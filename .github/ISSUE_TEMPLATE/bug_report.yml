@@ -1,0 +1,56 @@
+name: 🐛 Bug Report
+description: Report something broken or incorrect
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in the details below.
+        Evidence (command output, file:line, measured numbers) makes fixes 10x faster.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include exact commands and output.
+      placeholder: "ctest -R test_block_codec fails with ... / quant-infer crashes when ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Quantization codecs (Q-series formats)
+        - Inference engine
+        - Training engine / autograd
+        - Tokenizer
+        - Server / HTTP API
+        - GPU backends
+        - Build system / CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform & compiler
+      placeholder: "Windows 11, Clang 22 (clang-cl) / Ubuntu 24.04, GCC 13"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction steps
+      placeholder: |
+        1. cmake -B build ...
+        2. Run ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true

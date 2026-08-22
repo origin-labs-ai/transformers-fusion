@@ -1,0 +1,44 @@
+name: ✨ Feature Request
+description: Propose an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea? Check [docs/GOOD_FIRST_ISSUES.md](../docs/GOOD_FIRST_ISSUES.md)
+        first — your idea may already be listed with an ID.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Quantization format (new Q-variant / codec improvement)
+        - Model architecture support (loader / attention / MoE)
+        - Performance (SIMD / GPU kernels)
+        - Training engine / RLL
+        - Server / ecosystem
+        - Developer experience (build / tests / docs)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem it solves
+      description: What can't you do today? Include numbers if performance-related.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: House rules acknowledgment
+      description: These are non-negotiable in this repo.
+      options:
+        - label: This feature keeps zero external dependencies (C++20 stdlib only)
+        - label: Any perf/quality claim will ship with measured evidence

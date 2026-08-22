@@ -485,13 +485,43 @@ private:
         }
     }
 
+    // ---- L017: single timeout style + hard request-size caps ------------
+    static constexpr int kClientTimeoutMs = 30000;
+    static constexpr size_t kMaxRequestLineBytes = 8192;   // request-line cap
+
+    static void set_client_timeout(int client_fd) {
+#ifdef _WIN32
+        DWORD t = (DWORD)kClientTimeoutMs;                 // Windows: DWORD ms
+        setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&t, sizeof(t));
+#else
+        timeval t{kClientTimeoutMs / 1000, (kClientTimeoutMs % 1000) * 1000}; // POSIX: timeval
+        setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t));
+#endif
+    }
+
     void handle_request(int client_fd) {
         std::vector<char> buf(65536);
         int n = recv(client_fd, buf.data(), (int)buf.size() - 1, 0);
         if (n <= 0) return;
         buf[n] = '\0';
 
+        // Header budget: the recv buffer itself is the cap; a completely
+        // full buffer means the client blew past it -> 413.
+        if ((size_t)n >= buf.size() - 1) {
+            send_response(client_fd, 413, "application/json",
+                          json_error("request too large (header/body cap 64KB)"));
+            return;
+        }
+
         std::string raw(buf.data());
+
+        // Request-line cap: first CRLF must arrive within 8KB.
+        const size_t eol = raw.find("\r\n");
+        if (eol != std::string::npos && eol > kMaxRequestLineBytes) {
+            send_response(client_fd, 414, "application/json",
+                          json_error("request line too long"));
+            return;
+        }
         auto req = parse_request(raw);
 
         if (req.method == "OPTIONS") {
@@ -532,14 +562,7 @@ private:
             int client_fd = (int)accept(server_fd, (sockaddr*)&client_addr, &addr_len);
             if (client_fd < 0) continue;
 
-            // Set timeout
-#ifdef _WIN32
-            int timeout = 30000;
-            setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
-#else
-            struct timeval tv_timeout = {30, 0};
-            setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv_timeout, sizeof(tv_timeout));
-#endif
+            set_client_timeout(client_fd);
 
             handle_request(client_fd);
             quant::socket_helpers::close_socket(client_fd);

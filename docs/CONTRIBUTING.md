@@ -16,6 +16,16 @@ This document provides guidelines for contributing to InNova. Following these gu
 
 There are many ways to contribute to InNova:
 
+### 🎯 Find Your First Issue (Start Here!)
+
+Don't know where to begin? We maintain a **live contributor board** with every
+open task tiered by difficulty — starter, intermediate, and advanced:
+
+**👉 [docs/GOOD_FIRST_ISSUES.md](GOOD_FIRST_ISSUES.md)**
+
+Pick an ID (e.g. `GF-01`, `INT-05`, `ADV-03`), comment "taking <ID>" on its
+issue, and you own it. Each entry lists exact files and exit criteria.
+
 ### 🐛 Bug Reports
 
 - **Find a bug?** Open an issue with a clear description
