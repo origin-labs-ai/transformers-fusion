@@ -42,6 +42,8 @@ add_quant_test_full(test_mla        test_mla.cpp        quant_model             
 set_tests_properties(test_model      PROPERTIES LABELS "core")
 set_tests_properties(test_kda        PROPERTIES LABELS "core")
 set_tests_properties(test_mla        PROPERTIES LABELS "core")
+add_quant_test_full(test_hybrid_scheduler test_hybrid_scheduler.cpp quant_model     ${_default_timeout})
+set_tests_properties(test_hybrid_scheduler PROPERTIES LABELS "core")
 
 add_quant_test_full(test_tokenizer  test_tokenizer.cpp  quant_tokenizer                         ${_default_timeout})
 set_tests_properties(test_tokenizer  PROPERTIES LABELS "core")

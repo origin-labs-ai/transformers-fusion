@@ -102,6 +102,7 @@ add_library(quant_model
   src/transformer.cpp
   src/kda_attention.cpp
   src/mla_attention.cpp
+  src/hybrid_scheduler.cpp
   src/model.cpp
   src/kv_cache.cpp
   src/kv_cache_quant4.cpp
