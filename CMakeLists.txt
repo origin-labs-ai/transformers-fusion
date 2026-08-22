@@ -126,6 +126,7 @@ add_library(quant_tokenizer
   src/bpe_tokenizer_bpe.cpp
   src/bpe_tokenizer_unicode.cpp
   src/qwen35_tokenizer.cpp
+  src/k3_tokenizer.cpp
   src/dataset.cpp
 )
 target_include_directories(quant_tokenizer PUBLIC include)
