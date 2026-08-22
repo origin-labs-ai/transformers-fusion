@@ -104,7 +104,7 @@ add_library(quant_model
   src/mla_attention.cpp
   src/hybrid_scheduler.cpp
   src/hybrid_block.cpp
-  src/hybrid_expert.cpp
+  src/hybrid_moe_model.cpp
   src/model.cpp
   src/kv_cache.cpp
   src/kv_cache_quant4.cpp
