@@ -154,6 +154,7 @@ add_library(quant_trainer
   src/trainer_data.cpp
   src/trainer_rl.cpp
   src/trainer_rl_ops.cpp
+  src/rollout_worker.cpp
   src/training_utils.cpp
   src/zero_offload.cpp
   src/zero_optimizer_core.cpp

@@ -94,6 +94,8 @@ add_quant_test_full(test_moe_training test_moe_training.cpp quant_trainer quant_
 set_tests_properties(test_moe_training PROPERTIES LABELS "training;distributed")
 add_quant_test_full(test_grpo         test_grpo.cpp         quant_trainer quant_model quant_moe_variants quant_kernel ${_long_timeout})
 set_tests_properties(test_grpo PROPERTIES LABELS "training;rl")
+add_quant_test_full(test_rollout_worker test_rollout_worker.cpp quant_trainer quant_model quant_moe_variants ${_long_timeout})
+set_tests_properties(test_rollout_worker PROPERTIES LABELS "training;rl")
 
 add_quant_test_full(test_training_features test_training_features.cpp quant_trainer quant_model quant_math quant_core ${_long_timeout})
 set_tests_properties(test_training_features PROPERTIES LABELS "training")
