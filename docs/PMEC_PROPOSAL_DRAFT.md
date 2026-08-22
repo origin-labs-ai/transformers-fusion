@@ -95,6 +95,21 @@ provider quotes — E2E Networks / Yotta / NxtGen]
   agreements with vetted institutions
 - Usage logs retained per End User Policy
 
+## 8. Naming & stealth strategy (LOCKED)
+
+- All public artifacts during R&D use the codename **`origin-x-preview`** —
+  repos, model cards, papers, benchmarks. No exceptions.
+- **No third-party trademarks** appear in any artifact before a signed
+  agreement explicitly grants naming rights. Trademark-first naming invites
+  takedowns and kills the stealth window.
+- Base-model provenance (Kimi K3 lineage) disclosed only under research
+  agreements; public materials describe architecture class, not identity.
+- Post-PT (post-training complete): partnership conversations begin from
+  measured results. Any co-branding/naming is defined BY that agreement,
+  never before it.
+- Internal codenames (Balancer/Destroyer track) stay out of public artifacts
+  entirely.
+
 ---
 (NOTE TO FOUNDER: fill sections 2/5, verify K3 license text, lock eval-suite
 list before submission. Do NOT submit with placeholder values.)
