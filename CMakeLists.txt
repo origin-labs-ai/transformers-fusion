@@ -101,6 +101,7 @@ target_link_libraries(quant_kernel PUBLIC quant_format)
 add_library(quant_model
   src/transformer.cpp
   src/kda_attention.cpp
+  src/mla_attention.cpp
   src/model.cpp
   src/kv_cache.cpp
   src/kv_cache_quant4.cpp

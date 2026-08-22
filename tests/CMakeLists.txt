@@ -38,7 +38,10 @@ set_tests_properties(test_kernel     PROPERTIES LABELS "core")
 
 add_quant_test_full(test_model      test_model.cpp      quant_model                             ${_default_timeout})
 add_quant_test_full(test_kda        test_kda.cpp        quant_model                             ${_default_timeout})
+add_quant_test_full(test_mla        test_mla.cpp        quant_model                             ${_default_timeout})
 set_tests_properties(test_model      PROPERTIES LABELS "core")
+set_tests_properties(test_kda        PROPERTIES LABELS "core")
+set_tests_properties(test_mla        PROPERTIES LABELS "core")
 
 add_quant_test_full(test_tokenizer  test_tokenizer.cpp  quant_tokenizer                         ${_default_timeout})
 set_tests_properties(test_tokenizer  PROPERTIES LABELS "core")
