@@ -1,4 +1,5 @@
 #include "quant/tensor.h"
+#include "quant/autograd.h"
 #include "quant/memory.h"
 #include "quant/types.h"
 #include <cstring>
@@ -88,7 +89,15 @@ Tensor::Tensor(Shape shape, std::shared_ptr<Buffer> buffer, DType dtype)
     compute_strides();
 }
 
-Tensor::~Tensor() noexcept = default;
+Tensor::~Tensor() noexcept {
+    // Self-cleaning autograd registry: only tensors that were ever registered
+    // pay the lookup cost. Prevents address-reuse stale entries (flaky exit
+    // crashes) from outliving the owning model. registry_alive() is checked
+    // first so we never resurrect the singleton during static teardown.
+    if (autograd_registered_ && AutogradEngine::registry_alive()) {
+        AutogradEngine::instance().unregister_parameter(this);
+    }
+}
 
 Tensor::Tensor(const Tensor& other)
     : shape_(other.shape_), dtype_(other.dtype_), buffer_(other.buffer_),

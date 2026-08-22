@@ -83,6 +83,11 @@ private:
     size_t offset_ = 0;
     bool is_transposed_ = false;
     std::vector<int64_t> strides_;
+    // Set by AutogradEngine::register_parameter; drives self-cleanup in the
+    // destructor so stale address-keyed registry entries cannot outlive the
+    // owning model (heap-address reuse previously caused flaky corruption).
+    bool autograd_registered_ = false;
+    friend class AutogradEngine;
 
     void compute_strides();
     int64_t offset_to_flat(const std::initializer_list<int64_t>& indices) const;

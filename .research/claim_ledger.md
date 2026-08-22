@@ -13,8 +13,8 @@
 | C-06 | Zero-dep dynamic loaders CPU/CUDA/Vulkan/Metal/SYCL/HIP verified | gpu_compute_*.cpp dlopen/load logic + fallback correctness | PENDING | - |
 | C-07 | 42 tests pass | ctest full run on this machine | PENDING | - |
 | C-08 | 90+ build targets | cmake --build target count | PENDING | - |
-| C-09 | RLL PPO implemented | trainer_rl.cpp PPO clip objective presence check | PENDING | - |
-| C-10 | GRPO implemented | group-relative advantage code search | PENDING | - |
+| C-09 | RLL PPO implemented | clipped surrogate+GAE+KL verified in code | **VERIFIED** | src/trainer_rl.cpp:29-210 + tests/test_grpo.cpp |
+| C-10 | GRPO implemented | per-sample adv weighting fixed in-graph; MoE param collection added; was grad-scale hack before | **VERIFIED** (post-fix) | src/trainer_rl.cpp:533-640 + tests/test_grpo.cpp |
 | C-11 | Reward modeling integrated | reward.h forward + KL penalty wiring check | PENDING | - |
 | C-12 | EWC implemented | fisher information matrix code search | PENDING | - |
 | C-13 | LoRA/DoRA adapters | fine_tuning.h / finetune.h rank-delta audit | PENDING | - |

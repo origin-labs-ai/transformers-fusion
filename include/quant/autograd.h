@@ -97,14 +97,25 @@ public:
 
 private:
     AutogradEngine() = default;
+    ~AutogradEngine();
     mutable std::mutex mutex_;
     std::vector<std::shared_ptr<AutogradNode>> nodes_;
     mutable std::mutex param_mutex_;
     std::unordered_map<const void*, std::weak_ptr<AutogradNode>> output_to_node_;
     std::unordered_map<const void*, Tensor*> param_map_;
     static std::atomic<bool> enabled_;
+    // Registry lifetime flag: flipped false as the singleton begins teardown
+    // so late-destroying Tensors never touch the dying param_map_.
+    static std::atomic<bool> registry_alive_;
     bool next_is_checkpoint_ = false;
     std::shared_ptr<AutogradNode> last_checkpoint_;
+
+public:
+    // Self-cleaning parameter registry: called from ~Tensor for any tensor
+    // that was ever registered, so stale address-keyed entries cannot be
+    // misused after the owning model dies and heap addresses get reused.
+    void unregister_parameter(Tensor* p);
+    static bool registry_alive();
 };
 
 Tensor matmul_grad(const Tensor& a, const Tensor& b, const Tensor& grad_output);

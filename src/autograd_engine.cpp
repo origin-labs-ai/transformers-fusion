@@ -8,6 +8,29 @@
 namespace quant {
 
 std::atomic<bool> AutogradEngine::enabled_{false};
+std::atomic<bool> AutogradEngine::registry_alive_{true};
+
+AutogradEngine::~AutogradEngine() {
+    // Order matters: flip the flag BEFORE members are destroyed so any
+    // ~Tensor running later (static teardown) early-returns instead of
+    // touching the dying param_map_.
+    registry_alive_.store(false, std::memory_order_relaxed);
+}
+
+void AutogradEngine::unregister_parameter(Tensor* p) {
+    if (!p || !registry_alive()) return;
+    try {
+        std::lock_guard<std::mutex> lock(param_mutex_);
+        auto it = param_map_.find(p->data());
+        if (it != param_map_.end() && it->second == p) param_map_.erase(it);
+    } catch (...) {
+        // noexcept-safe: never let registry cleanup throw from ~Tensor.
+    }
+}
+
+bool AutogradEngine::registry_alive() {
+    return registry_alive_.load(std::memory_order_relaxed);
+}
 
 // ========================================================================
 // AutogradEngine operation helpers
@@ -288,13 +311,14 @@ Tensor AutogradEngine::embedding_op(const Tensor& input_ids, const Tensor& weigh
 // AutogradEngine
 // ========================================================================
 
-// Caller guarantee: `p` must outlive this AutogradEngine and must not be
-// moved/reallocated after registration. The engine stores a raw pointer keyed
-// by the tensor's data() address; if the tensor is moved, the pointer dangles.
+// Caller note: the registry is now SELF-CLEANING — ~Tensor unregisters any
+// tensor flagged via autograd_registered_, so entries cannot outlive the
+// owning model even when heap addresses are reused by new allocations.
 void AutogradEngine::register_parameter(Tensor* p) {
     if (!p || !p->data()) return;
     std::lock_guard<std::mutex> lock(mutex_);
     param_map_[p->data()] = p;
+    p->autograd_registered_ = true;
 }
 
 void AutogradEngine::register_node(const std::shared_ptr<AutogradNode>& node) {

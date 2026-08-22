@@ -4,6 +4,7 @@
 #include "quant/autograd.h"
 #include "quant/optimizer.h"
 #include "quant/transformer.h"
+#include "quant/moe_model.h"
 #include "quant/flash_attention.h"
 #include <iostream>
 #include <fstream>
@@ -535,6 +536,40 @@ static std::vector<Tensor*> collect_grpo_params(Model* m) {
     if (!m) return p;
     if (auto* dm = dynamic_cast<DenseModel*>(m)) {
         collect_dense_params(dm, p);
+        return p;
+    }
+    if (auto* mm = dynamic_cast<MoEModel*>(m)) {
+        // Mirror MoETrainer::collect_params(): dense trunk + router + every
+        // expert + shared expert, so GRPO gradients reach the MoE stack
+        // (required for RLL on MoE bases like Kimi-K3-class models).
+        p.push_back(&mm->tok_embeddings->weight);
+        for (auto& l : mm->layers) {
+            p.push_back(&l.attention_norm.weight);
+            p.push_back(&l.attention.q_proj.weight);
+            if (l.attention.q_proj.bias.numel() > 0) p.push_back(&l.attention.q_proj.bias);
+            p.push_back(&l.attention.k_proj.weight);
+            if (l.attention.k_proj.bias.numel() > 0) p.push_back(&l.attention.k_proj.bias);
+            p.push_back(&l.attention.v_proj.weight);
+            if (l.attention.v_proj.bias.numel() > 0) p.push_back(&l.attention.v_proj.bias);
+            p.push_back(&l.attention.o_proj.weight);
+            if (l.attention.o_proj.bias.numel() > 0) p.push_back(&l.attention.o_proj.bias);
+            p.push_back(&l.ffn_norm.weight);
+            p.push_back(&l.moe->router_weight.weight);
+            for (auto& e : l.moe->experts) {
+                p.push_back(&e.gate_proj.weight);
+                p.push_back(&e.up_proj.weight);
+                p.push_back(&e.down_proj.weight);
+            }
+            if (l.shared_expert) {
+                p.push_back(&l.shared_expert->gate_proj.weight);
+                p.push_back(&l.shared_expert->up_proj.weight);
+                p.push_back(&l.shared_expert->down_proj.weight);
+            }
+        }
+        p.push_back(&mm->norm->weight);
+        p.push_back(&mm->lm_head->weight);
+        if (mm->lm_head->bias.numel() > 0) p.push_back(&mm->lm_head->bias);
+        return p;
     }
     return p;
 }
@@ -569,37 +604,40 @@ float GRPOTrainer::train_step(const Tensor& input_ids, const Tensor& labels, con
     AutogradEngine::set_enabled(true);
 
     Tensor logits = model_->forward(input_ids, positions, nullptr);
-    // build per-token log-softmax and sequence logprob weighted by advantage
-    // We need a scalar loss tensor connected to logits graph: loss = - mean_i adv_i * mean_j logp_{i,j}
-    // Compute CE-like loss manually but keep graph via cross_entropy_op scaling.
-    // Use cross_entropy_op per sample scaled by adv: total_loss = sum_i adv_i * ce_i
-    // ce = cross_entropy(logits_i, labels_i) (mean over tokens)
-    // We create a scalar by summing.
+
+    // Proper GRPO loss: each group sample's sequence cross-entropy is weighted
+    // by ITS OWN group-relative advantage inside the graph, then summed.
+    //   loss = (1/G) * Σ_i  adv_i * CE(logits_i, labels_i)
+    // The previous implementation backpropagated one mean-CE and rescaled all
+    // parameter gradients by mean(adv) — which is ≈0 after normalization — so
+    // updates collapsed into a sign-hacked SFT. This per-sample graph fixes it.
     Tensor loss_acc(Shape{1});
     loss_acc.zero_();
-    // Instead do explicit per-group cross_entropy then combine with adv scaling via gradient scale
-    // First compute logits_flat and use cross_entropy_op then scale grad
-    // Simplest: compute full CE loss tensor then reweight grad by adv via manual grad scaling
-    Tensor loss_tensor = AutogradEngine::cross_entropy_op(logits, labels);
-    float base_loss = loss_tensor.data<float>()[0];
-    // Scale gradient by group-relative advantage weighting:
-    // We add grad multiplier: loss = mean_i adv_i * ce_i, so we scale global grad by mean adv sign
-    // For correctness we inject advantage scaling into gradient accumulation before backward:
-    // Do backward then scale parameter grads by advantage factor
+    for (int64_t i = 0; i < G; ++i) {
+        Tensor logits_i = logits.slice(0, i, i + 1);   // {1,S,V}, contiguous row block
+        Tensor labels_i = labels.slice(0, i, i + 1);   // {1,S}
+        Tensor ce_i = AutogradEngine::cross_entropy_op(logits_i, labels_i);
+        Tensor adv_t(Shape{1});
+        adv_t.data<float>()[0] = adv[(size_t)i];
+        loss_acc = AutogradEngine::add_op(loss_acc, AutogradEngine::mul_op(ce_i, adv_t));
+    }
+    Tensor inv_g(Shape{1});
+    inv_g.data<float>()[0] = 1.0f / (float)G;
+    Tensor loss_tensor = AutogradEngine::mul_op(loss_acc, inv_g);
+
     AutogradEngine::instance().backward(loss_tensor);
     AutogradEngine::set_enabled(false);
-    // Apply group-relative advantage scaling to grads (heuristic to reflect GRPO)
-    float adv_scale = 0.0f;
-    for (float a : adv) adv_scale += a;
-    adv_scale /= (float)G;
-    // If adv_scale near zero, amplify grad slightly to ensure update
-    if (std::abs(adv_scale) < 1e-6f) adv_scale = (adv[0] != 0 ? (adv[0] > 0 ? 1.0f : -1.0f) : 1.0f);
-    for (auto* p : params) if (p->has_grad()) {
-        float* gd = p->grad().data<float>();
-        int64_t n = p->grad().numel();
-        for (int64_t i = 0; i < n; i++) gd[i] *= adv_scale;
-        // beta KL regularization dampens update
-        if (beta_ > 0) for (int64_t i = 0; i < n; i++) gd[i] *= (1.0f - beta_ * 0.01f);
+    const float base_loss = loss_tensor.data<float>()[0];
+
+    // beta_ acts as trust-region damping on the update magnitude. It is NOT a
+    // KL-vs-reference term; the reference-KL variant lives in PPOTrainer.
+    if (beta_ > 0) {
+        const float damp = std::max(0.0f, 1.0f - beta_ * 0.01f);
+        for (auto* p : params) if (p->has_grad()) {
+            float* gd = p->grad().data<float>();
+            int64_t n = p->grad().numel();
+            for (int64_t i = 0; i < n; i++) gd[i] *= damp;
+        }
     }
     if (optimizer_) {
         optimizer_->step();
@@ -619,6 +657,12 @@ float GRPOTrainer::train_step(const std::string& prompt) {
     if (tok_) prompt_tokens = tok_->encode(prompt);
     else for (char c : prompt) prompt_tokens.push_back((int)(unsigned char)c % std::max(1, vocab_size));
     if (prompt_tokens.empty()) prompt_tokens.push_back(1);
+    // Clamp to vocab range: a fresh tokenizer's ids can exceed a tiny test
+    // model's vocab_size, and an out-of-range embedding gather poisons the
+    // whole forward with NaN.
+    for (auto& t : prompt_tokens) {
+        t = ((t % std::max(1, vocab_size)) + std::max(1, vocab_size)) % std::max(1, vocab_size);
+    }
 
     bool prev = AutogradEngine::enabled();
     AutogradEngine::set_enabled(false);
@@ -627,7 +671,15 @@ float GRPOTrainer::train_step(const std::string& prompt) {
     for (int g = 0; g < group_size_; g++) {
         completions[g] = prompt_tokens;
         std::mt19937 rng(42 + g * 101);
-        for (int step = 0; step < 32; step++) {
+        // Cap generated length so total sequence stays inside max_seq_len:
+        // positions beyond the RoPE/KV-cache range poison the forward with NaN.
+        int gen_steps = 32;
+        if (model_->config.max_seq_len > 0) {
+            const int room =
+                (int)model_->config.max_seq_len - (int)prompt_tokens.size();
+            gen_steps = std::max(0, std::min(gen_steps, room));
+        }
+        for (int step = 0; step < gen_steps; step++) {
             int64_t len = (int64_t)completions[g].size();
             int64_t start = std::max((int64_t)0, len - context_len);
             int64_t ctx_len = len - start;

@@ -86,6 +86,8 @@ set_tests_properties(test_native_quant_moe PROPERTIES LABELS "training;distribut
 
 add_quant_test_full(test_moe_training test_moe_training.cpp quant_trainer quant_model quant_moe_variants quant_kernel ${_long_timeout})
 set_tests_properties(test_moe_training PROPERTIES LABELS "training;distributed")
+add_quant_test_full(test_grpo         test_grpo.cpp         quant_trainer quant_model quant_moe_variants quant_kernel ${_long_timeout})
+set_tests_properties(test_grpo PROPERTIES LABELS "training;rl")
 
 add_quant_test_full(test_training_features test_training_features.cpp quant_trainer quant_model quant_math quant_core ${_long_timeout})
 set_tests_properties(test_training_features PROPERTIES LABELS "training")
@@ -202,3 +204,7 @@ set_tests_properties(
   test_fp32_gather_quality test_bpw_150_proof test_quant_mix test_format_registry_complete
   PROPERTIES COST 2.0
 )
+
+# ── codec fuzz roundtrip (L036) ───────────────────────────────────
+add_quant_test_full(test_fuzz_codec test_fuzz_codec.cpp quant_kernel quant_format quant_core ${_long_timeout})
+set_tests_properties(test_fuzz_codec PROPERTIES LABELS "codec;core")
