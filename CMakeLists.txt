@@ -104,6 +104,7 @@ add_library(quant_model
   src/mla_attention.cpp
   src/hybrid_scheduler.cpp
   src/hybrid_block.cpp
+  src/hybrid_expert.cpp
   src/model.cpp
   src/kv_cache.cpp
   src/kv_cache_quant4.cpp
@@ -351,6 +352,9 @@ if(QUANT_BUILD_TOOLS)
 
   add_executable(quant_convert tools/convert.cpp)
   target_link_libraries(quant_convert PRIVATE quant_format)
+
+  add_executable(k3_convert tools/k3_convert.cpp)
+  target_link_libraries(k3_convert PRIVATE quant_format quant_model quant_tokenizer)
 
   add_executable(quant_bench tools/bench.cpp)
   target_link_libraries(quant_bench PRIVATE quant_kernel quant_inference quant_tokenizer)

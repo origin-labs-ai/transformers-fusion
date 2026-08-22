@@ -46,6 +46,8 @@ add_quant_test_full(test_hybrid_scheduler test_hybrid_scheduler.cpp quant_model 
 set_tests_properties(test_hybrid_scheduler PROPERTIES LABELS "core")
 add_quant_test_full(test_hybrid_model test_hybrid_model.cpp quant_model          ${_default_timeout})
 set_tests_properties(test_hybrid_model PROPERTIES LABELS "core")
+add_quant_test_full(test_hybrid_expert test_hybrid_expert.cpp quant_model     ${_default_timeout})
+set_tests_properties(test_hybrid_expert PROPERTIES LABELS "core")
 add_quant_test_full(test_k3_tokenizer test_k3_tokenizer.cpp quant_tokenizer          ${_default_timeout})
 set_tests_properties(test_k3_tokenizer PROPERTIES LABELS "core")
 
