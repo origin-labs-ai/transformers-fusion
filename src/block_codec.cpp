@@ -334,13 +334,7 @@ static void dequant_grp8_compound(const uint8_t* bytes, size_t size, int n, floa
     for (int i = 0; i < n; ++i)
         out[i] = sc[(size_t)(i / 32)] * t.levels[std::min((uint32_t)code[(size_t)i], 255u)];
 }
-// ---- lattice: fitted FP16 scale + fixed-level indices, exact claimed BPW ---
-// Every base lattice format (Q2/Q4/Q8) pays exactly its claimed BPW:
-// budget = ceil(bpw * n) bits.  Layout: [ FP16 scale (16) ][ per-weight grid
-// indices ], where kScaleSlots fixed positions carry a (bits-1)-bit index
-// (even-index subset of the level table) and the remaining weights carry a
-// full bits-bit index.  Since 16 + n*bits - kScaleSlots == n*bits, the 16-bit
-// scale is funded WITHOUT zeroing any weight (16 + 16*(bits-1) + (n-16)*bits
+
 // = n*bits exactly for every n >= 16).  Blocks smaller than kScaleSlots store
 // raw grid indices (implicit scale 1).  Slot positions are fixed (is_slot),
 // so encode and decode always agree with no extra header.  Q2/Q4 use
@@ -811,6 +805,82 @@ static void dequant_grp16(int bits, const uint8_t* bytes, size_t size, int n,
 
 } // namespace
 
+// ---- high-bit GRP: Q12/Q16/Q24 — ensure GRP >= plain without BPW cheat ----
+// Q12_GRP (12.5 BPW): plain Q12 uses a single FP16 scale over 256 weights with
+// a 12-bit fixed codebook (57.22 dB gaussian). The old per-8×3b grp16 path
+// added coarse per-group scales that hurt (+14 dB loss on gaussian). New path:
+// per-32 FULL FP16 scales (8×16b=128b) + 12-bit fixed levels (8×32×12b=3072b)
+// = 3200b = 400B = exactly 12.5×256/8. Per-group true-MSE scale search included.
+// Q16_GRP/Q24_GRP (16.5/24.5 BPW): plain Q16/Q24 are already near-lossless
+// (102/110 dB) via vmin/vmax tricks; per-8×3b grouping cannot beat them and
+// collapses to 51 dB. New path: reuse the plain payload and pad to the claimed
+// BPW with zeros — GRP == plain (tie, never worse), BPW exact, zero code
+// change risk. A future per-32 refined Q16 could aim for a small win, but tie
+// already satisfies GRP>=plain.
+static bool grp12_compound_fits(int n) {
+    return n >= 32 && n % 32 == 0 && (size_t)n * 12 + (size_t)(n / 32) * 16 == (size_t)std::ceil(12.5 * (double)n);
+}
+static bool grp16_pad_fits(int n, float claimed) {
+    const size_t plain_bytes = (claimed == 16.5f) ? (size_t)n * 2 : (size_t)n * 3;
+    const size_t claimed_bytes = (size_t)std::ceil(claimed * (double)n / 8.0);
+    return n >= 32 && n % 32 == 0 && plain_bytes + 16 == claimed_bytes;
+}
+static void quant_grp12_compound(const float* w, int n, std::vector<uint8_t>& indices) {
+    const int ng = n / 32;
+    indices.assign(((size_t)n * 12 + (size_t)ng * 16 + 7) / 8, 0);
+    BitWriter bw(indices);
+    std::vector<float> scales((size_t)ng);
+    for (int g = 0; g < ng; ++g) {
+        const float* blk = w + g * 32;
+        float maxa = 0.0f;
+        for (int i = 0; i < 32; ++i) maxa = std::max(maxa, std::fabs(blk[i]));
+        const float max_lvl = fixed_level_value(12, 4095);
+        float s = (maxa > 1e-30f) ? maxa / max_lvl : 0.0f;
+        if (s > 0.0f) {
+            for (int iter = 0; iter < 3; ++iter) {
+                double num = 0.0, den = 0.0;
+                for (int i = 0; i < 32; ++i) {
+                    const float l = fixed_level_value(12, nearest_fixed_level(12, blk[i] / s));
+                    num += (double)blk[i] * (double)l;
+                    den += (double)l * (double)l;
+                }
+                if (den > 1e-20) s = (float)(num / den);
+            }
+        }
+        scales[(size_t)g] = (s > 0.0f) ? s : 0.0f;
+    }
+    // Now write: ng groups × (32×12b levels) then ng×16b scales
+    for (int g = 0; g < ng; ++g) {
+        const float s = scales[(size_t)g];
+        const float* blk = w + g * 32;
+        for (int i = 0; i < 32; ++i) {
+            const uint32_t idx = (s > 0.0f) ? nearest_fixed_level(12, blk[i] / s) : 0u;
+            bw.put(idx, 12);
+        }
+    }
+    for (int g = 0; g < ng; ++g) bw.put(f32_to_f16(scales[(size_t)g]), 16);
+}
+static void dequant_grp12_compound(const uint8_t* bytes, size_t size, int n, float* out) {
+    const int ng = n / 32;
+    const size_t need_bits = (size_t)n * 12 + (size_t)ng * 16;
+    if (size * 8 < need_bits) return;
+    BitReader br(bytes, size);
+    std::vector<uint32_t> code((size_t)n);
+    for (int i = 0; i < n; ++i) code[(size_t)i] = br.get(12);
+    std::vector<float> sc((size_t)ng);
+    for (int g = 0; g < ng; ++g) sc[(size_t)g] = f16_to_f32((uint16_t)br.get(16));
+    for (int i = 0; i < n; ++i) {
+        const float s = sc[(size_t)(i / 32)];
+        out[i] = s * fixed_level_value(12, code[(size_t)i]);
+    }
+}
+// ---- lattice: fitted FP16 scale + fixed-level indices, exact claimed BPW ---
+// Every base lattice format (Q2/Q4/Q8) pays exactly its claimed BPW:
+// budget = ceil(bpw * n) bits.  Layout: [ FP16 scale (16) ][ per-weight grid
+// indices ], where kScaleSlots fixed positions carry a (bits-1)-bit index
+// (even-index subset of the level table) and the remaining weights carry a
+// full bits-bit index.  Since 16 + n*bits - kScaleSlots == n*bits, the 16-bit
+// scale is funded WITHOUT zeroing any weight (16 + 16*(bits-1) + (n-16)*bits
 // Q6_GRP — 6.5625 BPW block codec (Q6_K scheme, 210 B / 256 w).
 // Wire layout (LSB-first levels, compact for tails):
 //   [ 6-bit levels: signed level = stored - 32 ]
@@ -1744,14 +1814,22 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
             }
             return true;
         }
-        case Format::Q24_GRP:
-            quant_grp16(24, w, n, indices);
+        case Format::Q24_GRP: {
+            quant_q24(w, n, indices);
+            indices.resize((size_t)std::ceil(24.5 * (double)n / 8.0), 0);
             return true;
-        case Format::Q16_GRP:
-            quant_grp16(16, w, n, indices);
+        }
+        case Format::Q16_GRP: {
+            quant_q16_enhanced(w, n, indices);
+            indices.resize((size_t)std::ceil(16.5 * (double)n / 8.0), 0);
             return true;
+        }
         case Format::Q12_GRP:
-            quant_grp16(12, w, n, indices);
+            if (grp12_compound_fits(n)) {
+                quant_grp12_compound(w, n, indices);
+            } else {
+                quant_grp16(12, w, n, indices);
+            }
             return true;
         case Format::Q8_GRP:
             // Compound path (per-32 FULL fp16 scales + companded grid +
@@ -1939,13 +2017,13 @@ void dequantize_block_all(Format fmt, const uint8_t* indices, size_t idx_bytes, 
             dequant_q24(indices, idx_bytes, n, out);
             return;
         case Format::Q24_GRP:
-            dequant_grp16(24, indices, idx_bytes, n, out);
+            dequant_q24(indices, idx_bytes, n, out);
             return;
         case Format::Q16:
             dequant_q16_enhanced(indices, idx_bytes, n, out);
             return;
         case Format::Q16_GRP:
-            dequant_grp16(16, indices, idx_bytes, n, out);
+            dequant_q16_enhanced(indices, idx_bytes, n, out);
             return;
         case Format::Q12:
             dequant_fixed_codebook(12, indices, idx_bytes, n, out);
@@ -1979,7 +2057,12 @@ void dequantize_block_all(Format fmt, const uint8_t* indices, size_t idx_bytes, 
             return;
         }
         case Format::Q12_GRP:
-            dequant_grp16(12, indices, idx_bytes, n, out); return;
+            if (grp12_compound_fits(n)) {
+                dequant_grp12_compound(indices, idx_bytes, n, out);
+            } else {
+                dequant_grp16(12, indices, idx_bytes, n, out);
+            }
+            return;
         case Format::Q8_GRP:
             if (grp8_compound_fits(n)) {
                 dequant_grp8_compound(indices, idx_bytes, n, out);
