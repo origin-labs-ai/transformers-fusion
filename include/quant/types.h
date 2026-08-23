@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -11,335 +10,161 @@
 #include <cmath>
 #include <numeric>
 #include <cassert>
-
 namespace quant {
-
 enum class Activation : uint8_t { None, ReLU, GELU, SiLU, SwiGLU, GeGLU };
-
 enum class RoPEScalingMode : uint8_t { None, Linear, NTK, YARN };
-
 // ============================================================
-// Format enum — Q-series quantization formats
-// Base formats: Q1, Q2, Q3, Q4, Q6, Q8, Q12, Q16, Q24, Q32
-// GRP variants: per-group scaling for each base format
-// MIXED: TWI_MIX (2-tier) and QUAD_MIX (4-tier) mixed-precision
+// Format enum — Q-series quantization formats — v3 RE-ARRANGED 2026-08-23
+// Rules: exact BPW (name == claimed BPW), 3 K variants per BPW (L/M/H),
+// GRP exact at same BPW (no extra), half-BPW GRP as Q_GRP_X_Y,
+// MXQ only as MXQ_(BPW)_GRP (4-variant mix, no TWI), no TWI_MIX.
 // ============================================================
 enum class Format : uint8_t {
-    // --- Base formats (10) ---
-    Q1              = 0,   // 1.00 BPW, 1×FP32 block mean, 1-bit binary quantization
-    Q2              = 1,   // 2.00 BPW, 4×FP32 centroids, 2-bit lattice
-    Q3              = 2,   // 3.00 BPW, 8×FP32 centroids, 3-bit lattice
-    Q4              = 3,   // 4.00 BPW, 16×FP32 centroids, 4-bit lattice
-    Q6              = 4,   // 6.00 BPW, 64×FP32 centroids, 6-bit lattice
-    Q8              = 5,   // 8.00 BPW, 256×FP32 centroids, 8-bit lattice
-    Q12             = 6,   // 12.00 BPW, 4096×FP16 centroids, 12-bit lattice
-    Q16             = 7,   // 16.00 BPW, per-block adaptive 16-bit (beats FP16)
-    Q24             = 8,   // 24.00 BPW, per-block FP24 (16b mantissa + 8b exponent)
-    Q32             = 9,   // 32.00 BPW, FP32 identity (lossless reference)
-
-    // --- GRP variants (10) — per-group scaling, must beat 2× BPW base ---
-    Q1_GRP          = 10,  // 1.00 BPW, block FP16 scale + sign bits (must beat Q2)
-    Q2_GRP          = 11,  // 2.625 BPW, 2-bit lattice + per-16 4b sc+4b min + FP16 d/dm (must beat Q4)
-    Q3_GRP          = 12,  // 3.50 BPW, 3-bit lattice + per-32 6b sc+6b min + FP16 d (must beat Q6)
-    Q4_GRP          = 13,  // 4.50 BPW, 4-bit lattice + per-32 6b sc+6b min + FP16 d/dm (must beat Q8)
-    Q6_GRP          = 14,  // 6.5625 BPW, 6-bit lattice + per-16 8b sc + FP16 d (must beat Q12)
-    Q8_GRP          = 15,  // 8.50 BPW, 8-bit lattice + per-16 7b sc + FP16 d (must beat Q16)
-    Q12_GRP         = 16,  // 12.50 BPW, 12-bit lattice + per-16 FP16 sc + FP16 d (must beat Q24)
-    Q16_GRP         = 17,  // 16.50 BPW, 16-bit adaptive + per-16 FP16 sc + FP16 offset (must beat Q32)
-    Q24_GRP         = 18,  // 24.50 BPW, FP24 + per-8 FP16 sc + FP16 d (must beat Q32)
-
-    // --- TWI_MIX — 2-tier mixed precision (2 base + 2 GRP = 4) ---
-    Q_TWI_MIX_1_5       = 20,  // 1.50 BPW: Q1(95%) + Q4(5%)
-    Q_TWI_MIX_2_5       = 21,  // 2.50 BPW: Q2(90%) + Q8(10%)
-    Q_TWI_MIX_1_5_GRP   = 22,  // ~1.75 BPW: TWI_MIX@1.5 + per-group scaling
-    Q_TWI_MIX_2_5_GRP   = 23,  // ~2.75 BPW: TWI_MIX@2.5 + per-group scaling
-
-    // --- QUAD_MIX — 4-tier mixed precision (7 base + 7 GRP = 14) ---
-    Q_QUAD_MIX_3_5      = 24,  // 3.50 BPW: Q1(70%) + Q3(20%) + Q8(8%) + Q32(2%)
-    Q_QUAD_MIX_4_5      = 25,  // 4.50 BPW: Q2(60%) + Q4(25%) + Q12(12%) + Q32(3%)
-    Q_QUAD_MIX_6_5      = 26,  // 6.50 BPW: Q3(50%) + Q6(30%) + Q16(15%) + Q32(5%)
-    Q_QUAD_MIX_8_5      = 27,  // 8.50 BPW: Q4(45%) + Q8(35%) + Q16(15%) + Q32(5%)
-    Q_QUAD_MIX_12_5     = 28,  // 12.50 BPW: Q6(40%) + Q12(35%) + Q24(20%) + Q32(5%)
-    Q_QUAD_MIX_16_5     = 29,  // 16.50 BPW: Q8(35%) + Q16(40%) + Q24(20%) + Q32(5%)
-    Q_QUAD_MIX_24_5     = 30,  // 24.50 BPW: Q12(25%) + Q16(30%) + Q24(35%) + Q32(10%)
-    Q_QUAD_MIX_3_5_GRP  = 31,  // ~3.75 BPW: QUAD_MIX@3.5 + per-group scaling
-    Q_QUAD_MIX_4_5_GRP  = 32,  // ~4.75 BPW: QUAD_MIX@4.5 + per-group scaling
-    Q_QUAD_MIX_6_5_GRP  = 33,  // ~6.75 BPW: QUAD_MIX@6.5 + per-group scaling
-    Q_QUAD_MIX_8_5_GRP  = 34,  // ~8.75 BPW: QUAD_MIX@8.5 + per-group scaling
-    Q_QUAD_MIX_12_5_GRP = 35,  // ~12.75 BPW: QUAD_MIX@12.5 + per-group scaling
-    Q_QUAD_MIX_16_5_GRP = 36,  // ~16.75 BPW: QUAD_MIX@16.5 + per-group scaling
-    Q_QUAD_MIX_24_5_GRP = 37,  // ~24.75 BPW: QUAD_MIX@24.5 + per-group scaling
+    // --- Base integer BPW (10) ---
+    Q1              = 0,   // 1.00
+    Q2              = 1,   // 2.00
+    Q3              = 2,   // 3.00
+    Q4              = 3,   // 4.00
+    Q6              = 4,   // 6.00
+    Q8              = 5,   // 8.00
+    Q12             = 6,   // 12.00
+    Q16             = 7,   // 16.00
+    Q24             = 8,   // 24.00
+    Q32             = 9,   // 32.00
+    // --- K variants integer BPW (30) ---
+    Q1_K_L          = 10, Q1_K_M          = 11, Q1_K_H          = 12,
+    Q2_K_L          = 13, Q2_K_M          = 14, Q2_K_H          = 15,
+    Q3_K_L          = 16, Q3_K_M          = 17, Q3_K_H          = 18,
+    Q4_K_L          = 19, Q4_K_M          = 20, Q4_K_H          = 21,
+    Q6_K_L          = 22, Q6_K_M          = 23, Q6_K_H          = 24,
+    Q8_K_L          = 25, Q8_K_M          = 26, Q8_K_H          = 27,
+    Q12_K_L         = 28, Q12_K_M         = 29, Q12_K_H         = 30,
+    Q16_K_L         = 31, Q16_K_M         = 32, Q16_K_H         = 33,
+    Q24_K_L         = 34, Q24_K_M         = 35, Q24_K_H         = 36,
+    Q32_K_L         = 37, Q32_K_M         = 38, Q32_K_H         = 39,
+    // --- GRP exact integer BPW (10) ---
+    Q1_GRP          = 40, Q2_GRP          = 41, Q3_GRP          = 42, Q4_GRP          = 43, Q6_GRP          = 44,
+    Q8_GRP          = 45, Q12_GRP         = 46, Q16_GRP         = 47, Q24_GRP         = 48, Q32_GRP         = 49,
+    // --- K_GRP exact integer BPW (30) ---
+    Q1_K_L_GRP      = 50, Q1_K_M_GRP      = 51, Q1_K_H_GRP      = 52,
+    Q2_K_L_GRP      = 53, Q2_K_M_GRP      = 54, Q2_K_H_GRP      = 55,
+    Q3_K_L_GRP      = 56, Q3_K_M_GRP      = 57, Q3_K_H_GRP      = 58,
+    Q4_K_L_GRP      = 59, Q4_K_M_GRP      = 60, Q4_K_H_GRP      = 61,
+    Q6_K_L_GRP      = 62, Q6_K_M_GRP      = 63, Q6_K_H_GRP      = 64,
+    Q8_K_L_GRP      = 65, Q8_K_M_GRP      = 66, Q8_K_H_GRP      = 67,
+    Q12_K_L_GRP     = 68, Q12_K_M_GRP     = 69, Q12_K_H_GRP     = 70,
+    Q16_K_L_GRP     = 71, Q16_K_M_GRP     = 72, Q16_K_H_GRP     = 73,
+    Q24_K_L_GRP     = 74, Q24_K_M_GRP     = 75, Q24_K_H_GRP     = 76,
+    Q32_K_L_GRP     = 77, Q32_K_M_GRP     = 78, Q32_K_H_GRP     = 79,
+    // --- Half BPW GRP (9) ---
+    Q_GRP_1_5       = 80, Q_GRP_2_5       = 81, Q_GRP_3_5       = 82, Q_GRP_4_5       = 83, Q_GRP_6_5       = 84,
+    Q_GRP_8_5       = 85, Q_GRP_12_5      = 86, Q_GRP_16_5      = 87, Q_GRP_24_5      = 88,
+    // --- MXQ mix 4-variant only as MXQ_(BPW)_GRP (7) ---
+    MXQ_3_5_GRP     = 89, MXQ_4_5_GRP     = 90, MXQ_6_5_GRP     = 91, MXQ_8_5_GRP     = 92, MXQ_12_5_GRP    = 93, MXQ_16_5_GRP    = 94, MXQ_24_5_GRP    = 95,
 };
-
-// Total number of unique format IDs (excluding legacy aliases)
-constexpr int FORMAT_COUNT = 37;
-
+constexpr int FORMAT_COUNT = 96;
 inline const char* format_name(Format f) {
-    switch (f) {
-        case Format::Q1:              return "Q1";
-        case Format::Q2:              return "Q2";
-        case Format::Q3:              return "Q3";
-        case Format::Q4:              return "Q4";
-        case Format::Q6:              return "Q6";
-        case Format::Q8:              return "Q8";
-        case Format::Q12:             return "Q12";
-        case Format::Q16:             return "Q16";
-        case Format::Q24:             return "Q24";
-        case Format::Q32:             return "Q32";
-        case Format::Q1_GRP:          return "Q1_GRP";
-        case Format::Q2_GRP:          return "Q2_GRP";
-        case Format::Q3_GRP:          return "Q3_GRP";
-        case Format::Q4_GRP:          return "Q4_GRP";
-        case Format::Q6_GRP:          return "Q6_GRP";
-        case Format::Q8_GRP:          return "Q8_GRP";
-        case Format::Q12_GRP:         return "Q12_GRP";
-        case Format::Q16_GRP:         return "Q16_GRP";
-        case Format::Q24_GRP:         return "Q24_GRP";
-        case Format::Q_TWI_MIX_1_5:       return "Q_TWI_MIX@1.5";
-        case Format::Q_TWI_MIX_2_5:       return "Q_TWI_MIX@2.5";
-        case Format::Q_TWI_MIX_1_5_GRP:   return "Q_TWI_MIX@1.5_GRP";
-        case Format::Q_TWI_MIX_2_5_GRP:   return "Q_TWI_MIX@2.5_GRP";
-        case Format::Q_QUAD_MIX_3_5:      return "Q_QUAD_MIX@3.5";
-        case Format::Q_QUAD_MIX_4_5:      return "Q_QUAD_MIX@4.5";
-        case Format::Q_QUAD_MIX_6_5:      return "Q_QUAD_MIX@6.5";
-        case Format::Q_QUAD_MIX_8_5:      return "Q_QUAD_MIX@8.5";
-        case Format::Q_QUAD_MIX_12_5:     return "Q_QUAD_MIX@12.5";
-        case Format::Q_QUAD_MIX_16_5:     return "Q_QUAD_MIX@16.5";
-        case Format::Q_QUAD_MIX_24_5:     return "Q_QUAD_MIX@24.5";
-        case Format::Q_QUAD_MIX_3_5_GRP:  return "Q_QUAD_MIX@3.5_GRP";
-        case Format::Q_QUAD_MIX_4_5_GRP:  return "Q_QUAD_MIX@4.5_GRP";
-        case Format::Q_QUAD_MIX_6_5_GRP:  return "Q_QUAD_MIX@6.5_GRP";
-        case Format::Q_QUAD_MIX_8_5_GRP:  return "Q_QUAD_MIX@8.5_GRP";
-        case Format::Q_QUAD_MIX_12_5_GRP: return "Q_QUAD_MIX@12.5_GRP";
-        case Format::Q_QUAD_MIX_16_5_GRP: return "Q_QUAD_MIX@16.5_GRP";
-        case Format::Q_QUAD_MIX_24_5_GRP: return "Q_QUAD_MIX@24.5_GRP";
+    switch(f) {
+        case Format::Q1: return "Q1"; case Format::Q2: return "Q2"; case Format::Q3: return "Q3"; case Format::Q4: return "Q4"; case Format::Q6: return "Q6"; case Format::Q8: return "Q8"; case Format::Q12: return "Q12"; case Format::Q16: return "Q16"; case Format::Q24: return "Q24"; case Format::Q32: return "Q32";
+        case Format::Q1_K_L: return "Q1_K_L"; case Format::Q1_K_M: return "Q1_K_M"; case Format::Q1_K_H: return "Q1_K_H";
+        case Format::Q2_K_L: return "Q2_K_L"; case Format::Q2_K_M: return "Q2_K_M"; case Format::Q2_K_H: return "Q2_K_H";
+        case Format::Q3_K_L: return "Q3_K_L"; case Format::Q3_K_M: return "Q3_K_M"; case Format::Q3_K_H: return "Q3_K_H";
+        case Format::Q4_K_L: return "Q4_K_L"; case Format::Q4_K_M: return "Q4_K_M"; case Format::Q4_K_H: return "Q4_K_H";
+        case Format::Q6_K_L: return "Q6_K_L"; case Format::Q6_K_M: return "Q6_K_M"; case Format::Q6_K_H: return "Q6_K_H";
+        case Format::Q8_K_L: return "Q8_K_L"; case Format::Q8_K_M: return "Q8_K_M"; case Format::Q8_K_H: return "Q8_K_H";
+        case Format::Q12_K_L: return "Q12_K_L"; case Format::Q12_K_M: return "Q12_K_M"; case Format::Q12_K_H: return "Q12_K_H";
+        case Format::Q16_K_L: return "Q16_K_L"; case Format::Q16_K_M: return "Q16_K_M"; case Format::Q16_K_H: return "Q16_K_H";
+        case Format::Q24_K_L: return "Q24_K_L"; case Format::Q24_K_M: return "Q24_K_M"; case Format::Q24_K_H: return "Q24_K_H";
+        case Format::Q32_K_L: return "Q32_K_L"; case Format::Q32_K_M: return "Q32_K_M"; case Format::Q32_K_H: return "Q32_K_H";
+        case Format::Q1_GRP: return "Q1_GRP"; case Format::Q2_GRP: return "Q2_GRP"; case Format::Q3_GRP: return "Q3_GRP"; case Format::Q4_GRP: return "Q4_GRP"; case Format::Q6_GRP: return "Q6_GRP"; case Format::Q8_GRP: return "Q8_GRP"; case Format::Q12_GRP: return "Q12_GRP"; case Format::Q16_GRP: return "Q16_GRP"; case Format::Q24_GRP: return "Q24_GRP"; case Format::Q32_GRP: return "Q32_GRP";
+        case Format::Q1_K_L_GRP: return "Q1_K_L_GRP"; case Format::Q1_K_M_GRP: return "Q1_K_M_GRP"; case Format::Q1_K_H_GRP: return "Q1_K_H_GRP";
+        case Format::Q2_K_L_GRP: return "Q2_K_L_GRP"; case Format::Q2_K_M_GRP: return "Q2_K_M_GRP"; case Format::Q2_K_H_GRP: return "Q2_K_H_GRP";
+        case Format::Q3_K_L_GRP: return "Q3_K_L_GRP"; case Format::Q3_K_M_GRP: return "Q3_K_M_GRP"; case Format::Q3_K_H_GRP: return "Q3_K_H_GRP";
+        case Format::Q4_K_L_GRP: return "Q4_K_L_GRP"; case Format::Q4_K_M_GRP: return "Q4_K_M_GRP"; case Format::Q4_K_H_GRP: return "Q4_K_H_GRP";
+        case Format::Q6_K_L_GRP: return "Q6_K_L_GRP"; case Format::Q6_K_M_GRP: return "Q6_K_M_GRP"; case Format::Q6_K_H_GRP: return "Q6_K_H_GRP";
+        case Format::Q8_K_L_GRP: return "Q8_K_L_GRP"; case Format::Q8_K_M_GRP: return "Q8_K_M_GRP"; case Format::Q8_K_H_GRP: return "Q8_K_H_GRP";
+        case Format::Q12_K_L_GRP: return "Q12_K_L_GRP"; case Format::Q12_K_M_GRP: return "Q12_K_M_GRP"; case Format::Q12_K_H_GRP: return "Q12_K_H_GRP";
+        case Format::Q16_K_L_GRP: return "Q16_K_L_GRP"; case Format::Q16_K_M_GRP: return "Q16_K_M_GRP"; case Format::Q16_K_H_GRP: return "Q16_K_H_GRP";
+        case Format::Q24_K_L_GRP: return "Q24_K_L_GRP"; case Format::Q24_K_M_GRP: return "Q24_K_M_GRP"; case Format::Q24_K_H_GRP: return "Q24_K_H_GRP";
+        case Format::Q32_K_L_GRP: return "Q32_K_L_GRP"; case Format::Q32_K_M_GRP: return "Q32_K_M_GRP"; case Format::Q32_K_H_GRP: return "Q32_K_H_GRP";
+        case Format::Q_GRP_1_5: return "Q_GRP_1.5"; case Format::Q_GRP_2_5: return "Q_GRP_2.5"; case Format::Q_GRP_3_5: return "Q_GRP_3.5"; case Format::Q_GRP_4_5: return "Q_GRP_4.5"; case Format::Q_GRP_6_5: return "Q_GRP_6.5"; case Format::Q_GRP_8_5: return "Q_GRP_8.5"; case Format::Q_GRP_12_5: return "Q_GRP_12.5"; case Format::Q_GRP_16_5: return "Q_GRP_16.5"; case Format::Q_GRP_24_5: return "Q_GRP_24.5";
+        case Format::MXQ_3_5_GRP: return "MXQ_3.5_GRP"; case Format::MXQ_4_5_GRP: return "MXQ_4.5_GRP"; case Format::MXQ_6_5_GRP: return "MXQ_6.5_GRP"; case Format::MXQ_8_5_GRP: return "MXQ_8.5_GRP"; case Format::MXQ_12_5_GRP: return "MXQ_12.5_GRP"; case Format::MXQ_16_5_GRP: return "MXQ_16.5_GRP"; case Format::MXQ_24_5_GRP: return "MXQ_24.5_GRP";
         default: return "unknown";
     }
 }
-
 inline float format_bpw(Format f) {
-    switch (f) {
-        // Base formats
-        case Format::Q1:       return 1.0f;
-        case Format::Q2:       return 2.0f;
-        case Format::Q3:       return 3.0f;
-        case Format::Q4:       return 4.0f;
-        case Format::Q6:       return 6.0f;
-        case Format::Q8:       return 8.0f;
-        case Format::Q12:      return 12.0f;
-        case Format::Q16:      return 16.0f;
-        case Format::Q24:      return 24.0f;
-        case Format::Q32:      return 32.0f;
-        // GRP variants — base BPW + per-group overhead
-        // Q1_GRP: block FP16 scale amortized over 256 weights = 0 extra
-        // Q2_GRP: per-16 4b scale + 4b min + FP16 d/dm = +0.625 BPW
-        // Q3_GRP: per-32 6b scale + 6b min + FP16 d = +0.5 BPW
-        // Q4_GRP: per-32 6b scale + 6b min + FP16 d/dm = +0.5 BPW
-        // Q6_GRP: per-16 8b scale + FP16 d = +0.5 BPW
-        // Q8_GRP: per-16 7b scale + FP16 d = +0.5 BPW
-        // Q12_GRP: per-16 FP16 scale + FP16 d = +0.5 BPW
-        // Q16_GRP: per-16 FP16 scale + FP16 offset = +0.5 BPW
-        // Q24_GRP: per-8 FP16 scale + FP16 d = +0.5 BPW
-        case Format::Q1_GRP:   return 1.0f;
-        case Format::Q2_GRP:   return 2.625f;
-        case Format::Q3_GRP:   return 3.5f;
-        case Format::Q4_GRP:   return 4.5f;
-        case Format::Q6_GRP:   return 6.5625f;
-        case Format::Q8_GRP:   return 8.5f;
-        case Format::Q12_GRP:  return 12.5f;
-        case Format::Q16_GRP:  return 16.5f;
-        case Format::Q24_GRP:  return 24.5f;
-        // TWI_MIX — 2-tier mixed
-        case Format::Q_TWI_MIX_1_5:       return 1.5f;
-        case Format::Q_TWI_MIX_2_5:       return 2.5f;
-        case Format::Q_TWI_MIX_1_5_GRP:   return 1.75f;
-        case Format::Q_TWI_MIX_2_5_GRP:   return 2.75f;
-        // QUAD_MIX — 4-tier mixed
-        case Format::Q_QUAD_MIX_3_5:      return 3.5f;
-        case Format::Q_QUAD_MIX_4_5:      return 4.5f;
-        case Format::Q_QUAD_MIX_6_5:      return 6.5f;
-        case Format::Q_QUAD_MIX_8_5:      return 8.5f;
-        case Format::Q_QUAD_MIX_12_5:     return 12.5f;
-        case Format::Q_QUAD_MIX_16_5:     return 16.5f;
-        case Format::Q_QUAD_MIX_24_5:     return 24.5f;
-        case Format::Q_QUAD_MIX_3_5_GRP:  return 3.75f;
-        case Format::Q_QUAD_MIX_4_5_GRP:  return 4.75f;
-        case Format::Q_QUAD_MIX_6_5_GRP:  return 6.75f;
-        case Format::Q_QUAD_MIX_8_5_GRP:  return 8.75f;
-        case Format::Q_QUAD_MIX_12_5_GRP: return 12.75f;
-        case Format::Q_QUAD_MIX_16_5_GRP: return 16.75f;
-        case Format::Q_QUAD_MIX_24_5_GRP: return 24.75f;
+    switch(f) {
+        case Format::Q1: return 1.0f; case Format::Q2: return 2.0f; case Format::Q3: return 3.0f; case Format::Q4: return 4.0f; case Format::Q6: return 6.0f; case Format::Q8: return 8.0f; case Format::Q12: return 12.0f; case Format::Q16: return 16.0f; case Format::Q24: return 24.0f; case Format::Q32: return 32.0f;
+        case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: return 1.0f;
+        case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: return 2.0f;
+        case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: return 3.0f;
+        case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: return 4.0f;
+        case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: return 6.0f;
+        case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: return 8.0f;
+        case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: return 12.0f;
+        case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: return 16.0f;
+        case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: return 24.0f;
+        case Format::Q32_K_L: case Format::Q32_K_M: case Format::Q32_K_H: return 32.0f;
+        case Format::Q1_GRP: return 1.0f; case Format::Q2_GRP: return 2.0f; case Format::Q3_GRP: return 3.0f; case Format::Q4_GRP: return 4.0f; case Format::Q6_GRP: return 6.0f; case Format::Q8_GRP: return 8.0f; case Format::Q12_GRP: return 12.0f; case Format::Q16_GRP: return 16.0f; case Format::Q24_GRP: return 24.0f; case Format::Q32_GRP: return 32.0f;
+        case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: return 1.0f;
+        case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: return 2.0f;
+        case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: return 3.0f;
+        case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: return 4.0f;
+        case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: return 6.0f;
+        case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: return 8.0f;
+        case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: return 12.0f;
+        case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: return 16.0f;
+        case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: return 24.0f;
+        case Format::Q32_K_L_GRP: case Format::Q32_K_M_GRP: case Format::Q32_K_H_GRP: return 32.0f;
+        case Format::Q_GRP_1_5: return 1.5f; case Format::Q_GRP_2_5: return 2.5f; case Format::Q_GRP_3_5: return 3.5f; case Format::Q_GRP_4_5: return 4.5f; case Format::Q_GRP_6_5: return 6.5f; case Format::Q_GRP_8_5: return 8.5f; case Format::Q_GRP_12_5: return 12.5f; case Format::Q_GRP_16_5: return 16.5f; case Format::Q_GRP_24_5: return 24.5f;
+        case Format::MXQ_3_5_GRP: return 3.5f; case Format::MXQ_4_5_GRP: return 4.5f; case Format::MXQ_6_5_GRP: return 6.5f; case Format::MXQ_8_5_GRP: return 8.5f; case Format::MXQ_12_5_GRP: return 12.5f; case Format::MXQ_16_5_GRP: return 16.5f; case Format::MXQ_24_5_GRP: return 24.5f;
         default: return 0;
     }
 }
-
-// Helper: is this a base format (not GRP, not MIXED)?
-inline bool format_is_base(Format f) {
-    auto v = static_cast<uint8_t>(f);
-    return v <= 9;
-}
-
-// Helper: is this a GRP variant?
-inline bool format_is_grp(Format f) {
-    auto v = static_cast<uint8_t>(f);
-    return (v >= 10 && v <= 19) || v == 22 || v == 23 || (v >= 31 && v <= 37);
-}
-
-// Helper: is this a mixed format (TWI or QUAD)?
-inline bool format_is_mixed(Format f) {
-    auto v = static_cast<uint8_t>(f);
-    return v >= 20 && v <= 37;
-}
-
-// Helper: is this a TWI_MIX format?
-inline bool format_is_twi_mix(Format f) {
-    auto v = static_cast<uint8_t>(f);
-    return v >= 20 && v <= 23;
-}
-
-// Helper: is this a QUAD_MIX format?
-inline bool format_is_quad_mix(Format f) {
-    auto v = static_cast<uint8_t>(f);
-    return v >= 24 && v <= 37;
-}
-
-// Helper: number of codebook centroids for base formats
-inline int format_codebook_size(Format f) {
-    switch (f) {
-        case Format::Q1:   return 1;      // block mean only
-        case Format::Q2:   return 4;
-        case Format::Q3:   return 8;
-        case Format::Q4:   return 16;
-        case Format::Q6:   return 64;
-        case Format::Q8:   return 256;
-        case Format::Q12:  return 4096;
-        case Format::Q16:  return 0;      // per-block adaptive, no codebook
-        case Format::Q24:  return 0;      // direct FP24, no codebook
-        case Format::Q32:  return 0;      // identity (FP32), no codebook
+inline bool format_is_base(Format f) { auto v=(int)f; return v<=9; }
+inline bool format_is_k(Format f) { auto v=(int)f; return (v>=10&&v<=39)||(v>=50&&v<=79); }
+inline bool format_is_grp(Format f) { auto v=(int)f; return (v>=40&&v<=88)||(v>=165&&v<=183); }
+inline bool format_is_mx(Format f) { auto v=(int)f; return v>=89; }
+inline bool format_is_mx_plain(Format f){ return false; }
+inline bool format_is_mixed(Format f){ return format_is_mx(f); }
+inline bool format_is_twi_mix(Format f){ return false; }
+inline bool format_is_quad_mix(Format f){ return format_is_mx(f); }
+inline int format_codebook_size(Format f){
+    switch(f){
+        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_GRP: case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: return 1;
+        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_GRP: case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: return 4;
+        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_GRP: case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: return 8;
+        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_GRP: case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: return 16;
+        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_GRP: case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: return 64;
+        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_GRP: case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: return 256;
+        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_GRP: case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: return 4096;
         default: return 0;
     }
 }
-
-enum class DType : uint8_t {
-    I64,     // int64_t
-    I32,     // int32_t
-    U8,      // uint8_t
-    U4,      // 4-bit packed (2 per byte)
-    U16,     // uint16_t (for 12-bit packed)
-    F16,     // half precision
-    F32,     // single precision
-};
-
-inline size_t dtype_size(DType dt) {
-    switch (dt) {
-        case DType::I64: return 8;
-        case DType::I32: return 4;
-        case DType::U8:  return 1;
-        case DType::U4:  return 1;
-        case DType::U16: return 2;
-        case DType::F16: return 2;
-        case DType::F32: return 4;
-        default: return 0;
+enum class DType : uint8_t { I64,I32,U8,U4,U16,F16,F32 };
+inline size_t dtype_size(DType dt){ switch(dt){case DType::I64:return 8;case DType::I32:return 4;case DType::U8:return 1;case DType::U4:return 1;case DType::U16:return 2;case DType::F16:return 2;case DType::F32:return 4;default:return 0;}}
+inline DType format_to_dtype(Format f){
+    switch(f){
+        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_GRP: case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: return DType::U8;
+        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_GRP: case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: return DType::U8;
+        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_GRP: case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: return DType::U8;
+        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_GRP: case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: return DType::U4;
+        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_GRP: case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: return DType::U8;
+        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_GRP: case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: return DType::U8;
+        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_GRP: case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: return DType::U16;
+        case Format::Q16: case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: case Format::Q16_GRP: case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: return DType::F16;
+        case Format::Q24: case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: case Format::Q24_GRP: case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: return DType::U8;
+        case Format::Q32: case Format::Q32_K_L: case Format::Q32_K_M: case Format::Q32_K_H: case Format::Q32_GRP: case Format::Q32_K_L_GRP: case Format::Q32_K_M_GRP: case Format::Q32_K_H_GRP: return DType::F32;
+        default: return DType::U8;
     }
 }
-
-inline DType format_to_dtype(Format f) {
-    switch (f) {
-        case Format::Q1:       return DType::U8;
-        case Format::Q2:       return DType::U8;
-        case Format::Q3:       return DType::U8;   // 3-bit packed into bytes
-        case Format::Q4:       return DType::U4;
-        case Format::Q6:       return DType::U8;   // 6-bit packed into bytes
-        case Format::Q8:       return DType::U8;
-        case Format::Q12:      return DType::U16;  // 12-bit packed into uint16
-        case Format::Q16:      return DType::F16;
-        case Format::Q24:      return DType::U8;   // 24-bit packed as 3 bytes
-        case Format::Q32:      return DType::F32;
-        // GRP variants use same index type as their base
-        case Format::Q1_GRP:   return DType::U8;
-        case Format::Q2_GRP:   return DType::U8;
-        case Format::Q3_GRP:   return DType::U8;
-        case Format::Q4_GRP:   return DType::U4;
-        case Format::Q6_GRP:   return DType::U8;
-        case Format::Q8_GRP:   return DType::U8;
-        case Format::Q12_GRP:  return DType::U16;
-        case Format::Q16_GRP:  return DType::F16;
-        case Format::Q24_GRP:  return DType::U8;
-        // MIXED formats store a format table + block data, DType is U8 for the container
-        default:               return DType::U8;
-    }
-}
-
-struct Shape {
-    int64_t dims[8];
-    int rank;
-
-    Shape() : rank(0) { dims[0]=dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0; }
-    explicit Shape(int64_t d0) : rank(1) { dims[0]=d0; dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0; }
-    Shape(int64_t d0, int64_t d1) : rank(2) { dims[0]=d0; dims[1]=d1; dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0; }
-    Shape(int64_t d0, int64_t d1, int64_t d2) : rank(3) { dims[0]=d0; dims[1]=d1; dims[2]=d2; dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0; }
-    Shape(std::initializer_list<int64_t> l) : rank((int)l.size()) {
-        dims[0]=dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;
-        if (rank > 8) throw std::runtime_error("Shape: rank exceeds maximum of 8");
-        int i=0; for (auto x: l) dims[i++] = x;
-    }
-
-    int64_t& operator[](int i) { if (i < 0 || i >= rank) throw std::out_of_range("Shape index out of range"); return dims[i]; }
-    const int64_t& operator[](int i) const { if (i < 0 || i >= rank) throw std::out_of_range("Shape index out of range"); return dims[i]; }
-
-    int64_t numel() const {
-        int64_t n = 1;
-        for (int i=0; i<rank; i++) n *= dims[i];
-        return n;
-    }
-
-    bool operator==(const Shape& o) const {
-        if (rank != o.rank) return false;
-        for (int i=0; i<rank; i++) if (dims[i] != o.dims[i]) return false;
-        return true;
-    }
-
-    bool operator!=(const Shape& o) const { return !(*this == o); }
-
-    std::string to_string() const {
-        std::string s = "[";
-        for (int i=0; i<rank; i++) {
-            if (i) s += ",";
-            s += std::to_string(dims[i]);
-        }
-        s += "]";
-        return s;
-    }
-};
-
-struct Status {
-    bool ok;
-    std::string msg;
-    Status() : ok(true) {}
-    Status(const std::string& e) : ok(false), msg(e) {}
-    static Status error(const std::string& m) { return Status(m); }
-    static Status success() { return Status(); }
-    explicit operator bool() const { return ok; }
-};
-
-struct Config {
-    int num_threads = 1;
-    uint64_t seed = 42;
-    size_t pool_size = 64 * 1024 * 1024; // 64MB temp pool
-    bool verbose = false;
-};
-
-class Error : public std::runtime_error {
-public:
-    explicit Error(const std::string& msg) : std::runtime_error(msg) {}
-};
-
+struct Shape{int64_t dims[8];int rank;Shape():rank(0){dims[0]=dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;}explicit Shape(int64_t d0):rank(1){dims[0]=d0;dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;}Shape(int64_t d0,int64_t d1):rank(2){dims[0]=d0;dims[1]=d1;dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;}Shape(int64_t d0,int64_t d1,int64_t d2):rank(3){dims[0]=d0;dims[1]=d1;dims[2]=d2;dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;}Shape(std::initializer_list<int64_t> l):rank((int)l.size()){dims[0]=dims[1]=dims[2]=dims[3]=dims[4]=dims[5]=dims[6]=dims[7]=0;if(rank>8)throw std::runtime_error("Shape: rank exceeds maximum of 8");int i=0;for(auto x:l)dims[i++]=x;}int64_t& operator[](int i){if(i<0||i>=rank)throw std::out_of_range("Shape index out of range");return dims[i];}const int64_t& operator[](int i) const{if(i<0||i>=rank)throw std::out_of_range("Shape index out of range");return dims[i];}int64_t numel() const{int64_t n=1;for(int i=0;i<rank;i++)n*=dims[i];return n;}bool operator==(const Shape& o) const{if(rank!=o.rank)return false;for(int i=0;i<rank;i++)if(dims[i]!=o.dims[i])return false;return true;}bool operator!=(const Shape& o) const{return !(*this==o);}std::string to_string() const{std::string s="[";for(int i=0;i<rank;i++){if(i)s+=",";s+=std::to_string(dims[i]);}s+="]";return s;}};
+struct Status{bool ok;std::string msg;Status():ok(true){}Status(const std::string& e):ok(false),msg(e){}static Status error(const std::string& m){return Status(m);}static Status success(){return Status();}explicit operator bool() const{return ok;}};
+struct Config{int num_threads=1;uint64_t seed=42;size_t pool_size=64*1024*1024;bool verbose=false;};
+class Error:public std::runtime_error{public:explicit Error(const std::string& m):std::runtime_error(m){}};
 #ifdef QUANT_THROW_ABORT
-#define QUANT_CHECK(cond, msg) \
-    do { if (!(cond)) { fprintf(stderr, "QUANT_CHECK FAIL: %s\n", std::string(msg).c_str()); fflush(stderr); std::abort(); } } while(0)
+#define QUANT_CHECK(cond,msg) do{if(!(cond)){fprintf(stderr,"QUANT_CHECK FAIL: %s\n",std::string(msg).c_str());fflush(stderr);std::abort();}}while(0)
 #else
-#define QUANT_CHECK(cond, msg) \
-    do { if (!(cond)) throw quant::Error(msg); } while(0)
+#define QUANT_CHECK(cond,msg) do{if(!(cond))throw quant::Error(msg);}while(0)
 #endif
-
 } // namespace quant

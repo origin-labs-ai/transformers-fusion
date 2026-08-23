@@ -525,8 +525,8 @@ int main(int argc, char** argv) {
         r_rows.push_back(run_baseline(b.name, b.bpw, real_flat, b.fn));
     }
 
-    // Every Q-series format through the production codec (skip the hole at 19 / "unknown").
-    for (int v = 0; v <= 37; ++v) {
+    // Every Q-series format through the production codec (skip unknown holes).
+    for (int v = 0; v < quant::FORMAT_COUNT; ++v) {
         Format fmt = static_cast<Format>(v);
         if (std::string(quant::format_name(fmt)) == "unknown") continue;
         g_rows.push_back(run_format(fmt, gauss, ""));
@@ -627,7 +627,7 @@ int main(int argc, char** argv) {
             std::cout << "  [industrial] " << r.note << ": ";
             verdict(r.grp, find(rows, r.grp), r.ind, find(rows, r.ind), max_abs);
         }
-        verdict("Q_QUAD_MIX@24.5_GRP", find_fmt(rows, Format::Q_QUAD_MIX_24_5_GRP),
+        verdict("Q_QUAD_MIX@24.5_GRP", find_fmt(rows, Format::MXQ_24_5_GRP),
                 "IEEE FP16", find(rows, "[ref] IEEE FP16"), max_abs);
         (void)max_abs;
     }

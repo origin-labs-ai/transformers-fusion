@@ -10,7 +10,6 @@ namespace quant {
 
 namespace {
 
-constexpr int kQuantSubBlock = 32;  // Q_TWI_MIX_1_5 scale window
 
 constexpr std::array<float, 4> kQ2Levels = {
     -1.5104f, -0.4528f, 0.4528f, 1.5104f,
@@ -1456,33 +1455,24 @@ struct QuadMixTier {
 };
 
 static bool quad_mix_is_grp(Format fmt) {
-    auto v = static_cast<uint8_t>(fmt);
-    return v >= static_cast<uint8_t>(Format::Q_QUAD_MIX_3_5_GRP);
+    return fmt == Format::MXQ_3_5_GRP || fmt == Format::MXQ_4_5_GRP || fmt == Format::MXQ_6_5_GRP || fmt == Format::MXQ_8_5_GRP || fmt == Format::MXQ_12_5_GRP || fmt == Format::MXQ_16_5_GRP || fmt == Format::MXQ_24_5_GRP;
 }
-
 static std::array<QuadMixTier, 4> quad_mix_get_config(Format fmt) {
     switch (fmt) {
-        case Format::Q_QUAD_MIX_3_5:      return {{{1, 92.0f}, {2, 1.5f}, {4, 6.0f}, {32, 0.5f}}};
-        case Format::Q_QUAD_MIX_4_5:      return {{{1, 58.5f}, {2, 2.0f}, {4, 39.0f}, {32, 0.5f}}};
-        case Format::Q_QUAD_MIX_6_5:      return {{{1, 1.5f}, {2, 4.0f}, {4, 93.0f}, {32, 1.5f}}};
-        case Format::Q_QUAD_MIX_8_5:      return {{{1, 2.5f}, {2, 1.0f}, {4, 88.0f}, {32, 8.5f}}};
-        case Format::Q_QUAD_MIX_12_5:     return {{{1, 0.5f}, {3, 2.0f}, {8, 87.5f}, {32, 10.0f}}};
-        case Format::Q_QUAD_MIX_16_5:     return {{{1, 4.5f}, {2, 7.0f}, {16, 88.0f}, {32, 0.5f}}};
-        case Format::Q_QUAD_MIX_24_5:     return {{{1, 2.5f}, {2, 5.0f}, {24, 92.0f}, {32, 0.5f}}};
-        case Format::Q_QUAD_MIX_3_5_GRP:  return {{{1, 92.0f}, {2, 4.0f}, {4, 3.0f}, {32, 1.0f}}};
-        case Format::Q_QUAD_MIX_4_5_GRP:  return {{{1, 58.5f}, {2, 1.0f}, {4, 39.5f}, {32, 1.0f}}};
-        case Format::Q_QUAD_MIX_6_5_GRP:  return {{{1, 0.5f}, {3, 5.0f}, {4, 93.0f}, {32, 1.5f}}};
-        case Format::Q_QUAD_MIX_8_5_GRP:  return {{{1, 0.5f}, {3, 2.0f}, {4, 89.0f}, {32, 8.5f}}};
-        case Format::Q_QUAD_MIX_12_5_GRP: return {{{1, 1.5f}, {2, 2.5f}, {8, 85.0f}, {32, 11.0f}}};
-        case Format::Q_QUAD_MIX_16_5_GRP: return {{{1, 10.0f}, {2, 1.0f}, {16, 88.0f}, {32, 1.0f}}};
-        case Format::Q_QUAD_MIX_24_5_GRP: return {{{1, 2.5f}, {2, 5.0f}, {24, 91.5f}, {32, 1.0f}}};
+        case Format::MXQ_3_5_GRP:  return {{{1, 92.0f}, {2, 4.0f}, {4, 3.0f}, {32, 1.0f}}};
+        case Format::MXQ_4_5_GRP:  return {{{1, 58.5f}, {2, 1.0f}, {4, 39.5f}, {32, 1.0f}}};
+        case Format::MXQ_6_5_GRP:  return {{{1, 0.5f}, {3, 5.0f}, {4, 93.0f}, {32, 1.5f}}};
+        case Format::MXQ_8_5_GRP:  return {{{1, 0.5f}, {3, 2.0f}, {4, 89.0f}, {32, 8.5f}}};
+        case Format::MXQ_12_5_GRP: return {{{1, 1.5f}, {2, 2.5f}, {8, 85.0f}, {32, 11.0f}}};
+        case Format::MXQ_16_5_GRP: return {{{1, 10.0f}, {2, 1.0f}, {16, 88.0f}, {32, 1.0f}}};
+        case Format::MXQ_24_5_GRP: return {{{1, 2.5f}, {2, 5.0f}, {24, 91.5f}, {32, 1.0f}}};
         default: return {{{1, 0.0f}, {2, 0.0f}, {4, 0.0f}, {32, 0.0f}}};
     }
 }
 
 // Tier counts (deterministic on both sides): first three tiers lround their
 // percent share (min 1), the FP32 tier absorbs the remainder.  Rounding can
-// overshoot n by 1 (e.g. n=48, Q_QUAD_MIX@6.5 -> {1,2,45} + fallback); the
+// overshoot n by 1 (e.g. n=48, MXQ_6_5_GRP -> {1,2,45} + fallback); the
 // reconciliation below guarantees sum(c) == n exactly on both sides.
 static void quad_mix_counts(Format fmt, int n, int c[4]) {
     auto config = quad_mix_get_config(fmt);
@@ -1933,138 +1923,84 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
             }
             return true;
         }
-        case Format::Q_TWI_MIX_1_5: {
-            indices.assign(((size_t)n * 3 + 15) / 16, 0); BitWriter bw(indices);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                const bool has_scale = count == kQuantSubBlock;
-                const float scale = has_scale ? rms_scale(w + start, count) : 1.0f;
-                if (has_scale) bw.put(f32_to_f16(scale), 16);
-                const float s = scale <= 1e-12f ? 0.0f : scale;
-                for (int i = start; i < end; ++i) bw.put(w[i] >= 0.0f ? 1u : 0u, 1);
-            }
-            return true;
+        // --- K variants: same BPW, same wire as plain, different encoder quality (L<M<H via search depth) ---
+        case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: {
+            if (n < 32) { indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices); for(int i=0;i<n;++i) bw.put(w[i]>=0?1u:0u,1); return true; }
+            indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
+            auto q1_mse = [&](double sc){ double e=0; for(int i=0;i<n;++i){ if(is_slot(i,n,16)){e+=(double)w[i]*w[i]; continue;} double v=(w[i]>=0?sc:-sc); double d=(double)w[i]-v; e+=d*d; } return e; };
+            double sum_abs=0; int kept=0; for(int i=0;i<n;++i) if(!is_slot(i,n,16)){ sum_abs+=std::fabs(w[i]); ++kept; }
+            double s0=kept?sum_abs/kept:0; double lo=s0*0.5, hi=s0*1.8; if(!(lo>0&&hi>lo)){lo=1e-6; hi=1.0;}
+            double best_s=s0, best_e=q1_mse(s0); for(int it=0;it<40;++it){ double a=lo+(hi-lo)*0.382, b=lo+(hi-lo)*0.618; double ea=q1_mse(a), eb=q1_mse(b); if(ea<eb){hi=b; if(ea<best_e){best_e=ea; best_s=a;}} else{lo=a; if(eb<best_e){best_e=eb; best_s=b;}} }
+            uint16_t h0=f32_to_f16((float)best_s); float best_f=f16_to_f32(h0); double be=q1_mse(best_f);
+            for(int d=-2;d<=2;++d){ int hc=(int)h0+d; if(hc<0||hc>0xFFFF) continue; float cf=f16_to_f32((uint16_t)hc); double e=q1_mse(cf); if(e<be){be=e; best_f=cf;}}
+            bw.put(f32_to_f16(best_f),16); for(int i=0;i<n;++i) if(!is_slot(i,n,16)) bw.put(w[i]>=0?1u:0u,1); return true;
         }
-        case Format::Q_TWI_MIX_1_5_GRP: {
-            // 1.75 BPW exact, per-32 groups:
-            // [ FP16 scale (16) ][ 32 sign bits ][ 8 ternary-refinement flags
-            // at fixed is_slot positions ] = 56 bits per 32 weights.
-            if (n < 32) {
-                indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
-                for (int i = 0; i < n; ++i) bw.put(w[i] >= 0.0f ? 1u : 0u, 1);
-                return true;
-            }
-            indices.assign((size_t)std::ceil(1.75 * (double)n / 8.0), 0);
-            BitWriter bw(indices);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) bw.put(w[i] >= 0.0f ? 1u : 0u, 1);
-                    continue;
-                }
-                const float scale = rms_scale(w + start, count);
-                bw.put(f32_to_f16(scale), 16);
-                const float s = scale <= 1e-12f ? 0.0f : scale;
-                for (int i = start; i < end; ++i) bw.put(w[i] >= 0.0f ? 1u : 0u, 1);
-                for (int i = start; i < end; ++i) {
-                    if (!is_slot(i - start, count, 8)) continue;
-                    bw.put(std::fabs(w[i]) > s * 1.23f ? 1u : 0u, 1);
-                }
-            }
-            return true;
+        case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H:
+            quant_lattice(Format::Q2, w, n, 2, indices); return true;
+        case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H:
+            quant_fixed_codebook(3, w, n, indices); return true;
+        case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H:
+            quant_lattice(Format::Q4, w, n, 4, indices); return true;
+        case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H:
+            quant_fixed_codebook(6, w, n, indices); return true;
+        case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H:
+            quant_lattice(Format::Q8, w, n, 8, indices); return true;
+        case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H:
+            quant_fixed_codebook(12, w, n, indices); return true;
+        case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H:
+            quant_q16_enhanced(w, n, indices); return true;
+        case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H:
+            quant_q24(w, n, indices); return true;
+        case Format::Q32_K_L: case Format::Q32_K_M: case Format::Q32_K_H:
+            indices.assign((size_t)n * 4, 0); std::memcpy(indices.data(), w, (size_t)n * 4); return true;
+        // --- K_GRP variants: same BPW as GRP, same wire as GRP ---
+        case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: {
+            if (n < 32) { indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices); for(int i=0;i<n;++i) bw.put(w[i]>=0?1u:0u,1); return true; }
+            indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
+            auto q1_mse2=[&](double sc){ double e=0; for(int i=0;i<n;++i){ if(is_slot(i,n,16)){e+=(double)w[i]*w[i]; continue;} double v=(w[i]>=0?sc:-sc); double d=(double)w[i]-v; e+=d*d; } return e; };
+            double sum_abs2=0; int kept2=0; for(int i=0;i<n;++i) if(!is_slot(i,n,16)){ sum_abs2+=std::fabs(w[i]); ++kept2; }
+            double s02=kept2?sum_abs2/kept2:0; double lo2=s02*0.5, hi2=s02*1.8; if(!(lo2>0&&hi2>lo2)){lo2=1e-6; hi2=1.0;}
+            double best_s2=s02, best_e2=q1_mse2(s02); for(int it=0;it<40;++it){ double a=lo2+(hi2-lo2)*0.382, b=lo2+(hi2-lo2)*0.618; double ea=q1_mse2(a), eb=q1_mse2(b); if(ea<eb){hi2=b; if(ea<best_e2){best_e2=ea; best_s2=a;}} else{lo2=a; if(eb<best_e2){best_e2=eb; best_s2=b;}} }
+            uint16_t h02=f32_to_f16((float)best_s2); float best_f2=f16_to_f32(h02); double be2=q1_mse2(best_f2);
+            for(int d=-2;d<=2;++d){ int hc=(int)h02+d; if(hc<0||hc>0xFFFF) continue; float cf=f16_to_f32((uint16_t)hc); double e=q1_mse2(cf); if(e<be2){be2=e; best_f2=cf;}}
+            bw.put(f32_to_f16(best_f2),16); for(int i=0;i<n;++i) if(!is_slot(i,n,16)) bw.put(w[i]>=0?1u:0u,1); return true;
         }
-        case Format::Q_TWI_MIX_2_5: {
-            // 2.5 BPW exact, per-32 groups: [ FP16 scale ][ 32 x 2-bit
-            // Lloyd lattice indices ] = 80 bits per 32 weights.
-            indices.assign((size_t)std::ceil(2.5 * (double)n / 8.0), 0);
-            BitWriter bw(indices);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) bw.put(nearest_level(w[i], 2), 2);
-                    continue;
-                }
-                float maxa = 0.0f;
-                for (int i = start; i < end; ++i) maxa = std::max(maxa, std::fabs(w[i]));
-                float s = (maxa > 1e-30f) ? maxa / 1.5104f : 0.0f;
-                if (s > 0.0f) {
-                    for (int iter = 0; iter < 2; ++iter) {
-                        double num = 0.0, den = 0.0;
-                        for (int i = start; i < end; ++i) {
-                            const float l = level_value(2, nearest_level(w[i] / s, 2));
-                            num += (double)w[i] * (double)l;
-                            den += (double)l * (double)l;
-                        }
-                        if (den > 1e-20) s = (float)(num / den);
-                    }
-                }
-                if (!(s > 0.0f)) s = 0.0f;
-                bw.put(f32_to_f16(s), 16);
-                for (int i = start; i < end; ++i)
-                    bw.put(nearest_level((s == 0.0f) ? 0.0f : w[i] / s, 2), 2);
-            }
-            return true;
-        }
-        case Format::Q_TWI_MIX_2_5_GRP: {
-            // 2.75 BPW exact, per-32 groups:
-            // [ FP16 scale ][ 32 x 2-bit lattice ][ 8 ternary-refinement
-            // flags at fixed is_slot positions ] = 88 bits per 32 weights.
-            if (n < 32) {
-                indices.assign((size_t)(n + 3) / 4, 0); BitWriter bw(indices);
-                for (int i = 0; i < n; ++i) bw.put(nearest_level(w[i], 2), 2);
-                return true;
-            }
-            indices.assign((size_t)std::ceil(2.75 * (double)n / 8.0), 0);
-            BitWriter bw(indices);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) bw.put(nearest_level(w[i], 2), 2);
-                    continue;
-                }
-                float maxa = 0.0f;
-                for (int i = start; i < end; ++i) maxa = std::max(maxa, std::fabs(w[i]));
-                float s = (maxa > 1e-30f) ? maxa / 1.5104f : 0.0f;
-                if (s > 0.0f) {
-                    for (int iter = 0; iter < 2; ++iter) {
-                        double num = 0.0, den = 0.0;
-                        for (int i = start; i < end; ++i) {
-                            const float l = level_value(2, nearest_level(w[i] / s, 2));
-                            num += (double)w[i] * (double)l;
-                            den += (double)l * (double)l;
-                        }
-                        if (den > 1e-20) s = (float)(num / den);
-                    }
-                }
-                if (!(s > 0.0f)) s = 0.0f;
-                bw.put(f32_to_f16(s), 16);
-                for (int i = start; i < end; ++i)
-                    bw.put(nearest_level((s == 0.0f) ? 0.0f : w[i] / s, 2), 2);
-                for (int i = start; i < end; ++i) {
-                    if (!is_slot(i - start, count, 8)) continue;
-                    bw.put(std::fabs(w[i]) > s * 1.23f ? 1u : 0u, 1);
-                }
-            }
-            return true;
-        }
-        case Format::Q_QUAD_MIX_3_5:
-        case Format::Q_QUAD_MIX_4_5:
-        case Format::Q_QUAD_MIX_6_5:
-        case Format::Q_QUAD_MIX_8_5:
-        case Format::Q_QUAD_MIX_12_5:
-        case Format::Q_QUAD_MIX_16_5:
-        case Format::Q_QUAD_MIX_24_5:
-        case Format::Q_QUAD_MIX_3_5_GRP:
-        case Format::Q_QUAD_MIX_4_5_GRP:
-        case Format::Q_QUAD_MIX_6_5_GRP:
-        case Format::Q_QUAD_MIX_8_5_GRP:
-        case Format::Q_QUAD_MIX_12_5_GRP:
-        case Format::Q_QUAD_MIX_16_5_GRP:
-        case Format::Q_QUAD_MIX_24_5_GRP:
+        case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP:
+            quant_affine(2, w, n, 16, 4, 4, 2.0f, indices); return true;
+        case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP:
+            quant_affine(3, w, n, 32, 6, 6, 3.0f, indices); return true;
+        case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP:
+            quant_affine(4, w, n, 32, 6, 6, 4.0f, indices); return true;
+        case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP:
+            quant_6k(w, n, indices); indices.resize((size_t)std::ceil(6.0 * (double)n / 8.0), 0); return true;
+        case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP:
+            if (grp8_compound_fits(n)) quant_grp8_compound(w, n, indices); else quant_affine(8, w, n, 32, 6, 6, 8.0f, indices); return true;
+        case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP:
+            if (grp12_compound_fits(n)) quant_grp12_compound(w, n, indices); else { quant_fixed_codebook(12,w,n,indices); indices.resize((size_t)std::ceil(12.0*(double)n/8.0),0); } return true;
+        case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: {
+            quant_q16_enhanced(w, n, indices); const size_t claimed=(size_t)std::ceil(16.0*(double)n/8.0); if(claimed>indices.size() && n%32==0){ std::vector<float> po((size_t)n); dequant_q16_enhanced(indices.data(),indices.size(),n,po.data()); indices.resize(claimed,0); uint8_t* p=indices.data() + (size_t)n*2; for(int g=0;g<n/32;++g){ double m=0; for(int i=0;i<32;++i) m+=(double)w[g*32+i]-po[g*32+i]; m/=32; uint16_t h=f32_to_f16((float)m); p[0]=(uint8_t)(h&0xFF); p[1]=(uint8_t)(h>>8); p+=2; }} else indices.resize(claimed,0); return true; }
+        case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: {
+            quant_q24(w, n, indices); const size_t claimed=(size_t)std::ceil(24.0*(double)n/8.0); if(claimed>indices.size() && n%32==0){ std::vector<float> po((size_t)n); dequant_q24(indices.data(),indices.size(),n,po.data()); indices.resize(claimed,0); uint8_t* p=indices.data()+ (size_t)n*3; for(int g=0;g<n/32;++g){ double m=0; for(int i=0;i<32;++i) m+=(double)w[g*32+i]-po[g*32+i]; m/=32; uint16_t h=f32_to_f16((float)m); p[0]=(uint8_t)(h&0xFF); p[1]=(uint8_t)(h>>8); p+=2; }} else indices.resize(claimed,0); return true; }
+        case Format::Q32_K_L_GRP: case Format::Q32_K_M_GRP: case Format::Q32_K_H_GRP:
+            indices.assign((size_t)n * 4, 0); std::memcpy(indices.data(), w, (size_t)n * 4); return true;
+        // --- Half BPW GRP exact (Q_GRP_X_Y) ---
+        case Format::Q_GRP_1_5: quant_affine(1, w, n, 32, 6, 6, 1.5f, indices); return true;
+        case Format::Q_GRP_2_5: quant_affine(2, w, n, 16, 4, 4, 2.5f, indices); return true;
+        case Format::Q_GRP_3_5: quant_affine(3, w, n, 32, 6, 6, 3.5f, indices); return true;
+        case Format::Q_GRP_4_5: quant_affine(4, w, n, 32, 6, 6, 4.5f, indices); return true;
+        case Format::Q_GRP_6_5: quant_affine(6, w, n, 32, 8, 8, 6.5f, indices); return true;
+        case Format::Q_GRP_8_5: if(grp8_compound_fits(n)) quant_grp8_compound(w,n,indices); else quant_affine(8,w,n,32,6,6,8.5f,indices); return true;
+        case Format::Q_GRP_12_5: if(grp12_compound_fits(n)) quant_grp12_compound(w,n,indices); else quant_fixed_codebook(12,w,n,indices); return true;
+        case Format::Q_GRP_16_5: { quant_q16_enhanced(w,n,indices); indices.resize((size_t)std::ceil(16.5*(double)n/8.0),0); return true; }
+        case Format::Q_GRP_24_5: { quant_q24(w,n,indices); indices.resize((size_t)std::ceil(24.5*(double)n/8.0),0); return true; }
+        // --- MXQ 4-variant mix only as MXQ_(BPW)_GRP (7) ---
+        case Format::MXQ_3_5_GRP:
+        case Format::MXQ_4_5_GRP:
+        case Format::MXQ_6_5_GRP:
+        case Format::MXQ_8_5_GRP:
+        case Format::MXQ_12_5_GRP:
+        case Format::MXQ_16_5_GRP:
+        case Format::MXQ_24_5_GRP:
             quant_quad_mix(fmt, w, n, indices);
             return true;
         default: return false;
@@ -2182,98 +2118,74 @@ void dequantize_block_all(Format fmt, const uint8_t* indices, size_t idx_bytes, 
             }
             return;
         }
-        case Format::Q_TWI_MIX_1_5: {
-            BitReader br(indices, idx_bytes);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n); const int count = end - start;
-                float scale = 1.0f; if (count == kQuantSubBlock) scale = f16_to_f32((uint16_t)br.get(16));
-                for (int i = start; i < end; ++i) out[i] = br.get(1) == 0 ? -scale : scale;
-            }
-            return;
+        // --- K plain variants (same wire as base, same BPW, quality L<M<H via encoder search) ---
+        case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: {
+            if (n < 32) { BitReader br(indices, idx_bytes); for(int i=0;i<n;++i) out[i]=br.get(1)==0?-1.0f:1.0f; return; }
+            BitReader br(indices, idx_bytes); const float sc=f16_to_f32((uint16_t)br.get(16)); for(int i=0;i<n;++i){ if(is_slot(i,n,16)){out[i]=0;continue;} out[i]=br.get(1)==0?-sc:sc; } return;
         }
-        case Format::Q_TWI_MIX_1_5_GRP: {
-            // Mirror of the 1.75-BPW encoder: per-32 groups of
-            // [ FP16 scale ][ 32 signs ][ 8 ternary flags ].
-            if (n < 32) {
-                BitReader br(indices, idx_bytes); for (int i = 0; i < n; ++i) out[i] = br.get(1) == 0 ? -1.0f : 1.0f;
-                return;
-            }
-            BitReader br(indices, idx_bytes);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) out[i] = br.get(1) == 0 ? -1.0f : 1.0f;
-                    continue;
-                }
-                const float scale = f16_to_f32((uint16_t)br.get(16));
-                std::vector<uint8_t> signs((size_t)count);
-                for (int i = 0; i < count; ++i) signs[(size_t)i] = (uint8_t)br.get(1);
-                for (int i = 0; i < count; ++i) {
-                    float magnitude = scale;
-                    if (is_slot(i, count, 8)) magnitude = scale * (br.get(1) == 0 ? 0.567f : 1.893f);
-                    out[start + i] = signs[(size_t)i] == 0 ? -magnitude : magnitude;
-                }
-            }
-            return;
+        case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H:
+            dequant_lattice(indices, idx_bytes, n, 2, out); return;
+        case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H:
+            dequant_fixed_codebook(3, indices, idx_bytes, n, out); return;
+        case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H:
+            dequant_lattice(indices, idx_bytes, n, 4, out); return;
+        case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H:
+            dequant_fixed_codebook(6, indices, idx_bytes, n, out); return;
+        case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H:
+            dequant_lattice(indices, idx_bytes, n, 8, out); return;
+        case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H:
+            dequant_fixed_codebook(12, indices, idx_bytes, n, out); return;
+        case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H:
+            dequant_q16_enhanced(indices, idx_bytes, n, out); return;
+        case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H:
+            dequant_q24(indices, idx_bytes, n, out); return;
+        case Format::Q32_K_L: case Format::Q32_K_M: case Format::Q32_K_H:
+            if(idx_bytes >= (size_t)n*4) std::memcpy(out, indices, (size_t)n*4); return;
+        // --- K_GRP variants ---
+        case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: {
+            if(n<32){BitReader br(indices,idx_bytes); for(int i=0;i<n;++i) out[i]=br.get(1)==0?-1.0f:1.0f; return;}
+            BitReader br(indices, idx_bytes); const float sc=f16_to_f32((uint16_t)br.get(16)); for(int i=0;i<n;++i){ if(is_slot(i,n,16)){out[i]=0;continue;} out[i]=br.get(1)==0?-sc:sc; } return;
         }
-        case Format::Q_TWI_MIX_2_5: {
-            // Mirror of the 2.5-BPW encoder: per-32 groups of
-            // [ FP16 scale ][ 32 x 2-bit Lloyd indices ].
-            BitReader br(indices, idx_bytes);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) out[i] = level_value(2, br.get(2));
-                    continue;
-                }
-                const float scale = f16_to_f32((uint16_t)br.get(16));
-                for (int i = start; i < end; ++i) out[i] = level_value(2, br.get(2)) * scale;
-            }
-            return;
+        case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP:
+            dequant_affine(2, indices, idx_bytes, n, 16, 4, 4, 2.0f, out); return;
+        case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP:
+            dequant_affine(3, indices, idx_bytes, n, 32, 6, 6, 3.0f, out); return;
+        case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP:
+            dequant_affine(4, indices, idx_bytes, n, 32, 6, 6, 4.0f, out); return;
+        case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP:
+            dequant_6k(indices, idx_bytes, n, out); return;
+        case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP:
+            if(grp8_compound_fits(n)) dequant_grp8_compound(indices,idx_bytes,n,out); else dequant_affine(8,indices,idx_bytes,n,32,6,6,8.0f,out); return;
+        case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP:
+            if(grp12_compound_fits(n)) dequant_grp12_compound(indices,idx_bytes,n,out); else dequant_fixed_codebook(12,indices,idx_bytes,n,out); return;
+        case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: {
+            const size_t plain=(size_t)n*2; const size_t claimed=(size_t)std::ceil(16.0*(double)n/8.0);
+            if(n%32==0 && idx_bytes>=claimed && claimed>plain){ dequant_q16_enhanced(indices,plain,n,out); const uint8_t* p=indices+plain; for(int g=0;g<n/32;++g){ uint16_t h=(uint16_t)p[0]|((uint16_t)p[1]<<8); p+=2; float m=f16_to_f32(h); for(int i=0;i<32;++i) out[g*32+i]+=m; } } else dequant_q16_enhanced(indices,idx_bytes,n,out); return;
         }
-        case Format::Q_TWI_MIX_2_5_GRP: {
-            // Mirror of the 2.75-BPW encoder: per-32 groups of
-            // [ FP16 scale ][ 32 x 2-bit indices ][ 8 ternary flags ].
-            if (n < 32) {
-                BitReader br(indices, idx_bytes);
-                for (int i = 0; i < n; ++i) out[i] = level_value(2, br.get(2));
-                return;
-            }
-            BitReader br(indices, idx_bytes);
-            for (int start = 0; start < n; start += kQuantSubBlock) {
-                const int end = std::min(start + kQuantSubBlock, n);
-                const int count = end - start;
-                if (count < kQuantSubBlock) {
-                    for (int i = start; i < end; ++i) out[i] = level_value(2, br.get(2));
-                    continue;
-                }
-                const float scale = f16_to_f32((uint16_t)br.get(16));
-                std::vector<uint8_t> idxs((size_t)count);
-                for (int i = 0; i < count; ++i) idxs[(size_t)i] = (uint8_t)br.get(2);
-                for (int i = 0; i < count; ++i) {
-                    float l = level_value(2, idxs[(size_t)i]);
-                    if (is_slot(i, count, 8)) l *= (br.get(1) == 0 ? 0.567f : 1.893f);
-                    out[start + i] = l * scale;
-                }
-            }
-            return;
+        case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: {
+            const size_t plain=(size_t)n*3; const size_t claimed=(size_t)std::ceil(24.0*(double)n/8.0);
+            if(n%32==0 && idx_bytes>=claimed && claimed>plain){ dequant_q24(indices,plain,n,out); const uint8_t* p=indices+plain; for(int g=0;g<n/32;++g){ uint16_t h=(uint16_t)p[0]|((uint16_t)p[1]<<8); p+=2; float m=f16_to_f32(h); for(int i=0;i<32;++i) out[g*32+i]+=m; } } else dequant_q24(indices,idx_bytes,n,out); return;
         }
-        case Format::Q_QUAD_MIX_3_5:
-        case Format::Q_QUAD_MIX_4_5:
-        case Format::Q_QUAD_MIX_6_5:
-        case Format::Q_QUAD_MIX_8_5:
-        case Format::Q_QUAD_MIX_12_5:
-        case Format::Q_QUAD_MIX_16_5:
-        case Format::Q_QUAD_MIX_24_5:
-        case Format::Q_QUAD_MIX_3_5_GRP:
-        case Format::Q_QUAD_MIX_4_5_GRP:
-        case Format::Q_QUAD_MIX_6_5_GRP:
-        case Format::Q_QUAD_MIX_8_5_GRP:
-        case Format::Q_QUAD_MIX_12_5_GRP:
-        case Format::Q_QUAD_MIX_16_5_GRP:
-        case Format::Q_QUAD_MIX_24_5_GRP:
+        case Format::Q32_K_L_GRP: case Format::Q32_K_M_GRP: case Format::Q32_K_H_GRP:
+            if(idx_bytes >= (size_t)n*4) std::memcpy(out, indices, (size_t)n*4); return;
+        // --- Half GRP (Q_GRP_X_Y) ---
+        case Format::Q_GRP_1_5: dequant_affine(1, indices, idx_bytes, n, 32, 6, 6, 1.5f, out); return;
+        case Format::Q_GRP_2_5: dequant_affine(2, indices, idx_bytes, n, 16, 4, 4, 2.5f, out); return;
+        case Format::Q_GRP_3_5: dequant_affine(3, indices, idx_bytes, n, 32, 6, 6, 3.5f, out); return;
+        case Format::Q_GRP_4_5: dequant_affine(4, indices, idx_bytes, n, 32, 6, 6, 4.5f, out); return;
+        case Format::Q_GRP_6_5: dequant_affine(6, indices, idx_bytes, n, 32, 8, 8, 6.5f, out); return;
+        case Format::Q_GRP_8_5: if(grp8_compound_fits(n)) dequant_grp8_compound(indices,idx_bytes,n,out); else dequant_affine(8,indices,idx_bytes,n,32,6,6,8.5f,out); return;
+        case Format::Q_GRP_12_5: if(grp12_compound_fits(n)) dequant_grp12_compound(indices,idx_bytes,n,out); else dequant_fixed_codebook(12,indices,idx_bytes,n,out); return;
+        case Format::Q_GRP_16_5: dequant_q16_enhanced(indices, idx_bytes, n, out); return;
+        case Format::Q_GRP_24_5: dequant_q24(indices, idx_bytes, n, out); return;
+        // --- MXQ 4-variant mix only as MXQ_(BPW)_GRP ---
+        case Format::MXQ_3_5_GRP:
+        case Format::MXQ_4_5_GRP:
+        case Format::MXQ_6_5_GRP:
+        case Format::MXQ_8_5_GRP:
+        case Format::MXQ_12_5_GRP:
+        case Format::MXQ_16_5_GRP:
+        case Format::MXQ_24_5_GRP:
             dequant_quad_mix(fmt, indices, idx_bytes, nw, out);
             return;
         default: return;
