@@ -1816,12 +1816,45 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
         }
         case Format::Q24_GRP: {
             quant_q24(w, n, indices);
-            indices.resize((size_t)std::ceil(24.5 * (double)n / 8.0), 0);
+            const size_t claimed = (size_t)std::ceil(24.5 * (double)n / 8.0);
+            const size_t plain = indices.size();
+            if (claimed > plain && n % 32 == 0) {
+                // Use the 16B budget (for n=256) to store 8×FP16 per-32 mean residuals (tie->win, ~0.05 dB)
+                std::vector<float> plain_out((size_t)n);
+                dequant_q24(indices.data(), indices.size(), n, plain_out.data());
+                indices.resize(claimed, 0);
+                uint8_t* p = indices.data() + plain;
+                for (int g = 0; g < n / 32; ++g) {
+                    double mean = 0;
+                    for (int i = 0; i < 32; ++i) mean += (double)w[g*32+i] - plain_out[g*32+i];
+                    mean /= 32.0;
+                    const uint16_t h = f32_to_f16((float)mean);
+                    p[0] = (uint8_t)(h & 0xFF); p[1] = (uint8_t)(h >> 8); p += 2;
+                }
+            } else {
+                indices.resize(claimed, 0);
+            }
             return true;
         }
         case Format::Q16_GRP: {
             quant_q16_enhanced(w, n, indices);
-            indices.resize((size_t)std::ceil(16.5 * (double)n / 8.0), 0);
+            const size_t claimed = (size_t)std::ceil(16.5 * (double)n / 8.0);
+            const size_t plain = indices.size();
+            if (claimed > plain && n % 32 == 0) {
+                std::vector<float> plain_out((size_t)n);
+                dequant_q16_enhanced(indices.data(), indices.size(), n, plain_out.data());
+                indices.resize(claimed, 0);
+                uint8_t* p = indices.data() + plain;
+                for (int g = 0; g < n / 32; ++g) {
+                    double mean = 0;
+                    for (int i = 0; i < 32; ++i) mean += (double)w[g*32+i] - plain_out[g*32+i];
+                    mean /= 32.0;
+                    const uint16_t h = f32_to_f16((float)mean);
+                    p[0] = (uint8_t)(h & 0xFF); p[1] = (uint8_t)(h >> 8); p += 2;
+                }
+            } else {
+                indices.resize(claimed, 0);
+            }
             return true;
         }
         case Format::Q12_GRP:
@@ -1860,7 +1893,40 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
                 return true;
             }
             indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
-            const float scale = rms_scale(w, n); bw.put(f32_to_f16(scale), 16);
+            // True-MSE scale search for 1-bit (16 slots zeroed): scale = mean|w| over kept weights is optimal for fixed assignment, but a small golden search around it captures the slot-zero effect and FP16 snap.
+            auto q1_mse = [&](double sc) {
+                double e = 0;
+                for (int i = 0; i < n; ++i) {
+                    if (is_slot(i, n, 16)) { e += (double)w[i] * w[i]; continue; }
+                    const double v = (w[i] >= 0 ? sc : -sc);
+                    const double d = (double)w[i] - v;
+                    e += d * d;
+                }
+                return e;
+            };
+            double sum_abs = 0; int kept = 0;
+            for (int i = 0; i < n; ++i) if (!is_slot(i, n, 16)) { sum_abs += std::fabs(w[i]); ++kept; }
+            double s0 = kept ? sum_abs / kept : 0;
+            double lo = s0 * 0.5, hi = s0 * 1.8;
+            if (!(lo > 0 && hi > lo)) { lo = 1e-6; hi = 1.0; }
+            double best_s = s0, best_e = q1_mse(s0);
+            for (int it = 0; it < 40; ++it) {
+                const double a = lo + (hi - lo) * 0.382, b = lo + (hi - lo) * 0.618;
+                const double ea = q1_mse(a), eb = q1_mse(b);
+                if (ea < eb) { hi = b; if (ea < best_e) { best_e = ea; best_s = a; } } else { lo = a; if (eb < best_e) { best_e = eb; best_s = b; } }
+            }
+            // Snap to FP16-nearest best
+            const uint16_t h0 = f32_to_f16((float)best_s);
+            float best_f = f16_to_f32(h0);
+            double be = q1_mse(best_f);
+            for (int d = -2; d <= 2; ++d) {
+                const int hc = (int)h0 + d;
+                if (hc < 0 || hc > 0xFFFF) continue;
+                const float cf = f16_to_f32((uint16_t)hc);
+                const double e = q1_mse(cf);
+                if (e < be) { be = e; best_f = cf; }
+            }
+            bw.put(f32_to_f16(best_f), 16);
             for (int i = 0; i < n; ++i) {
                 if (is_slot(i, n, 16)) continue;
                 bw.put(w[i] >= 0.0f ? 1u : 0u, 1);
@@ -2016,15 +2082,41 @@ void dequantize_block_all(Format fmt, const uint8_t* indices, size_t idx_bytes, 
         case Format::Q24:
             dequant_q24(indices, idx_bytes, n, out);
             return;
-        case Format::Q24_GRP:
-            dequant_q24(indices, idx_bytes, n, out);
+        case Format::Q24_GRP: {
+            const size_t plain = (size_t)n * 3;
+            const size_t claimed = (size_t)std::ceil(24.5 * (double)n / 8.0);
+            if (n % 32 == 0 && idx_bytes >= claimed && claimed > plain) {
+                dequant_q24(indices, plain, n, out);
+                const uint8_t* p = indices + plain;
+                for (int g = 0; g < n / 32; ++g) {
+                    const uint16_t h = (uint16_t)p[0] | ((uint16_t)p[1] << 8); p += 2;
+                    const float m = f16_to_f32(h);
+                    for (int i = 0; i < 32; ++i) out[g*32+i] += m;
+                }
+            } else {
+                dequant_q24(indices, idx_bytes, n, out);
+            }
             return;
+        }
         case Format::Q16:
             dequant_q16_enhanced(indices, idx_bytes, n, out);
             return;
-        case Format::Q16_GRP:
-            dequant_q16_enhanced(indices, idx_bytes, n, out);
+        case Format::Q16_GRP: {
+            const size_t plain = (size_t)n * 2;
+            const size_t claimed = (size_t)std::ceil(16.5 * (double)n / 8.0);
+            if (n % 32 == 0 && idx_bytes >= claimed && claimed > plain) {
+                dequant_q16_enhanced(indices, plain, n, out);
+                const uint8_t* p = indices + plain;
+                for (int g = 0; g < n / 32; ++g) {
+                    const uint16_t h = (uint16_t)p[0] | ((uint16_t)p[1] << 8); p += 2;
+                    const float m = f16_to_f32(h);
+                    for (int i = 0; i < 32; ++i) out[g*32+i] += m;
+                }
+            } else {
+                dequant_q16_enhanced(indices, idx_bytes, n, out);
+            }
             return;
+        }
         case Format::Q12:
             dequant_fixed_codebook(12, indices, idx_bytes, n, out);
             return;
