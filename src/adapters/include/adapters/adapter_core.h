@@ -3,7 +3,6 @@
 // ----------------------------------------------------------------------------
 // Every external-format bridge (PTQ, GGUF, Safetensors) loads weights into
 // AdapterTensor (always FP32), then funnels through write_quant_mixed() which
-// assigns a per-block mixed-precision format (Q1/Q_TWI_MIX_1_5/Q4/Q8/Q16)
 // via the parent project's FormatRegistry + codebooks and writes a .quant file.
 //
 // Design rule: NOTHING leaves the adapter edition in a foreign format. The only

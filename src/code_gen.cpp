@@ -79,7 +79,6 @@ std::string CodeGenerator::make_function_name(const KernelSpec& spec) const {
 std::string CodeGenerator::format_type_string(Format fmt) const {
     switch (fmt) {
         case Format::Q1:            return "int8_t";
-        case Format::Q_TWI_MIX_1_5: return "int8_t";
         case Format::Q4:            return "uint8_t";
         case Format::Q8:            return "uint8_t";
         case Format::Q16:           return "float";
@@ -568,7 +567,6 @@ std::string CodeGenerator::generate_quantize_dequantize(int64_t n, Format src_fo
         code << indent(2) << "q = q < 0 ? 0 : (q > 15 ? 15 : q);\n";
         code << indent(2) << "output[i] = ((float)q - 7.5f) / 7.5f;\n";
         code << indent(1) << "}\n";
-    } else if (src_format == Format::Q32 && dst_format == Format::Q_TWI_MIX_1_5) {
         code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
         code << indent(2) << "float v = input[i];\n";
         code << indent(2) << "output[i] = v > 0.33f ? 1.0f : (v < -0.33f ? -1.0f : 0.0f);\n";
@@ -615,7 +613,6 @@ std::string CodeGenerator::generate_format_branch(const std::string& op_name, Fo
             code << indent(1) << "for (int64_t i = 0; i < n; i++) out[i] = in[i] ^ 1;\n";
             code << "}\n";
             break;
-        case Format::Q_TWI_MIX_1_5:
             code << "void " << op_name << "_quant_q0(const int8_t* in, int8_t* out, int64_t n) {\n";
             code << indent(1) << "for (int64_t i = 0; i < n; i++) out[i] = -in[i];\n";
             code << "}\n";

@@ -138,25 +138,21 @@ const CapRow kCaps[] = {
     { quant::Format::Q16_GRP,         0.08, false },
     { quant::Format::Q24_GRP,         0.08, false },
     // TWI_MIX
-    { quant::Format::Q_TWI_MIX_1_5,     3.00, false },
-    { quant::Format::Q_TWI_MIX_2_5,     1.80, false },  // per-32 2-bit Lloyd lattice
-    { quant::Format::Q_TWI_MIX_1_5_GRP, 4.00, false },  // ternary refinement flags
-    { quant::Format::Q_TWI_MIX_2_5_GRP, 1.90, false },
     // QUAD_MIX — dominant tier governs the cap
-    { quant::Format::Q_QUAD_MIX_3_5,      4.00, false },  // 92% sign tier
-    { quant::Format::Q_QUAD_MIX_4_5,      4.00, false },  // 58.5% sign tier
-    { quant::Format::Q_QUAD_MIX_6_5,      2.00, false },
-    { quant::Format::Q_QUAD_MIX_8_5,      2.00, false },
-    { quant::Format::Q_QUAD_MIX_12_5,     2.00, false },
-    { quant::Format::Q_QUAD_MIX_16_5,     2.00, false },
-    { quant::Format::Q_QUAD_MIX_24_5,     2.00, false },
-    { quant::Format::Q_QUAD_MIX_3_5_GRP,  4.00, false },
-    { quant::Format::Q_QUAD_MIX_4_5_GRP,  4.00, false },
-    { quant::Format::Q_QUAD_MIX_6_5_GRP,  2.00, false },
-    { quant::Format::Q_QUAD_MIX_8_5_GRP,  2.00, false },
-    { quant::Format::Q_QUAD_MIX_12_5_GRP, 2.00, false },
-    { quant::Format::Q_QUAD_MIX_16_5_GRP, 2.00, false },
-    { quant::Format::Q_QUAD_MIX_24_5_GRP, 2.00, false },
+    { quant::Format::MXQ_3_5_GRP,      4.00, false },  // 92% sign tier
+    { quant::Format::MXQ_4_5_GRP,      4.00, false },  // 58.5% sign tier
+    { quant::Format::MXQ_6_5_GRP,      2.00, false },
+    { quant::Format::MXQ_8_5_GRP,      2.00, false },
+    { quant::Format::MXQ_12_5_GRP,     2.00, false },
+    { quant::Format::MXQ_16_5_GRP,     2.00, false },
+    { quant::Format::MXQ_24_5_GRP,     2.00, false },
+    { quant::Format::MXQ_3_5_GRP,  4.00, false },
+    { quant::Format::MXQ_4_5_GRP,  4.00, false },
+    { quant::Format::MXQ_6_5_GRP,  2.00, false },
+    { quant::Format::MXQ_8_5_GRP,  2.00, false },
+    { quant::Format::MXQ_12_5_GRP, 2.00, false },
+    { quant::Format::MXQ_16_5_GRP, 2.00, false },
+    { quant::Format::MXQ_24_5_GRP, 2.00, false },
 };
 
 const CapRow& cap_for(quant::Format f) {

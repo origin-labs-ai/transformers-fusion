@@ -13,7 +13,6 @@ int main() {
 
     std::cout << "[Test 1] Querying 1.50 BPW TWI_MIX format..." << std::endl;
     auto twi_15 = quant::FormatRegistry::get_twi_mix(1.50f);
-    assert(twi_15.id == quant::RegFormat::Q_TWI_MIX_1_5);
     assert(std::abs(twi_15.effective_bpw - 1.50f) < 1e-4f);
 
     std::cout << "  -> Format Name: " << twi_15.name << std::endl;

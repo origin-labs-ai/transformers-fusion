@@ -26,24 +26,13 @@ enum class RegFormat : uint32_t {
     Q12_GRP,
     Q16_GRP,
     Q24_GRP,
-    Q_TWI_MIX_1_5,
-    Q_TWI_MIX_2_5,
-    Q_TWI_MIX_1_5_GRP,
-    Q_TWI_MIX_2_5_GRP,
-    Q_QUAD_MIX_3_5,
-    Q_QUAD_MIX_4_5,
-    Q_QUAD_MIX_6_5,
-    Q_QUAD_MIX_8_5,
-    Q_QUAD_MIX_12_5,
-    Q_QUAD_MIX_16_5,
-    Q_QUAD_MIX_24_5,
-    Q_QUAD_MIX_3_5_GRP,
-    Q_QUAD_MIX_4_5_GRP,
-    Q_QUAD_MIX_6_5_GRP,
-    Q_QUAD_MIX_8_5_GRP,
-    Q_QUAD_MIX_12_5_GRP,
-    Q_QUAD_MIX_16_5_GRP,
-    Q_QUAD_MIX_24_5_GRP
+    MXQ_3_5_GRP,
+    MXQ_4_5_GRP,
+    MXQ_6_5_GRP,
+    MXQ_8_5_GRP,
+    MXQ_12_5_GRP,
+    MXQ_16_5_GRP,
+    MXQ_24_5_GRP
 };
 
 struct FormatDescriptor {
@@ -141,7 +130,6 @@ public:
 
     static float compute_average_bpw(const std::vector<FormatDescriptor>& assignment);
 
-    // Adaptive mix allocation (Q_TWI_MIX_1_5 / Q2).
     // Per-block member-format assignment that treats the claimed effective
     // BPW as a HARD byte budget: the returned plan NEVER costs more than
     // ceil(effective_bpw * n / 8) bytes, and spends every byte only where it

@@ -185,7 +185,6 @@ Format select_tensor_format(const std::string& name, int64_t numel, Format base)
 
     const float b = target_bpw;
     if (b <= 1.0f)  return Format::Q1_GRP;
-    if (b <= 1.5f)  return Format::Q_TWI_MIX_1_5_GRP;
     if (b <= 2.0f)  return Format::Q2_GRP;
     if (b <= 4.0f)  return Format::Q4_GRP;
     if (b <= 8.0f)  return Format::Q8_GRP;

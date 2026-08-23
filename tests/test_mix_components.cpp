@@ -78,7 +78,7 @@ int main() {
     // Spot-check the flagship: QUAD_MIX@12.5 components are Q6/Q12/Q24/Q32.
     bool found_flagship = false;
     for (const auto& m : quads) {
-        if (m.id == RegFormat::Q_QUAD_MIX_12_5) {
+        if (m.id == RegFormat::MXQ_12_5_GRP) {
             found_flagship = true;
             CHECK(m.tier1_fmt == RegFormat::Q6 && m.tier2_fmt == RegFormat::Q12 &&
                   m.tier3_fmt == RegFormat::Q24 && m.tier4_fmt == RegFormat::Q32,

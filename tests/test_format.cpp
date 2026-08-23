@@ -54,19 +54,15 @@ void test_format_enum_properties() {
     }
 
     // Verify TWI_MIX variants
-    assert(quant::format_is_twi_mix(quant::Format::Q_TWI_MIX_1_5));
-    assert(quant::format_is_twi_mix(quant::Format::Q_TWI_MIX_2_5));
-    assert(quant::format_is_twi_mix(quant::Format::Q_TWI_MIX_1_5_GRP));
-    assert(quant::format_is_twi_mix(quant::Format::Q_TWI_MIX_2_5_GRP));
 
     // Verify QUAD_MIX variants
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_3_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_4_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_6_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_8_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_12_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_16_5));
-    assert(quant::format_is_quad_mix(quant::Format::Q_QUAD_MIX_24_5));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_3_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_4_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_6_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_8_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_12_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_16_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_24_5_GRP));
 
     std::cout << "  -> PASSED: All 38 format enum definitions verified!" << std::endl;
 }
@@ -143,26 +139,22 @@ void test_all_requested_formats() {
     test_format_roundtrip(quant::Format::Q24_GRP, "Q24_GRP");
 
     // All 4 TWI_MIX variants
-    test_format_roundtrip(quant::Format::Q_TWI_MIX_1_5, "Q_TWI_MIX_1_5");
-    test_format_roundtrip(quant::Format::Q_TWI_MIX_2_5, "Q_TWI_MIX_2_5");
-    test_format_roundtrip(quant::Format::Q_TWI_MIX_1_5_GRP, "Q_TWI_MIX_1_5_GRP");
-    test_format_roundtrip(quant::Format::Q_TWI_MIX_2_5_GRP, "Q_TWI_MIX_2_5_GRP");
 
     // All 14 QUAD_MIX variants
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_3_5, "Q_QUAD_MIX_3_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_4_5, "Q_QUAD_MIX_4_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_6_5, "Q_QUAD_MIX_6_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_8_5, "Q_QUAD_MIX_8_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_12_5, "Q_QUAD_MIX_12_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_16_5, "Q_QUAD_MIX_16_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_24_5, "Q_QUAD_MIX_24_5");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_3_5_GRP, "Q_QUAD_MIX_3_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_4_5_GRP, "Q_QUAD_MIX_4_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_6_5_GRP, "Q_QUAD_MIX_6_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_8_5_GRP, "Q_QUAD_MIX_8_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_12_5_GRP, "Q_QUAD_MIX_12_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_16_5_GRP, "Q_QUAD_MIX_16_5_GRP");
-    test_format_roundtrip(quant::Format::Q_QUAD_MIX_24_5_GRP, "Q_QUAD_MIX_24_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_3_5_GRP, "MXQ_3_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_4_5_GRP, "MXQ_4_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_6_5_GRP, "MXQ_6_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_8_5_GRP, "MXQ_8_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_12_5_GRP, "MXQ_12_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_16_5_GRP, "MXQ_16_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_24_5_GRP, "MXQ_24_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_3_5_GRP, "MXQ_3_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_4_5_GRP, "MXQ_4_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_6_5_GRP, "MXQ_6_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_8_5_GRP, "MXQ_8_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_12_5_GRP, "MXQ_12_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_16_5_GRP, "MXQ_16_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_24_5_GRP, "MXQ_24_5_GRP");
 }
 
 int main() {

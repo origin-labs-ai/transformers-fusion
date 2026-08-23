@@ -28,22 +28,22 @@ int main() {
     f << "| Format Name | BPW (Target) | MSE (Mean Squared Error) | PSNR (dB) | Compression Ratio | Victory / Industrial Equivalent |\n";
     f << "| :--- | :--- | :--- | :--- | :--- | :--- |\n";
     f << "| **Q32** | 32.00 | 0.0000e+00 | 100.00 dB | 1.0x | Pure Unquantized FP32 Baseline |\n";
-    f << "| **Q_QUAD_MIX_24_5_GRP** | 24.50 | 2.5000e-09 | 86.02 dB | 1.3x | 4-Tier Importance Routing |\n";
+    f << "| **MXQ_24_5_GRP** | 24.50 | 2.5000e-09 | 86.02 dB | 1.3x | 4-Tier Importance Routing |\n";
     f << "| **Q24_GRP** | 24.50 | 1.1200e-08 | 79.51 dB | 1.3x | 24-bit Grouped Super-Block |\n";
     f << "| **Q16_GRP** | 16.50 | 2.6300e-08 | 75.80 dB | 1.9x | **Approaches FP32 Quality at 16.5 BPW** |\n";
-    f << "| **Q_QUAD_MIX_16_5_GRP** | 16.50 | 3.2000e-08 | 74.95 dB | 1.9x | 4-Tier Importance Routing |\n";
-    f << "| **Q_QUAD_MIX_12_5_GRP** | 12.50 | 1.4000e-07 | 68.54 dB | 2.6x | 4-Tier Importance Routing |\n";
+    f << "| **MXQ_16_5_GRP** | 16.50 | 3.2000e-08 | 74.95 dB | 1.9x | 4-Tier Importance Routing |\n";
+    f << "| **MXQ_12_5_GRP** | 12.50 | 1.4000e-07 | 68.54 dB | 2.6x | 4-Tier Importance Routing |\n";
     f << "| **Q12_GRP** | 12.50 | 3.8000e-07 | 64.20 dB | 2.6x | 12.5 BPW Grouped Super-Block |\n";
-    f << "| **Q_QUAD_MIX_8_5_GRP** | 8.50 | 6.8000e-07 | 61.67 dB | 3.8x | **Beats IEEE FP16 Quality (+7.49 dB)** |\n";
+    f << "| **MXQ_8_5_GRP** | 8.50 | 6.8000e-07 | 61.67 dB | 3.8x | **Beats IEEE FP16 Quality (+7.49 dB)** |\n";
     f << "| **Q16** | 16.00 | 8.5000e-07 | 60.71 dB | 2.0x | **Beats IEEE FP16 by +6.53 dB** |\n";
     f << "| **Q8_GRP** | 8.50 | 3.8900e-06 | 54.10 dB | 3.8x | **Matches IEEE FP16 Quality at 8.5 BPW!** |\n";
     f << "| **[Baseline] IEEE FP16** | 16.00 | 3.8200e-06 | 54.18 dB | 2.0x | Standard Industrial FP16 |\n";
-    f << "| **Q_QUAD_MIX_6_5_GRP** | 6.50 | 3.1000e-06 | 55.09 dB | 4.9x | **Beats IEEE FP16 at 6.5 BPW** |\n";
-    f << "| **Q_QUAD_MIX_4_5_GRP** | 4.50 | 1.5000e-05 | 48.24 dB | 7.1x | 4-Tier Importance Routing |\n";
+    f << "| **MXQ_6_5_GRP** | 6.50 | 3.1000e-06 | 55.09 dB | 4.9x | **Beats IEEE FP16 at 6.5 BPW** |\n";
+    f << "| **MXQ_4_5_GRP** | 4.50 | 1.5000e-05 | 48.24 dB | 7.1x | 4-Tier Importance Routing |\n";
     f << "| **Q6_GRP** | 6.56 | 2.2300e-05 | 46.50 dB | 4.9x | **Beats GGUF Q6_K_M by +15.05 dB** |\n";
     f << "| **Q8** | 8.00 | 2.8000e-05 | 45.53 dB | 4.0x | **Beats Standard INT8 by +9.51 dB** |\n";
     f << "| **Q4_GRP** | 4.50 | 3.8000e-05 | 44.20 dB | 7.1x | **Matches GGUF Q8_0 Quality at 4.5 BPW!** |\n";
-    f << "| **Q_QUAD_MIX_3_5_GRP** | 3.50 | 7.2000e-05 | 41.43 dB | 9.1x | 4-Tier Importance Routing |\n";
+    f << "| **MXQ_3_5_GRP** | 3.50 | 7.2000e-05 | 41.43 dB | 9.1x | 4-Tier Importance Routing |\n";
     f << "| **[Baseline] GGUF Q8_0** | 8.50 | 1.6000e-04 | 37.96 dB | 3.8x | GGUF 8-bit Baseline |\n";
     f << "| **Q3_GRP** | 3.50 | 2.2300e-04 | 36.50 dB | 9.1x | 3.5 BPW Grouped Super-Block |\n";
     f << "| **[Baseline] INT8 Standard** | 8.00 | 2.5000e-04 | 36.02 dB | 4.0x | Standard INT8 |\n";
@@ -100,7 +100,7 @@ int main() {
     f << "  <rect x=\"210\" y=\"326\" width=\"56\" height=\"20\" fill=\"#f85149\" rx=\"4\"/>\n";
     f << "  <text x=\"274\" y=\"341\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"11\">10.25 dB</text>\n\n";
 
-    f << "  <text x=\"200\" y=\"375\" fill=\"#bc8cff\" font-family=\"monospace\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"end\">Q_QUAD_MIX_8_5_GRP</text>\n";
+    f << "  <text x=\"200\" y=\"375\" fill=\"#bc8cff\" font-family=\"monospace\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"end\">MXQ_8_5_GRP</text>\n";
     f << "  <rect x=\"210\" y=\"361\" width=\"339\" height=\"20\" fill=\"#bc8cff\" rx=\"4\"/>\n";
     f << "  <text x=\"557\" y=\"376\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"11\" font-weight=\"bold\">61.67 dB (+7.49 dB over FP16!)</text>\n\n";
 

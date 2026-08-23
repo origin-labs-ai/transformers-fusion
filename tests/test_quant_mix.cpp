@@ -97,7 +97,6 @@ int main() {
     // ---- Test 1: registry claims -----------------------------------------
     printf("--- Test 1: registry claims ---\n");
     const MixDescriptor q0 = FormatRegistry::get_twi_mix(1.50f);
-    TEST_CHECK(q0.id == RegFormat::Q_TWI_MIX_1_5, "get_twi_mix(1.50) -> Q_TWI_MIX_1_5");
     TEST_CHECK(std::fabs(q0.effective_bpw - 1.50f) < 1e-4f, "Q0 effective BPW == 1.50");
     TEST_CHECK(q0.num_tiers == 2, "Q0 is a 2-tier TWI mix");
     TEST_CHECK(q0.adaptive, "Q0 is adaptive");
@@ -105,15 +104,13 @@ int main() {
                "Q0 ladder = Q1/Q4");
 
     const MixDescriptor q1 = FormatRegistry::get_four_mix(3.50f);
-    TEST_CHECK(q1.id == RegFormat::Q_QUAD_MIX_3_5, "get_four_mix(3.50) -> Q_QUAD_MIX_3_5");
+    TEST_CHECK(q1.id == RegFormat::MXQ_3_5_GRP, "get_four_mix(3.50) -> MXQ_3_5_GRP");
     TEST_CHECK(std::fabs(q1.effective_bpw - 3.50f) < 1e-4f, "Q1 effective BPW == 3.50");
     TEST_CHECK(q1.num_tiers == 4, "Q1 is a QUAD_MIX (4 tiers)");
     TEST_CHECK(q1.adaptive, "Q1 is adaptive");
 
-    TEST_CHECK(FormatRegistry::select_best_mix(3.50f, nullptr, 0).id == RegFormat::Q_QUAD_MIX_3_5,
-               "select_best_mix(3.50) -> Q_QUAD_MIX_3_5");
-    TEST_CHECK(FormatRegistry::select_best_mix(1.50f, nullptr, 0).id == RegFormat::Q_TWI_MIX_1_5,
-               "select_best_mix(1.50) -> Q_TWI_MIX_1_5");
+    TEST_CHECK(FormatRegistry::select_best_mix(3.50f, nullptr, 0).id == RegFormat::MXQ_3_5_GRP,
+               "select_best_mix(3.50) -> MXQ_3_5_GRP");
 
     // ---- Test 2: BPW hard cap (never exceeds; tail alignment <= 1 B/block)
     printf("\n--- Test 2: BPW hard cap ---\n");
@@ -430,7 +427,7 @@ int main() {
             }
             std::vector<Format> fmts = reader.tensor_formats(tensors[0].name);
             bool has_member = !fmts.empty();
-            // Q_QUAD_MIX_3_5 member formats: Q1/Q3/Q8/Q32 (non-GRP variant).
+            // MXQ_3_5_GRP member formats: Q1/Q3/Q8/Q32 (non-GRP variant).
             for (Format f : fmts)
                 if (f != Format::Q32 && f != Format::Q8 &&
                     f != Format::Q3 && f != Format::Q1)

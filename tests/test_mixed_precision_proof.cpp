@@ -24,15 +24,15 @@ int main() {
         assert(std::abs(mix.effective_bpw - target) < 1e-4f);
     }
 
-    std::cout << "[Test 2] Verifying 4-tier allocation for Q_QUAD_MIX_24_5..." << std::endl;
+    std::cout << "[Test 2] Verifying 4-tier allocation for MXQ_24_5_GRP..." << std::endl;
     auto mix24_5 = quant::FormatRegistry::get_four_mix(24.5f);
-    assert(mix24_5.id == quant::RegFormat::Q_QUAD_MIX_24_5);
+    assert(mix24_5.id == quant::RegFormat::MXQ_24_5_GRP);
     assert(mix24_5.tier1_fmt == quant::RegFormat::Q12);
     assert(mix24_5.tier2_fmt == quant::RegFormat::Q16);
     assert(mix24_5.tier3_fmt == quant::RegFormat::Q24);
     assert(mix24_5.tier4_fmt == quant::RegFormat::Q32);
 
-    std::cout << "  -> Q_QUAD_MIX_24_5 composition verified: Q12(25%) + Q16(30%) + Q24(35%) + Q32(10%) = 24.5 BPW!" << std::endl;
+    std::cout << "  -> MXQ_24_5_GRP composition verified: Q12(25%) + Q16(30%) + Q24(35%) + Q32(10%) = 24.5 BPW!" << std::endl;
 
     std::cout << "\nMIXED PRECISION PROOF TEST PASSED SUCCESSFULLY!" << std::endl;
     return 0;

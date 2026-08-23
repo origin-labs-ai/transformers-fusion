@@ -36,8 +36,7 @@ static Format parse_format(const std::string& s) {
     if (s == "q12_grp" || s == "Q12_GRP") return Format::Q12_GRP;
     if (s == "q16_grp" || s == "Q16_GRP") return Format::Q16_GRP;
     if (s == "q24_grp" || s == "Q24_GRP") return Format::Q24_GRP;
-    if (s == "twi_1_5" || s == "TWI_MIX_1_5") return Format::Q_TWI_MIX_1_5;
-    if (s == "quad_3_5" || s == "QUAD_MIX_3_5") return Format::Q_QUAD_MIX_3_5;
+    if (s == "quad_3_5" || s == "QUAD_MIX_3_5") return Format::MXQ_3_5_GRP;
     std::cerr << "Warning: unknown format '" << s << "' — defaulting to Q8\n";
     return Format::Q8;
 }

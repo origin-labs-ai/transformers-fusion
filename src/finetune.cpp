@@ -155,7 +155,6 @@ void FineTuner::apply_quant_update(const Tensor& fp32_grad, Tensor& quant_weight
         cb.train(wd, (size_t)n);
         Tensor quantized = ste.quantize_with_codebook(updated, cb);
         quantized.copy_to(quant_weight);
-    } else if (fmt == Format::Q_TWI_MIX_1_5) {
         uint8_t* dst = (uint8_t*)quant_weight.data();
         float scale;
         ste.quantize_quant(wd, dst, &scale, n);
