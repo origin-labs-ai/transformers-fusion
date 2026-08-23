@@ -26,18 +26,24 @@
 | C-19 | Kimi K3 MoE aux load-balance loss | auxiliary loss term in moe_trainer/moe_model | PENDING | - |
 | C-20 | Lossless KV cache offload (RAM/NVMe) | kv_cache offload async pipeline search | PENDING | - |
 | C-21 | YARN/NTK long-context scaling | rope scaling interpolation search | PENDING | - |
-| C-22 | DDP/FSDP/ZeRO functional | distributed.cpp single-node-only note audit | PENDING | - |
-| C-23 | Multimodal (vision/audio/video/OCR) working | multimodal*.cpp real pipeline vs skeleton | PENDING | - |
-| C-24 | HTTP server production-ready | quant_server.cpp hardening audit (B-4) | PENDING | - |
-| C-25 | Charts auto-generated from measured data | scripts/plot_comparison_charts.py input source check | PENDING | - |
+| C-22 | DDP/FSDP/ZeRO functional | distributed.cpp single-node-only note audit | **PARTIAL** | .research/claims/audit_infra.md + src/distributed.cpp:26-53,106-141,177-179,212-215,276 + src/fsdp.cpp:49-186,229-273,508-543; shared-memory barrier deadlocks for ws>1, NCCL MISSING, zero tests/consumers |
+| C-23 | Multimodal (vision/audio/video/OCR) working | multimodal*.cpp real pipeline vs skeleton | **PARTIAL** | .research/claims/audit_infra.md + src/multimodal.cpp:18-118,202-230,400-414,459,674-682 + src/multimodal_fusion.cpp:43-101; T2I UNet proxy, encode_image returns constants, tests only all_finite + 5× TEST_CHECK(true) |
+| C-24 | HTTP server production-ready | quant_server.cpp hardening audit (B-4) | **PARTIAL** | .research/claims/audit_infra.md + tools/quant_server.cpp:489-524,209-215; L017 caps present (8KB→414,64KB→413) but status-text 413/414="Unknown", single-recv body no Content-Length |
+| C-25 | Charts auto-generated from measured data | scripts/plot_comparison_charts.py input source check | **FAKE** | .research/claims/audit_infra.md + scripts/plot_comparison_charts.py:7-9,12-43 (never reads CSV, hardcodes Q16=60.71 vs CSV 102.449), docs/comparison_charts.html missing |
 
 ## FAKE → Rebuild Backlog Map
 
 | Wound/Claim | Verdict | Evidence | Action |
 |---|---|---|---|
 | B-1 Q3_GRP collapse (-14 dB) | ALREADY-FIXED (stale baseline) | grp_proof_test PASS: gaussian 29.21 > plain-Q3 24.79; real 30.46 > 26.59; fresh CSV rows | Plan PART-O numbers were pre-fix; test_grp_quality_proof guards regression (commit 9bd2ce3) |
-| NEW: Q8_GRP lost to plain Q8 (50.23 vs 54.66 gaussian) | FIXED THIS SESSION | affine path (gsz=32, scb=mb=6): gaussian 56.33 > 54.66; real 57.11 > 56.92; budget exact 272B (commit 562fae9) | Old CSV 59.03 proven un-reproducible from d302e46 code on MSVC = stale artifact from another build env |
+| NEW: Q8_GRP lost to plain Q8 (50.23 vs 54.66 gaussian) | FIXED (562fae9) then SUPERSEDED | affine path (6b ladder) fixed plain-GRP: 56.33>54.66 then compound path (fp16 per-32 + golden search): 58.56>58.14 gaussian, 60.15>59.75 real; exact 272B | Old CSV 59.03 stale artifact, now honestly beaten with measured wins on both datasets |
+| Q8_GRP vs GGUF Q8_0 industrial win (W2) | **VERIFIED (this session)** | bench_format_comparison.csv: gaussian 58.56 vs 58.14 (+0.42), real 60.15 vs 59.75 (+0.40); src/block_codec.cpp: grp8_compound_fits+quant_grp8_compound+comp8_fit_scale_fp16 (k=0.02, LUT, golden search), sweep k=1.0→0.02 evidence | W2 win register now green on both datasets; plain Q8 54.72/57.07 also recovers vs old 54.66/56.92 |
+| test_format hole 19 | FIXED | tests/test_format.cpp: skip unknown hole instead of bpw>0 assert on invalid enum value 19 | ctest test_format 0.24s PASS; FORMAT_COUNT=37 valid IDs |
 | B-5 / L015 legacy alias purge | REJECTED (wound is fake/stale) | QUANT_Q0/Q1/6_K are LIVE registered formats: constants.h:42-48, quant_import.cpp enum mapping, sops tables, API_REFERENCE — 25+ files | Blind purge would break public API; aliases are current naming |
 | L016 -fno-exceptions jhooth | DOC-FIXED | README:2077 corrected to reflect reality (88 try/catch sites, flag never set) | FULL conversion = dedicated campaign: gpu_compute*.cpp throw_hr plumbing (19+ sites), backend.cpp 21 catches, production_* 18, agi* 11, hpo_nas 6 — scoped in workbench |
 | E-5 sanitizer CI missing | STALE (already exists) | ci_full.yml:127-138 ASan+UBSan ubuntu gcc matrix step | Green-run verification pending next CI trigger |
 | QUAD_MIX@12.5 old-vs-new delta (54.9 vs 47.4) | GHOST-BASELINE suspect | Same class as Q8_GRP: old number un-reproducible from committed code on MSVC | Investigate separately before trusting either number |
+| C-22 DDP/FSDP/ZeRO functional | PARTIAL | barrier per-instance contexts deadlock ws>1, NCCL MISSING, zero tests/consumers | L025→Wave 7/8 (GPU/distributed scope, NCCL docs-only) |
+| C-23 Multimodal working | PARTIAL | T2I UNet proxy, constant tokenizers, 5× TEST_CHECK(true) | L025→L079 module tests + real projector |
+| C-24 Server production-ready | PARTIAL | 413/414 status-text Unknown, single-recv no Content-Length | L025→L074 full hardening |
+| C-25 Charts auto-generated | FAKE | script hardcodes numbers, never reads CSV, HTML missing | L025→L037 charts auto-gen (csv.DictReader) |

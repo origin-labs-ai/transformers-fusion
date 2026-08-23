@@ -168,6 +168,172 @@ static float f32_from_bits(uint32_t b) {
     return f;
 }
 
+// ---- 8-bit companded grid engine (plain Q8 + Q8_GRP) -----------------------
+// Bell-shaped weight distributions concentrate mass near zero, so the MSE-
+// optimal grid is denser there than a uniform range split. We use a tanh
+// compander C_k(t) = tanh(k*t)/tanh(k): odd, monotone, k -> 0 recovers the
+// uniform grid. Decode is a static 256-entry LUT (no transcendentals on the
+// hot path); encode runs a deterministic two-stage scale search (log-spaced
+// coarse scan, then golden-section refine) that minimizes TRUE group MSE
+// including overload/clipping — the failure mode of plain LS fitting.
+// k was selected by measured PSNR on the production bench (gaussian AND real
+// trained weights); see commit evidence before changing it.
+static constexpr float kQ8CompandK = 0.02f;
+
+struct Comp8Table {
+    float levels[256];  // ascending reconstruction grid in scale units [-1,1]
+};
+
+static const Comp8Table& comp8_table() {
+    static const Comp8Table t = [] {
+        Comp8Table x{};
+        const float k = kQ8CompandK;
+        for (int j = 0; j < 256; ++j)
+            x.levels[j] = std::tanh(k * ((float)j / 127.5f - 1.0f)) / std::tanh(k);
+        return x;
+    }();
+    return t;
+}
+
+static uint32_t comp8_rtn_index(float v) {
+    const Comp8Table& t = comp8_table();
+    if (v <= t.levels[0]) return 0;
+    if (v >= t.levels[255]) return 255;
+    // Nearest level under a monotone grid: bisect the last level <= v, then
+    // compare distances against its right neighbour (exact RTN, not an
+    // inverse-curve rounding approximation).
+    int lo = 0, hi = 255;
+    while (hi - lo > 1) {
+        const int mid = (lo + hi) / 2;
+        if (t.levels[mid] <= v) lo = mid; else hi = mid;
+    }
+    return (v - t.levels[lo] <= t.levels[hi] - v) ? (uint32_t)lo : (uint32_t)hi;
+}
+
+// Deterministic minimization of group_mse(s) over [lo, hi]: 32-sample
+// log-spaced scan for a robust bracket, then golden-section refinement.
+template <typename Fn>
+static double comp8_scale_search(Fn&& group_mse, double lo, double hi) {
+    double best_e = 1e300;
+    int bi = 32;
+    double cand[34];
+    for (int i = 0; i < 32; ++i) {
+        const double t = (double)i / 31.0;
+        cand[i] = lo * std::pow(hi / lo, t);
+    }
+    cand[32] = hi;
+    for (int i = 0; i < 33; ++i) {
+        const double e = group_mse(cand[i]);
+        if (e < best_e) { best_e = e; bi = i; }
+    }
+    double a = cand[std::max(0, bi - 1)];
+    double b = cand[std::min(32, bi + 1)];
+    const double phi = 0.6180339887498949;
+    double c = b - phi * (b - a), d = a + phi * (b - a);
+    double fc = group_mse(c), fd = group_mse(d);
+    for (int it = 0; it < 30 && (b - a) > 1e-11 * (a + b); ++it) {
+        if (fc < fd) {
+            b = d; d = c; fd = fc;
+            c = b - phi * (b - a); fc = group_mse(c);
+        } else {
+            a = c; c = d; fc = fd;
+            d = a + phi * (b - a); fd = group_mse(d);
+        }
+    }
+    const double coarse_best = cand[bi];
+    const double s = 0.5 * (a + b);
+    return (group_mse(s) <= group_mse(coarse_best)) ? s : coarse_best;
+}
+
+// True-MSE objective for one group at candidate scale s (includes clipping).
+static double comp8_group_mse(const float* w, int cnt, double s) {
+    const Comp8Table& t = comp8_table();
+    double err = 0.0;
+    for (int i = 0; i < cnt; ++i) {
+        const uint32_t j = comp8_rtn_index((float)((double)w[i] / s));
+        const double r = (double)t.levels[j] * s - (double)w[i];
+        err += r * r;
+    }
+    return err;
+}
+
+// Fit one group's fp16-storable scale: golden result, then the better of the
+// two neighbouring fp16 representable values (the wire stores fp16).
+static float comp8_fit_scale_fp16(const float* w, int cnt) {
+    double maxa = 0.0, energy = 0.0;
+    for (int i = 0; i < cnt; ++i) {
+        maxa = std::max(maxa, (double)std::fabs(w[i]));
+        energy += (double)w[i] * w[i];
+    }
+    if (!(maxa > 0.0)) return 0.0f;
+    const double rms = std::sqrt(energy / (double)cnt);
+    double lo = std::max(maxa * 0.01, rms * 0.05);
+    const double hi = maxa * 1.0000001;
+    if (!(lo < hi)) lo = hi * 0.5;
+    const double raw = comp8_scale_search(
+        [&](double s) { return comp8_group_mse(w, cnt, s); }, lo, hi);
+    const float f = (float)raw;
+    const uint16_t hf = f32_to_f16(f);
+    float best = f16_to_f32(hf);
+    double best_e = comp8_group_mse(w, cnt, (double)best);
+    for (int delta = -4; delta <= 4; ++delta) {
+        if (delta == 0) continue;
+        const int hc = (int)hf + delta;
+        if (hc < 0 || hc > 0xFFFF) continue;
+        const float candf = f16_to_f32((uint16_t)hc);
+        if (!(candf > 0.0f) || !(candf <= hi * 1.02)) continue;
+        const double e = comp8_group_mse(w, cnt, (double)candf);
+        if (e < best_e) { best_e = e; best = candf; }
+    }
+    // Also keep the raw float if its fp16-round happens to be worse than
+    // a nearby float32 neighbour that rounds to same fp16 — already covered,
+    // but check the exact raw float's fp16 as well.
+    return (float)best;
+}
+
+// Q8_GRP compound layout (exact 8.5 BPW for n % 32 == 0, else falls back to
+// the affine ladder path): per-32 groups, each with a FULL FP16 scale — the
+// same adaptivity class as GGUF Q8_0 — plus companded 8-bit codes and a true-
+// MSE scale search on top.
+//   wire: [ ng*32 code bytes ][ ng * FP16 scale ]   (ng = n / 32)
+static bool grp8_compound_fits(int n) {
+    return n >= 32 && n % 32 == 0 &&
+           (size_t)n * 8 + (size_t)(n / 32) * 16 ==
+               (size_t)std::ceil(8.5 * (double)n);
+}
+
+static void quant_grp8_compound(const float* w, int n, std::vector<uint8_t>& indices) {
+    const int ng = n / 32;
+    indices.assign(((size_t)n * 8 + (size_t)ng * 16 + 7) / 8, 0);
+    const Comp8Table& t = comp8_table();
+    std::vector<float> scales((size_t)ng, 0.0f);
+    for (int g = 0; g < ng; ++g)
+        scales[(size_t)g] = comp8_fit_scale_fp16(w + g * 32, 32);
+    BitWriter bw(indices);
+    for (int g = 0; g < ng; ++g) {
+        const float s = scales[(size_t)g];
+        for (int i = 0; i < 32; ++i) {
+            const uint32_t j = (s > 0.0f)
+                ? comp8_rtn_index(w[g * 32 + i] / s) : 0u;
+            bw.put(j, 8);
+        }
+    }
+    for (int g = 0; g < ng; ++g) bw.put(f32_to_f16(scales[(size_t)g]), 16);
+}
+
+static void dequant_grp8_compound(const uint8_t* bytes, size_t size, int n, float* out) {
+    const int ng = n / 32;
+    const size_t need_bits = (size_t)n * 8 + (size_t)ng * 16;
+    if (size * 8 < need_bits) return;
+    const Comp8Table& t = comp8_table();
+    BitReader br(bytes, size);
+    std::vector<uint8_t> code((size_t)n);
+    for (int i = 0; i < n; ++i) code[(size_t)i] = (uint8_t)br.get(8);
+    std::vector<float> sc((size_t)ng);
+    for (int g = 0; g < ng; ++g) sc[(size_t)g] = f16_to_f32((uint16_t)br.get(16));
+    for (int i = 0; i < n; ++i)
+        out[i] = sc[(size_t)(i / 32)] * t.levels[std::min((uint32_t)code[(size_t)i], 255u)];
+}
 // ---- lattice: fitted FP16 scale + fixed-level indices, exact claimed BPW ---
 // Every base lattice format (Q2/Q4/Q8) pays exactly its claimed BPW:
 // budget = ceil(bpw * n) bits.  Layout: [ FP16 scale (16) ][ per-weight grid
@@ -212,6 +378,20 @@ void quant_lattice(Format fmt, const float* w, int n, int bits,
     }
     const int slot_count = std::min(kScaleSlots, n);
     const float R = lattice_range(bits);
+    if (bits == 8) {
+        // Companded grid + fp16-storable true-MSE-optimal scale; wire layout
+        // (fp16 scale header funded by kScaleSlots 7-bit slots) unchanged.
+        const float s = comp8_fit_scale_fp16(w, n);
+        BitWriter bw(indices);
+        bw.put(f32_to_f16(s), 16);
+        for (int i = 0; i < n; ++i) {
+            const bool sl = is_slot(i, n, slot_count);
+            uint32_t idx = (s > 0.0f) ? comp8_rtn_index(w[i] / s) : 0u;
+            if (sl) idx &= ~1u;
+            bw.put(sl ? (idx >> 1) : idx, bits - (sl ? 1 : 0));
+        }
+        return;
+    }
     float maxa = 0.0f;
     for (int i = 0; i < n; ++i) {
         maxa = std::max(maxa, std::fabs(w[i]));
@@ -242,6 +422,7 @@ void quant_lattice(Format fmt, const float* w, int n, int bits,
 void dequant_lattice(const uint8_t* bytes, size_t size, int n, int bits,
                      float* out) {
     const size_t budget_bits = (size_t)std::ceil(lattice_claimed(bits) * (double)n);
+    (void)budget_bits;
     BitReader br(bytes, size);
     if (n < kScaleSlots) {
         for (int i = 0; i < n; ++i) out[i] = level_value(bits, br.get(bits));
@@ -249,6 +430,16 @@ void dequant_lattice(const uint8_t* bytes, size_t size, int n, int bits,
     }
     const int slot_count = std::min(kScaleSlots, n);
     const float scale = f16_to_f32((uint16_t)br.get(16));
+    if (bits == 8) {
+        const Comp8Table& t = comp8_table();
+        for (int i = 0; i < n; ++i) {
+            const bool sl = is_slot(i, n, slot_count);
+            uint32_t idx = br.get(bits - (sl ? 1 : 0));
+            if (sl) idx <<= 1;
+            out[i] = scale * t.levels[std::min(idx, 255u)];
+        }
+        return;
+    }
     for (int i = 0; i < n; ++i) {
         const bool sl = is_slot(i, n, slot_count);
         uint32_t idx = br.get(bits - (sl ? 1 : 0));
@@ -1052,6 +1243,7 @@ static void quant_affine(int bits, const float* w, int n, int gsz, int scb, int 
     bw.put(f32_to_f16(dm), 16);
 }
 
+
 static void dequant_affine(int bits, const uint8_t* bytes, size_t size, int n,
                            int gsz, int scb, int mb, float claimed, float* out) {
     size_t sc_bytes = 0, min_bytes = 0;
@@ -1562,10 +1754,14 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
             quant_grp16(12, w, n, indices);
             return true;
         case Format::Q8_GRP:
-            // Affine path (gsz=32, 6-bit scale+min): exact 8.5 BPW budget fit
-            // (256+6+6+4 == 272 bytes) and strictly more expressive than the
-            // 3-bit-scale grp16 layout, which measurably lost to plain Q8.
-            quant_affine(8, w, n, 32, 6, 6, 8.5f, indices);
+            // Compound path (per-32 FULL fp16 scales + companded grid +
+            // true-MSE scale search) at exact 8.5 BPW; the affine 6-bit
+            // ladder remains only as the odd-size fallback.
+            if (grp8_compound_fits(n)) {
+                quant_grp8_compound(w, n, indices);
+            } else {
+                quant_affine(8, w, n, 32, 6, 6, 8.5f, indices);
+            }
             return true;
         case Format::Q6_GRP:
             quant_6k(w, n, indices);
@@ -1785,7 +1981,12 @@ void dequantize_block_all(Format fmt, const uint8_t* indices, size_t idx_bytes, 
         case Format::Q12_GRP:
             dequant_grp16(12, indices, idx_bytes, n, out); return;
         case Format::Q8_GRP:
-            dequant_affine(8, indices, idx_bytes, n, 32, 6, 6, 8.5f, out); return;
+            if (grp8_compound_fits(n)) {
+                dequant_grp8_compound(indices, idx_bytes, n, out);
+            } else {
+                dequant_affine(8, indices, idx_bytes, n, 32, 6, 6, 8.5f, out);
+            }
+            return;
         case Format::Q6_GRP:
             dequant_6k(indices, idx_bytes, n, out); return;
         case Format::Q4_GRP:

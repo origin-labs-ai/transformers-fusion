@@ -6,16 +6,17 @@
 ## Current Status
 
 - **Run ID:** master_plan_v2_20260822
-- **Current Phase:** 0 (TRUTH ANCHOR) — Wave 1 mostly done
+- **Current Phase:** 1 (BUG HUNT) — Wave 2 DONE, Q8_GRP win restored
 - **Session started:** 2026-08-22
+- **Last bench:** 2026-08-23 bench_format_comparison.csv — Q8_GRP 58.56/60.15 dB beats GGUF Q8_0 58.14/59.75 on both datasets
 
 ## Phase Status
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Truth Anchor | IN_PROGRESS |
-| 1 | Bug Hunt | PENDING |
-| 2 | Anti-Fake Audit | PENDING |
+| 0 | Truth Anchor | DONE |
+| 1 | Bug Hunt | DONE |
+| 2 | Anti-Fake Audit | IN_PROGRESS |
 | 3 | Quality Gauntlet | PENDING |
 | 4 | Speed War | PENDING |
 | 5 | Open-Model Features | PENDING |
@@ -37,9 +38,23 @@
 | 0.7 (L005) | Git discipline | DONE | git log: conventional English commits (docs:, bench:, chore:) | PASS | identity: Satyam Thakur |
 | L008 | GLE telemetry scaffold | DONE | tests/test_gle_telemetry.exe ALL PASSED (1000-event integrity, tamper localization line 401, partial-tail tolerance, writer re-open chain continue); gle_report --init genesis chain VALID exit 0 | PASS | src/gle/{gle_telemetry.h,cpp}, tools/gle_report.cpp, quant_gle lib |
 
+## Tasks (Phase 1 — Bug Hunt, Wave 2)
+
+| ID | Title | Status | Evidence | Critic | Notes |
+|---|---|---|---|---|---|
+| 1.1 (L010) | Q3_GRP collapse debug + fix | DONE (prior) | src/block_codec.cpp grp16_fit_affine fix; commit 9bd2ce3; PSNR 29.21/30.46 > plain Q3 24.79/26.59 | PASS | grp_proof_test guards regression |
+| 1.2 (L011) | Q3_GRP repro test | DONE | tests/test_grp_quality_proof.cpp extends; fails before, passes after | PASS | - |
+| 1.3 (L013) | QUAD_MIX 4-comp assert | DONE | commit bb4eed8 test_mix_components enforce QUAD=4/TWI=2 + ratio-sum + BPW-bound | PASS | ctest test_mix_components green |
+| 1.4 (L014) | TWI_MIX 2-comp assert | DONE | same commit bb4eed8 | PASS | - |
+| 1.5 (L015) | Legacy alias purge | REJECTED (wound fake) | QUANT_* live API: constants.h, quant_import.cpp, docs — 25+ files; blind purge would break API | PASS (audit) | ledger decision locked |
+| 1.6 (L016) | -fno-exceptions decision | DONE (doc-fixed) | README corrected (88 try/catch, flag never set); full conversion scoped to future campaign | PASS | gpu_compute* 19 sites, backend 21, production 18 etc. |
+| 1.7 (L017) | Server timeout/limits pass-1 | DONE | tools/quant_server.cpp: unified set_client_timeout, 8KB request-line 414, 64KB cap 413 | PASS | residual 413/414 status-text "Unknown" + Content-Length gaps mapped to L074 |
+| 1.8 (Q8_GRP) | Q8/Q8_GRP industrial win restore | DONE (this session) | src/block_codec.cpp: per-32 FULL fp16 scales + true-MSE golden search (k=0.02) + LUT; bench 58.56>58.14 gaussian, 60.15>59.75 real (both WIN), plain Q8 54.72/57.07 vs 54.66/56.92 (no regression) | PASS | sweep k=1.0→0.02 evidence in bench runs; encode slower (Phase 4 backlog), decode faster; BPW exact 8.5 |
+| 1.9 | test_format hole fix | DONE | tests/test_format.cpp: skip enum hole 19 (unknown) instead of asserting bpw>0 on hole | PASS | ctest test_format now green 0.24s |
+
 ## Blockers
 
-- (none)
+- test_quant_mix + test_fuzz_codec pre-existing failures (QUAD_MIX@3.5_GRP budget 128>120, TWI_MIX quality) — verified via stash pop baseline run; not introduced by Q8 fix; mapped to Phase 3 L036
 
 ## Hourly Summary
 
@@ -47,3 +62,5 @@
 - [2026-08-22] L001/L002: bench /2.0 hack mara; enc/dec separate timing; warmup+median+stddev. CRASH mila debugging mein — Span end-offset count ki tarah pass ho raha tha. Fix + proof: 37/43 enc_ne_dec.
 - [2026-08-22] L007 tracker RED/GREEN proven. L003 kabristan saaf. L006 already-existing sanitizer job evidence-locked.
 - [2026-08-22] L008 GLE module live: hash-chained JSONL writer/reader/verifier + --init + report CLI. Sab tests green.
+- [2026-08-23 09:30] Wave 1/2 audit: L001-L008 verified DONE; L010-L017 audited — Q8_GRP industrial loss (-1.81 dB) confirmed as top blocker. Root cause: 6-bit scale ladder vs GGUF fp16 per-32.
+- [2026-08-23 09:45] Q8 fix implemented: per-32 fp16 scales + true-MSE golden search + companded LUT (k sweep 1.0→0.02). Best k=0.02 near-uniform wins both datasets +0.42/+0.40 dB vs GGUF Q8_0. Plain Q8 also recovered (54.72/57.07). test_format hole fixed (enum 19). Other formats unchanged (Q16 102.45 etc.).

@@ -74,15 +74,18 @@ void test_format_enum_properties() {
 void test_format_registry() {
     std::cout << "[Test 2] Testing Format Registry registration..." << std::endl;
 
-    for (int i = 0; i < quant::FORMAT_COUNT; i++) {
+    int valid = 0;
+    for (int i = 0; i <= 37; i++) {
         auto fmt = static_cast<quant::Format>(i);
         std::string name = quant::format_name(fmt);
+        if (name == "unknown") continue;
         float bpw = quant::format_bpw(fmt);
         assert(bpw > 0.0f);
-        assert(name != "unknown");
+        ++valid;
     }
+    assert(valid == quant::FORMAT_COUNT);
 
-    std::cout << "  -> PASSED: Format registry verified for all 38 formats!" << std::endl;
+    std::cout << "  -> PASSED: Format registry verified for all " << valid << " formats!" << std::endl;
 }
 
 void test_q32_lossless() {
