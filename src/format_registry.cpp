@@ -77,13 +77,20 @@ static std::vector<MixDescriptor> build_two_mixes() {
 
 static std::vector<MixDescriptor> build_four_mixes() {
     std::vector<MixDescriptor> v;
-    v.push_back({"MXQ_3_5_GRP",      RegFormat::MXQ_3_5_GRP,      4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  true});
-    v.push_back({"MXQ_4_5_GRP",      RegFormat::MXQ_4_5_GRP,      4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  true});
-    v.push_back({"MXQ_6_5_GRP",      RegFormat::MXQ_6_5_GRP,      4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  true});
-    v.push_back({"MXQ_8_5_GRP",      RegFormat::MXQ_8_5_GRP,      4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  true});
-    v.push_back({"MXQ_12_5_GRP",     RegFormat::MXQ_12_5_GRP,     4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, true});
-    v.push_back({"MXQ_16_5_GRP",     RegFormat::MXQ_16_5_GRP,     4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, true});
-    v.push_back({"MXQ_24_5_GRP",     RegFormat::MXQ_24_5_GRP,     4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, true});
+    v.push_back({"MXQ_3.5",          RegFormat::MXQ_3_5,          4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  false});
+    v.push_back({"MXQ_4.5",          RegFormat::MXQ_4_5,          4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  false});
+    v.push_back({"MXQ_6.5",          RegFormat::MXQ_6_5,          4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  false});
+    v.push_back({"MXQ_8.5",          RegFormat::MXQ_8_5,          4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  false});
+    v.push_back({"MXQ_12.5",         RegFormat::MXQ_12_5,         4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, false});
+    v.push_back({"MXQ_16.5",         RegFormat::MXQ_16_5,         4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, false});
+    v.push_back({"MXQ_24.5",         RegFormat::MXQ_24_5,         4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, false});
+    v.push_back({"MXQ_3.5_GRP",      RegFormat::MXQ_3_5_GRP,      4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  true});
+    v.push_back({"MXQ_4.5_GRP",      RegFormat::MXQ_4_5_GRP,      4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  true});
+    v.push_back({"MXQ_6.5_GRP",      RegFormat::MXQ_6_5_GRP,      4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  true});
+    v.push_back({"MXQ_8.5_GRP",      RegFormat::MXQ_8_5_GRP,      4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  true});
+    v.push_back({"MXQ_12.5_GRP",     RegFormat::MXQ_12_5_GRP,     4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, true});
+    v.push_back({"MXQ_16.5_GRP",     RegFormat::MXQ_16_5_GRP,     4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, true});
+    v.push_back({"MXQ_24.5_GRP",     RegFormat::MXQ_24_5_GRP,     4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, true});
     return v;
 }
 

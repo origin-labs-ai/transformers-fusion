@@ -26,6 +26,13 @@ enum class RegFormat : uint32_t {
     Q12_GRP,
     Q16_GRP,
     Q24_GRP,
+    MXQ_3_5,
+    MXQ_4_5,
+    MXQ_6_5,
+    MXQ_8_5,
+    MXQ_12_5,
+    MXQ_16_5,
+    MXQ_24_5,
     MXQ_3_5_GRP,
     MXQ_4_5_GRP,
     MXQ_6_5_GRP,
@@ -156,15 +163,65 @@ private:
 };
 
 inline RegFormat format_to_regformat(Format f) {
-    auto v = static_cast<uint32_t>(f);
-    if (v < 38) return static_cast<RegFormat>(v);
-    return RegFormat::Q32;
+    switch(f) {
+        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_GRP: case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: return RegFormat::Q1;
+        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_GRP: case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: return RegFormat::Q2;
+        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_GRP: case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: return RegFormat::Q3;
+        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_GRP: case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: return RegFormat::Q4;
+        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_GRP: case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: return RegFormat::Q6;
+        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_GRP: case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: return RegFormat::Q8;
+        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_GRP: case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: return RegFormat::Q12;
+        case Format::Q16: case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: case Format::Q16_GRP: case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: return RegFormat::Q16;
+        case Format::Q24: case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: case Format::Q24_GRP: case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: return RegFormat::Q24;
+        case Format::Q32: return RegFormat::Q32;
+        case Format::Q_GRP_1_5: case Format::Q_GRP_2_5: case Format::Q_GRP_3_5: case Format::Q_GRP_4_5: case Format::Q_GRP_6_5: case Format::Q_GRP_8_5: case Format::Q_GRP_12_5: case Format::Q_GRP_16_5: case Format::Q_GRP_24_5: return RegFormat::Q1;
+        case Format::MXQ_3_5: case Format::MXQ_3_5_GRP: return RegFormat::MXQ_3_5_GRP;
+        case Format::MXQ_4_5: case Format::MXQ_4_5_GRP: return RegFormat::MXQ_4_5_GRP;
+        case Format::MXQ_6_5: case Format::MXQ_6_5_GRP: return RegFormat::MXQ_6_5_GRP;
+        case Format::MXQ_8_5: case Format::MXQ_8_5_GRP: return RegFormat::MXQ_8_5_GRP;
+        case Format::MXQ_12_5: case Format::MXQ_12_5_GRP: return RegFormat::MXQ_12_5_GRP;
+        case Format::MXQ_16_5: case Format::MXQ_16_5_GRP: return RegFormat::MXQ_16_5_GRP;
+        case Format::MXQ_24_5: case Format::MXQ_24_5_GRP: return RegFormat::MXQ_24_5_GRP;
+        default: return RegFormat::Q32;
+    }
 }
-
 inline Format regformat_to_format(RegFormat rf) {
-    auto v = static_cast<uint8_t>(rf);
-    if (v < 38) return static_cast<Format>(v);
-    return Format::Q32;
+    switch(rf) {
+        case RegFormat::Q1: return Format::Q1;
+        case RegFormat::Q2: return Format::Q2;
+        case RegFormat::Q3: return Format::Q3;
+        case RegFormat::Q4: return Format::Q4;
+        case RegFormat::Q6: return Format::Q6;
+        case RegFormat::Q8: return Format::Q8;
+        case RegFormat::Q12: return Format::Q12;
+        case RegFormat::Q16: return Format::Q16;
+        case RegFormat::Q24: return Format::Q24;
+        case RegFormat::Q32: return Format::Q32;
+        case RegFormat::Q1_GRP: return Format::Q1_GRP;
+        case RegFormat::Q2_GRP: return Format::Q2_GRP;
+        case RegFormat::Q3_GRP: return Format::Q3_GRP;
+        case RegFormat::Q4_GRP: return Format::Q4_GRP;
+        case RegFormat::Q6_GRP: return Format::Q6_GRP;
+        case RegFormat::Q8_GRP: return Format::Q8_GRP;
+        case RegFormat::Q12_GRP: return Format::Q12_GRP;
+        case RegFormat::Q16_GRP: return Format::Q16_GRP;
+        case RegFormat::Q24_GRP: return Format::Q24_GRP;
+        case RegFormat::MXQ_3_5: return Format::MXQ_3_5;
+        case RegFormat::MXQ_4_5: return Format::MXQ_4_5;
+        case RegFormat::MXQ_6_5: return Format::MXQ_6_5;
+        case RegFormat::MXQ_8_5: return Format::MXQ_8_5;
+        case RegFormat::MXQ_12_5: return Format::MXQ_12_5;
+        case RegFormat::MXQ_16_5: return Format::MXQ_16_5;
+        case RegFormat::MXQ_24_5: return Format::MXQ_24_5;
+        case RegFormat::MXQ_3_5_GRP: return Format::MXQ_3_5_GRP;
+        case RegFormat::MXQ_4_5_GRP: return Format::MXQ_4_5_GRP;
+        case RegFormat::MXQ_6_5_GRP: return Format::MXQ_6_5_GRP;
+        case RegFormat::MXQ_8_5_GRP: return Format::MXQ_8_5_GRP;
+        case RegFormat::MXQ_12_5_GRP: return Format::MXQ_12_5_GRP;
+        case RegFormat::MXQ_16_5_GRP: return Format::MXQ_16_5_GRP;
+        case RegFormat::MXQ_24_5_GRP: return Format::MXQ_24_5_GRP;
+        default: return Format::Q32;
+    }
 }
 
 } // namespace quant

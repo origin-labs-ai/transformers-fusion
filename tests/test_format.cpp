@@ -13,7 +13,7 @@ void test_format_enum_properties() {
     std::cout << "[Test 1] Testing Format enum properties and helpers..." << std::endl;
 
     // Verify format count
-    assert(quant::FORMAT_COUNT == 37);
+    assert(quant::FORMAT_COUNT == 105);
 
     // Verify all base formats
     for (int i = 0; i <= 9; i++) {
@@ -46,14 +46,20 @@ void test_format_enum_properties() {
     assert(std::abs(quant::format_bpw(quant::Format::Q24) - 24.0f) < 1e-4f);
     assert(std::abs(quant::format_bpw(quant::Format::Q32) - 32.0f) < 1e-4f);
 
-    // Verify all 9 GRP variants (Q1_GRP to Q24_GRP)
-    for (int i = 10; i <= 18; i++) {
+    // Verify GRP exact variants (Q1_GRP..Q24_GRP at enum 37..45)
+    for (int i = 37; i <= 45; i++) {
         auto fmt = static_cast<quant::Format>(i);
         assert(quant::format_is_grp(fmt));
         assert(!quant::format_is_base(fmt));
     }
 
-    // Verify TWI_MIX variants
+    // Verify half-BPW plain variants (Q1.5..Q24.5 at enum 73..81)
+    for (int i = 73; i <= 81; i++) {
+        auto fmt = static_cast<quant::Format>(i);
+        assert(!quant::format_is_grp(fmt));
+        assert(!quant::format_is_base(fmt));
+        assert(quant::format_bpw(fmt) > 0.0f);
+    }
 
     // Verify QUAD_MIX variants
     assert(quant::format_is_quad_mix(quant::Format::MXQ_3_5_GRP));
@@ -71,7 +77,7 @@ void test_format_registry() {
     std::cout << "[Test 2] Testing Format Registry registration..." << std::endl;
 
     int valid = 0;
-    for (int i = 0; i <= 37; i++) {
+    for (int i = 0; i < quant::FORMAT_COUNT; i++) {
         auto fmt = static_cast<quant::Format>(i);
         std::string name = quant::format_name(fmt);
         if (name == "unknown") continue;

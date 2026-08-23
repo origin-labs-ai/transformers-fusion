@@ -182,6 +182,57 @@ void rt_gguf_q6k(const std::vector<float>& w, std::vector<float>& out) {
     }
 }
 
+// GGUF Q4_K scheme (faithful to public spec): 256-weight super-block with
+// FP16 d + FP16 dmin; 8 sub-blocks of 32, each with a 6-bit scale code and a
+// 6-bit min code; 4-bit codes q in [0,15]. Dequant: d*sc[q]*q - dmin*m[q].
+// Exact wire cost: 256*4 + 8*12 + 32 = 1152 bits = 4.500 BPW.
+void rt_gguf_q4k(const std::vector<float>& w, std::vector<float>& out) {
+    out.resize(w.size());
+    const int64_t kSuper = 256;
+    for (int64_t start = 0; start < (int64_t)w.size(); start += kSuper) {
+        const int64_t end = std::min(start + kSuper, (int64_t)w.size());
+        const int nsub = (int)((end - start + 31) / 32);
+        float gmax = 0, gmin_abs = 0;
+        std::vector<float> bmax((size_t)nsub), bmin((size_t)nsub);
+        for (int b = 0; b < nsub; ++b) {
+            float hi = -1e30f, lo = 1e30f;
+            for (int64_t j = 0; j < 32 && start + b * 32 + j < end; ++j) {
+                const float v = w[start + b * 32 + j];
+                hi = std::max(hi, v);
+                lo = std::min(lo, v);
+            }
+            bmax[(size_t)b] = hi;
+            bmin[(size_t)b] = lo;
+            gmax = std::max(gmax, hi);
+        }
+        // d spans positive reach; dmin spans the negative offset reach
+        float d = (gmax > 0) ? gmax / 7.0f : 1e-30f;
+        d = f16_to_f32(f32_to_f16(d));
+        for (int b = 0; b < nsub; ++b)
+            gmin_abs = std::max(gmin_abs, std::max(0.0f, -bmin[(size_t)b]));
+        float dmin = (gmin_abs > 0) ? gmin_abs / 7.0f : 0.0f;
+        dmin = f16_to_f32(f32_to_f16(dmin));
+        for (int b = 0; b < nsub; ++b) {
+            const int64_t bs = start + b * 32;
+            const int64_t be = std::min(bs + 32, end);
+            int sc = 0, mc = 0;
+            if (d > 0 && bmax[(size_t)b] > 0)
+                sc = (int)std::lround(bmax[(size_t)b] / d);
+            sc = std::max(0, std::min(63, sc));
+            if (dmin > 0 && bmin[(size_t)b] < 0)
+                mc = (int)std::lround(-bmin[(size_t)b] / dmin);
+            mc = std::max(0, std::min(63, mc));
+            const float step = (float)sc * d;
+            const float base = -(float)mc * dmin;
+            for (int64_t i = bs; i < be; ++i) {
+                int q = (step > 0) ? (int)std::lround((w[i] - base) / step) : 0;
+                q = std::max(0, std::min(15, q));
+                out[i] = (float)q * step + base;
+            }
+        }
+    }
+}
+
 // BitNet b1.58: ternary {-1,0,1} + per-32 FP16 scale (1.58 BPW).
 void rt_bitnet_158(const std::vector<float>& w, std::vector<float>& out) {
     out.resize(w.size());
@@ -517,6 +568,7 @@ int main(int argc, char** argv) {
         {"[ref] INT8 uniform", 8.125f, rt_int8},
         {"[ref] GGUF Q8_0", 8.5f, rt_gguf_q80},
         {"[ref] GGUF Q6_K", 6.5625f, rt_gguf_q6k},
+        {"[ref] GGUF Q4_K", 4.5f, rt_gguf_q4k},
         {"[ref] BitNet b1.58", 1.58f, rt_bitnet_158},
         {"[ref] Binary 1-bit", 1.0f, rt_binary},
     };

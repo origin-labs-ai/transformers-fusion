@@ -15,12 +15,12 @@ int main() {
     std::cout << "  -> Total single formats registered: " << singles.size() << std::endl;
     assert(singles.size() >= 19);
 
-    std::cout << "[Test 2] Querying two-mixes (TWI_MIX) and four-mixes (QUAD_MIX)..." << std::endl;
+    std::cout << "[Test 2] Querying mixes (TWI removed by design; four-tier MXQ)..." << std::endl;
     const auto& twi_mixes = quant::FormatRegistry::get_all_twi_mixes();
     const auto& four_mixes = quant::FormatRegistry::get_all_four_mixes();
-    std::cout << "  -> Total TWI_MIX formats: " << twi_mixes.size() << std::endl;
-    std::cout << "  -> Total QUAD_MIX formats: " << four_mixes.size() << std::endl;
-    assert(twi_mixes.size() >= 4);
+    std::cout << "  -> Total TWI_MIX formats: " << twi_mixes.size() << " (removed by design)" << std::endl;
+    std::cout << "  -> Total MXQ four-mix formats: " << four_mixes.size() << std::endl;
+    assert(twi_mixes.empty());
     assert(four_mixes.size() >= 14);
 
     std::cout << "[Test 3] Testing BPW lookup for Q1 through Q32..." << std::endl;
