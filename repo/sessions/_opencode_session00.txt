@@ -1,0 +1,453 @@
+
+===== [USER] 2026-08-26T15:33 =====
+Hello!
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+Hello! I'm Muse Spark (via OpenCode) — ready to help with your workspace at `C:\Users\thaku\Downloads\InNova`.
+
+I can:
+- Explore, edit, and debug code
+- Run tests, builds, and terminal commands
+- Review changes and manage git
+
+What would you like to work on?
+
+===== [USER] 2026-08-26T15:33 =====
+Hinglish bol be saale!
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[reasoning] Switching to a casual Hinglish tone and confirming a friendly, respectful reply without emojis.
+Haan bilkul 😄 ab se Hinglish me hi baat karte hai, bol kya kaam hai?
+
+===== [USER] 2026-08-26T15:33 =====
+Project me kitne formats hai, quant ke?!
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[tools: read]
+
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[tools: grep]
+
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[tools: read]
+
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[tools: read]
+
+
+===== [ASSISTANT] 2026-08-26T15:33 =====
+[tools: read]
+[reasoning] Counting project formats and preparing a Hinglish summary with the total and breakdown.
+
+===== [ASSISTANT] 2026-08-26T15:34 =====
+[reasoning] Analyzing the format enum and registry to reconcile total formats with registry singles count.
+Arre bhai sunn:
+
+**Total `105` formats hai** - `include/quant/types.h:67` pe `FORMAT_COUNT = 105` defined hai, enum `Format : uint8_t` `include/quant/types.h:22-66` me.
+
+Breakdown v3 wala (2026-08-23 rearranged):
+
+1.  **Base integer BPW (10):** `Q1, Q2, Q3, Q4, Q6, Q8, Q12, Q16, Q24, Q32` - `types.h:24-33`
+2.  **K variants (27):** har BPW pe 3 variant `L/M/H` -> `Q1_K_L/M/H` se `Q24_K_L/M/H` tak - `types.h:35-43` (comment me 30 likha hai but actual 27 hai, 10-36 = 27 entries)
+3.  **GRP exact (9):** `Q1_G ... Q24_G` - `types.h:45`
+4.  **K_G exact (27):** `Q1_K_L_G ... Q24_K_H_G` - `types.h:48-56`
+5.  **Half BPW plain (9):** `Q1.5 ... Q24.5` - `types.h:58-59`
+6.  **Half BPW GRP (9):** `Q_G_1.5 ... Q_G_24.5` - `types.h:61-62`
+7.  **MXQ QUAD_MIX (14):** 7 plain + 7 GRP -> `MXQ_3.5, 4.5, 6.5, 8.5, 12.5, 16.5, 24.5` aur uska `_G` wala - `types.h:64-65` | `src/format_registry.cpp:80-93`
+
+Total = 10+27+9+27+9+9+14 = **105**
+
+Registry level pe abstraction alag hai - `include/quant/format_registry.h:9` pe `RegFormat` enum me sirf **33** logical ID hai (10 Base + 9 GRP + 14 MXQ), aur `get_all_singles()` `src/format_registry.cpp:19` pe sirf 19 singles (10 base + 9 GRP) return karta hai, baaki K/Half wale wire-level `Format` pe hi handle hote hai via `block_codec`.
+
+Aur `TWI_MIX` ab exist nahi karta - `format_is_twi_mix() { return false }` `types.h:133`, sirf `QUAD_MIX` hi hai.
+
+
+===== [USER] 2026-08-26T15:35 =====
+Abe saale, QUAD_MIX kyu hai?! Maine to bas MXQ rakhne bola tha! Aur MXQ yaani QUAD_MIX hota!
+
+===== [ASSISTANT] 2026-08-26T15:35 =====
+[tools: grep]
+[reasoning] Investigating QUAD_MIX vs MXQ terminology in the codebase to confirm QUAD_MIX is an alias for MXQ.
+
+===== [ASSISTANT] 2026-08-26T15:35 =====
+[tools: grep]
+
+
+===== [ASSISTANT] 2026-08-26T15:35 =====
+[tools: read]
+
+
+===== [ASSISTANT] 2026-08-26T15:35 =====
+[reasoning] Explaining in Hinglish that QUAD_MIX is just an alias for MXQ in the code, with TWI_MIX removed and legacy docs still referencing it.
+Bilkul sahi bola tune, **MXQ hi QUAD_MIX hai, alag format nahi hai** — bas naam ka alias bacha hua hai.
+
+Dekh `include/quant/types.h:130-134`:
+
+```cpp
+format_is_mx(f)       => v>=91
+format_is_mixed(f)    => format_is_mx(f)
+format_is_quad_mix(f) => format_is_mx(f)  // <- MXQ == QUAD_MIX
+format_is_twi_mix(f)  => false             // <- TWI delete ho chuka v3 me
+```
+
+Actual `Format` enum `types.h:64-65` pe sirf `MXQ_3_5 ... MXQ_24_5_G` (14 entries) hai, koi `QUAD_MIX` naam ka alag enum value nahi hai. `RegFormat` `format_registry.h:29-42` pe bhi same 14 MXQ hi hai.
+
+`TWI_MIX` to v3 me pura delete hai - `src/format_registry.cpp:73-75` pe `build_two_mixes()` empty return karta hai, aur `audit_full_20260825.md:22` pe bhi likha hai `TWI_MIX API gone in v3`.
+
+Confusion isliye ho raha kyuki docs/bench me purana naam `Q_QUAD_MIX@12.5` abhi bhi string ke roop me pada hai - jaise `bench/bench_format_comparison.cpp:682` `verdict("Q_QUAD_MIX@24.5_G", Format::MXQ_24_5_G)` - andar se mapping `MXQ` pe hi ja raha hai, `tools/quantize.cpp:39` pe bhi `quad_3_5` -> `MXQ_3_5_GRP`.
+
+Toh fix simple hai: tu chahta hai toh mai `format_is_quad_mix` alias ko hata ke sirf `format_is_mx` / `format_is_mixed` rakh du, aur bench/docs ke `Q_QUAD_MIX` strings ko `MXQ` pe rename kar du. Bol kar du kya cleanup?
+
+
+===== [USER] 2026-08-26T15:36 =====
+Sabse pehle to saare GRP varients me _GRP jo laga hai uski jagah pe _G lagaa de, poore codebase me, har file me! Ek example de ke bataata hu, jaise ki Q3_GRP hai to usko Q3_G kar de and Q3_K_M_GRP hai to Q3_K_M_G and har varient pe, har format pe yahi _G waala rule apply kar, koi bhi type ho, all over 105 formats, isko update kar!
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: todowrite]
+[reasoning] Searching the codebase for _GRP occurrences to plan a consistent rename to _G across all formats.
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: todowrite]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: grep]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: bash]
+[reasoning] Verifying Format enum naming by rechecking types header and flagging outdated _GRP references in tools.
+[reasoning] Expanding the rename to cover all _GRP occurrences across the codebase and outlining a safe bulk-replace approach.
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:36 =====
+[tools: todowrite]
+[reasoning] Determining file scope and using git-tracked files while excluding .
+[reasoning] Extending the search to adapter enum definitions for consistent QUANT*_GRP to QUANT*_G renaming.
+
+===== [ASSISTANT] 2026-08-26T15:37 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:37 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:37 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:37 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:37 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:38 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:38 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:38 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:38 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:38 =====
+[tools: bash]
+[reasoning] Debugging a file filter mismatch caused by Windows path separators and incorrect prefix checks after replacing backslashes.
+[reasoning] Switching to a Python filesystem walk with extension filtering after subprocess path and cwd issues.
+
+===== [ASSISTANT] 2026-08-26T15:39 =====
+[tools: bash]
+[reasoning] Debugging ripgrep subprocess flag misuse causing exit code and path parsing issues, comparing results with git grep and file walk.
+[reasoning] Expanding the replacement scope to 21 files while limiting it to the _GRP token and handling case variants.
+
+===== [ASSISTANT] 2026-08-26T15:39 =====
+[tools: bash]
+[reasoning] Analyzing lowercase _grp occurrences to distinguish GRP naming from unrelated uses and deciding on replacement scope.
+[reasoning] Refining the replacement scope to target only format identifiers rather than all lowercase _grp occurrences.
+
+===== [ASSISTANT] 2026-08-26T15:39 =====
+[tools: bash]
+[reasoning] Analyzing lowercase _grp occurrences to distinguish internal code from format names and decide replacement scope.
+[reasoning] Restricting replacement to uppercase _GRP to avoid touching lowercase identifiers while noting lowercase format strings may also need handling.
+[reasoning] Extending the uppercase _GRP replacement to lowercase variants while excluding helper functions like quant_grp8.
+[reasoning] Limiting the global _GRP→_G change to uppercase occurrences to avoid breaking lowercase helper names and filenames.
+
+===== [ASSISTANT] 2026-08-26T15:40 =====
+[tools: read]
+[reasoning] Applying consistent lowercase format string updates in tools/quantize to match the uppercase replacement.
+[reasoning] Extending lowercase string fixes to remaining format identifiers in tools/quantize.
+
+===== [ASSISTANT] 2026-08-26T15:40 =====
+[tools: bash]
+[reasoning] Updating lowercase format identifiers and help text to use the _g suffix for consistency.
+[reasoning] Extending lowercase identifier updates to legacy quant names and limiting scope to quantize.cpp.
+
+===== [ASSISTANT] 2026-08-26T15:40 =====
+[tools: todowrite]
+[reasoning] Evaluating a lowercase-to-abbreviation rename for internal helpers while balancing compatibility with unrelated identifiers.
+[reasoning] Separating format-name replacements from helper identifiers to avoid unintended lowercase collisions.
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: edit]
+
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: read]
+[reasoning] Updating help text to use new naming while preserving backward compatibility references.
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: edit]
+
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: todowrite]
+[reasoning] Scanning for remaining lowercase grp references and confirming the build after 452 replacements.
+[reasoning] Running a build and quick compile test to confirm no remaining _GRP references.
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:41 =====
+[tools: bash]
+
+
+===== [ASSISTANT] 2026-08-26T15:42 =====
+[tools: bash]
+
+
+===== [USER] 2026-08-26T15:46 =====
+Abe, ek kaam kar... total saare ke saare formats ko list kar yahaa pe, har ek ko!
+
+===== [ASSISTANT] 2026-08-26T15:46 =====
+[reasoning] Compiling and grouping all 105 format enum entries from types header into Hinglish categories for the full list.
+[reasoning] Verifying the 105-entry count and applying the _G naming update across categories.
+Le bhai, pura **105 formats** ka list — `include/quant/types.h:22-67` se (`FORMAT_COUNT = 105`), abhi wala `_GRP` -> `_G` update ke baad:
+
+**1. Base integer BPW (10)** - `types.h:24-33`
+```
+0  Q1    (1.0)    1  Q2    (2.0)    2  Q3    (3.0)
+3  Q4    (4.0)    4  Q6    (6.0)    5  Q8    (8.0)
+6  Q12  (12.0)    7  Q16  (16.0)    8  Q24  (24.0)    9  Q32 (32.0 lossless)
+```
+
+**2. K variants - har BPW pe 3 (27)** - `types.h:35-43` - L/M/H = low/medium/high K
+```
+10 Q1_K_L  11 Q1_K_M  12 Q1_K_H   | 13 Q2_K_L  14 Q2_K_M  15 Q2_K_H
+16 Q3_K_L  17 Q3_K_M  18 Q3_K_H   | 19 Q4_K_L  20 Q4_K_M  21 Q4_K_H
+22 Q6_K_L  23 Q6_K_M  24 Q6_K_H   | 25 Q8_K_L  26 Q8_K_M  27 Q8_K_H
+28 Q12_K_L 29 Q12_K_M 30 Q12_K_H  | 31 Q16_K_L 32 Q16_K_M 33 Q16_K_H
+34 Q24_K_L 35 Q24_K_M 36 Q24_K_H
+```
+BPW same as base wala (Q1_K_* = 1.0, Q2_K_* = 2.0 ...)
+
+**3. GRP exact integer BPW (9)** - `types.h:45` - ab `_G` naam se
+```
+37 Q1_G (1.0)  38 Q2_G (2.0)  39 Q3_G (3.0)  40 Q4_G (4.0)  41 Q6_G (6.0)
+42 Q8_G (8.0)  43 Q12_G (12.0)  44 Q16_G (16.0)  45 Q24_G (24.0)
+```
+
+**4. K_G exact (27)** - `types.h:48-56`
+```
+46 Q1_K_L_G 47 Q1_K_M_G 48 Q1_K_H_G | 49 Q2_K_L_G 50 Q2_K_M_G 51 Q2_K_H_G
+52 Q3_K_L_G 53 Q3_K_M_G 54 Q3_K_H_G | 55 Q4_K_L_G 56 Q4_K_M_G 57 Q4_K_H_G
+58 Q6_K_L_G 59 Q6_K_M_G 60 Q6_K_H_G | 61 Q8_K_L_G 62 Q8_K_M_G 63 Q8_K_H_G
+64 Q12_K_L_G 65 Q12_K_M_G 66 Q12_K_H_G | 67 Q16_K_L_G 68 Q16_K_M_G 69 Q16_K_H_G
+70 Q24_K_L_G 71 Q24_K_M_G 72 Q24_K_H_G
+```
+
+**5. Half BPW plain (9)** - `types.h:58-59`
+```
+73 Q1_5 (1.5)  74 Q2_5 (2.5)  75 Q3_5 (3.5)  76 Q4_5 (4.5)  77 Q6_5 (6.5)
+78 Q8_5 (8.5)  79 Q12_5 (12.5) 80 Q16_5 (16.5) 81 Q24_5 (24.5)
+```
+
+**6. Half BPW GRP (9)** - `types.h:61-62` - ab `Q_G_X_5`
+```
+82 Q_G_1_5 (1.5)  83 Q_G_2_5 (2.5)  84 Q_G_3_5 (3.5)  85 Q_G_4_5 (4.5)  86 Q_G_6_5 (6.5)
+87 Q_G_8_5 (8.5)  88 Q_G_12_5 (12.5) 89 Q_G_16_5 (16.5) 90 Q_G_24_5 (24.5)
+```
+
+**7. MXQ = QUAD_MIX 4-tier (14)** - `types.h:64-65` - 7 plain + 7 G
+```
+91 MXQ_3_5   (3.5)  92 MXQ_4_5   (4.5)  93 MXQ_6_5   (6.5)  94 MXQ_8_5   (8.5)
+95 MXQ_12_5 (12.5)  96 MXQ_16_5 (16.5)  97 MXQ_24_5 (24.5)
+98 MXQ_3_5_G (3.5)  99 MXQ_4_5_G (4.5)  100 MXQ_6_5_G (6.5) 101 MXQ_8_5_G (8.5)
+102 MXQ_12_5_G (12.5) 103 MXQ_16_5_G (16.5) 104 MXQ_24_5_G (24.5)
+```
+MXQ hi QUAD_MIX hai - `format_is_quad_mix() == format_is_mx()` `types.h:134`, `TWI_MIX` dead hai `types.h:133`.
+
+Total = 10+27+9+27+9+9+14 = **105**.
+
+Tera bola wala `_GRP` -> `_G` wala kaam done — 26 files me 452 jagah change ho gaya hai, ab pure codebase me `_GRP` zero hai.
+
+===== [USER] 2026-08-26T15:51 =====
+Ab maine kuchh ideas banaa diye hai jisse saare formats super clean ho jaayenge! Dekhega kya?!
+
+===== [ASSISTANT] 2026-08-26T15:51 =====
+Haan bilkul dikha! Kya ideas banaye hai? Bata, saath me dekhte hai kaise clean karna hai 105 formats ko.
+
+===== [USER] 2026-08-26T15:52 =====
+Sabko mujhe rename karke saare ke saare 105 formats me sab settle karke dikhaana! Uske formats ke according!
+
+===== [ASSISTANT] 2026-08-26T15:52 =====
+[reasoning] Interpreting the ambiguous rename request for 105 formats and seeking clarification on the naming scheme.
+Samajh gaya bhai — tu chahta hai 105 formats ko ek dum clean rename karke settled dikhau, har category ke hisab se!
+
+Abhi ka settled structure ye hai (latest `_G` wala):
+- **Base (10)** | **K (27)** | **G (9)** | **K_G (27)** | **Half plain (9)** | **Half G (9)** | **MXQ (14)**
+
+Bata tera **naya rename ka idea kya hai**? 
+Jaise:
+- `Q1_K_M_G` ko kya naya naam dena hai?
+- `MXQ_3.5_G` ko kya bulana hai?
+- Half walo ko `Q1.5` vs `Q1_5` vs `Q_G_1.5` me se kaise rakhna hai?
+
+Tu pattern de de — mai turant pure 105 ka **before -> after mapping table** bana ke dikha dunga aur codebase me apply bhi kar dunga.
+
+===== [USER] 2026-08-26T15:58 =====
+Tere hisaab se kya scheme hona chahiye, G yaani grouping waale hai, mujhe underscore ke beech numbers nahi chahiye naa hi numbers ke beech underscore chahiye and numbers se khatam hone chahiye letters se shuru, MXQ bhi sahi hai, K and uske varients bhi sahi hai bas G and baaki har ek ka sahi se renaming chahiye jisse dikhe bhi clean!
+
+===== [ASSISTANT] 2026-08-26T15:58 =====
+[reasoning] Analyzing naming constraints for G-grouped schemes and ruling out invalid underscore and number patterns while keeping MXQ and K variants unchanged.
+[reasoning] Clarifying that suffixes must be numeric only and that underscores are allowed solely as optional separators between the letter prefix and numeric suffix.
+[reasoning] Proposing a G-variant naming scheme that starts with letters, ends with numbers, and avoids underscores between numbers.
+[reasoning] Refining the G-variant scheme to use a letter prefix with numeric suffix and no inter-number underscores.
+[reasoning] Extending the G-variant scheme with decimal handling and K-variant suffix options.
+Samajh gaya! Tera matlab clean matlab:
+- `Q1_G` jaise last me `G` letter pe khatam na ho — **letters se start, numbers pe end**
+- `Q_G_1_5` ya `Q1_5` jaise **numbers ke beech underscore na ho**
+- `Q_G_1_5` jaise **underscore ke beech numbers na ho**
+
+`K` aur `MXQ` tujhe sahi lag rahe hai, toh unko touch nahi karenge. Bas `G` wale (9 plain G + 27 K_G + 9 Half-G = 45 formats) aur Half plain wale (9) ko clean karna hai — total 54 ka rename.
+
+Mere hisaab se 2 clean schemes ho sakte hai, tu bata kaunsa chahiye:
+
+**Scheme A (Recommended - Prefix G, P for point):**
+- `Q1_G` -> `QG1`  (display `QG1`) — `QG` = grouping, end number pe
+- `Q1_K_L_G` -> `QG1_K_L`  (display `QG1_K_L`) — K variant same, bas prefix G
+- `Q1_5` -> `Q1P5` (display `Q1.5`) — `P` = point, underscore khatam
+- `Q_G_1_5` -> `QG1P5` (display `QG1.5`) — no underscore between numbers at all
+- `Q8_G` -> `QG8`, `Q12_G` -> `QG12` etc.
+
+Example settled G-block:
+```
+QG1 (1.0)  QG2 (2.0)  QG3 (3.0)  QG4 (4.0)  QG6 (6.0)  QG8 (8.0)  QG12 QG16 QG24
+QG1_K_L QG1_K_M QG1_K_H ... QG24_K_H
+QG1P5 (1.5) QG2P5 QG3P5 QG4P5 QG6P5 QG8P5 QG12P5 QG16P5 QG24P5
+```
+
+**Scheme B (Suffix G without underscore):**
+- `Q1_G` -> `Q1G` , `Q1_K_L_G` -> `Q1_K_LG` , `Q_G_1_5` -> `Q1P5G`
+- End letter pe hi khatam hoga (G), tera "numbers pe khatam" wala rule tootega.
+
+Mere hisaab se **Scheme A** sabse clean dikhega — `QG` se pata chalega grouping hai, start letters `QG` / `Q`, end hamesha number (`QG1`, `QG1P5`), aur beech me koi `1_5` jaisa underscore-number-underscore nahi.
+
+Tu bol — **Scheme A se 54 formats ko rename karke pura 105 ka settled list dikha du?** Ya tujhe `QG1` ki jagah `Q1G` jaisa koi aur pattern chahiye?
+
+===== [USER] 2026-08-27T12:13 =====
+Nahi be, ye P waala system achchha nahi hai, direct 1.5 ya ho bhi half pe hai wo nahi daal sakte hai kya naam me?! Soch ke bataa! Bas bataa!
+
+===== [ASSISTANT] 2026-08-27T12:13 =====
+[reasoning] Explaining C++ enum naming constraints and suggesting using display names for 1.
+[reasoning] Evaluating scaled-integer naming to represent halves while keeping numeric-only suffixes.
+[reasoning] Proposing compact numeric enum names like Q15 for 1.5 to avoid underscores while keeping dot-only display names.
+Nahi, direct `1.5` ko **enum name** me dot ke saath nahi daal sakte — C++ ka rule hai `Format::Q1.5` illegal hai, identifier me sirf `A-Z a-z 0-9 _` allowed hai, dot allowed nahi. Isiliye abhi `Q1_5` enum hai aur `format_name()` usko display pe `"Q1.5"` (dot wala) return karta hai `types.h:90`.
+
+Agar tujhe code me bhi `1.5` jaisa *dikhe* chahiye, to 2 hi clean tarike bachte hai jo tere rules ko bhi satisfy karega — **start letters, end numbers, no `1_5` wala underscore**:
+
+**Option 1 — Compact number (Recommended, sabse clean):**
+Enum me dot hatake number ko chipka de — `1.5 -> 15` samajh ke
+- `Q1_5` -> `Q15` (display `"Q1.5"`)
+- `Q2_5` -> `Q25` (display `"Q2.5"`)
+- `Q12_5` -> `Q125` (display `"Q12.5"`)
+- `Q_G_1_5` -> `QG15` (display `"QG1.5"`)
+- `Q_G_12_5` -> `QG125` (display `"QG12.5"`)
+
+Fayda: enum me ek bhi underscore nahi, `QG15` start `QG`, end `5` number pe — tere dono rules pass. Display pe user ko `QG1.5` dot wala hi dikhega. Problem: `Q15` dekh ke lagega 15 BPW, but actual me 1.5 hai — thoda confusing.
+
+**Option 2 — Enum me underscore rehne de, display dot:**
+- Enum `Q1_5` hi rehne de, `Q_G_1_5` hi rehne de
+- Display pe already `Q1.5`, `QG1.5` dot wala dikhta hai
+- Yehi abhi ka system hai, enum me `1_5` ka underscore toh rahega hi kyunki C++ me dot nahi ho sakta
+
+`P` wala (`Q1P5`) tujhe pasand nahi, aur `H` wala (`Q1H`) end letter pe khatam hoga jo tera "numbers pe khatam" wala rule todega.
+
+Bata kaunsa chahiye — **Option 1 wala `Q15 / QG15` compact kar du jisse enum ekdum clean dikhe (no underscore at all) aur display pe `1.5` dot wala rahe?** Ya **Option 2 wala `Q1_5 / Q_G_1_5` hi rehne du kyunki enum me dot technically possible hi nahi hai?**
+
+===== [USER] 2026-08-27T12:25 =====
+Abe, letters pe khatam hone waala chalega!
+
+===== [ASSISTANT] 2026-08-27T12:25 =====
+[reasoning] Reinterpreting the naming constraint to allow letter endings and proposing a half-version suffix like H for 1.
+[reasoning] Extending the naming rule to permit letter endings and mapping H suffixes for half versions.
+[reasoning] Proposing suffix G for grouping and H for half to keep names letter-terminated and underscore-free.
+[reasoning] Choosing the Q1GH suffix pattern to extend the G suffix for half-grouping variants.
+Samajh gaya — **letters pe khatam chalega** toh ab sabse clean scheme ye banega, bina `P` ke aur bina `1_5` wale underscore ke, aur dot direct display pe:
+
+**Enum me dot nahi ho sakta** isliye enum `Q1H` rakhenge aur `format_name()` display pe `"Q1.5"` / `"QG1.5"` dot wala dikhayega — tujhe code me `Q1H` dikhega par log/bench pe `Q1.5` hi dikhega.
+
+**Final clean rename (54 formats, baaki 51 same — K + MXQ + Base tune sahi bola):**
+
+**1. Plain G (9) — `Q1_G` -> `Q1G` (suffix G, no underscore)**
+```
+Q1_G -> Q1G    Q2_G -> Q2G    Q3_G -> Q3G    Q4_G -> Q4G    Q6_G -> Q6G
+Q8_G -> Q8G    Q12_G -> Q12G  Q16_G -> Q16G  Q24_G -> Q24G
+```
+
+**2. K_G (27) — bas last `_G` ka underscore hata**
+```
+Q1_K_L_G -> Q1_K_LG   Q1_K_M_G -> Q1_K_MG   Q1_K_H_G -> Q1_K_HG
+Q2_K_L_G -> Q2_K_LG ... Q24_K_H_G -> Q24_K_HG  (same pattern 27 ka)
+```
+
+**3. Half plain (9) — `H` = half (0.5)**
+```
+Q1_5 -> Q1H (display Q1.5)   Q2_5 -> Q2H   Q3_5 -> Q3H   Q4_5 -> Q4H
+Q6_5 -> Q6H   Q8_5 -> Q8H   Q12_5 -> Q12H   Q16_5 -> Q16H   Q24_5 -> Q24H
+```
+
+**4. Half G (9) — `GH` = grouping + half**
+```
+Q_G_1_5 -> Q1GH (display QG1.5)   Q_G_2_5 -> Q2GH   Q_G_3_5 -> Q3GH
+Q_G_4_5 -> Q4GH   Q_G_6_5 -> Q6GH   Q_G_8_5 -> Q8GH
+Q_G_12_5 -> Q12GH  Q_G_16_5 -> Q16GH  Q_G_24_5 -> Q24GH
+```
+
+Check tere rules:
+- Start letters `Q`/`QG`, end letters `G`/`H` — allowed (tune bola chalega)
+- `Q1GH` me ek bhi `1_5` jaisa underscore-number-underscore nahi, `Q1G` me toh underscore hi nahi
+- `MXQ_3.5` aur `Q1_K_L` jaise wale untouched — jaise tune bola sahi hai
+
+Ye karu toh pure 105 settled ho jayenge — 51 purane clean + 54 naye `Q1G / Q1H / Q1GH` wale.
+
+Bol apply kar du is scheme pe?

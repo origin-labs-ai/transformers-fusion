@@ -37,7 +37,7 @@ int main() {
             e.type = (i % 3 == 0) ? EventType::BuildResult : EventType::TestResult;
             e.actor = "ci";
             e.verdict = (i % 7 == 0) ? "FAIL" : "PASS";
-            e.evidence = ".research/telemetry/runs/r1/artifacts/out_" + std::to_string(i) + ".txt";
+            e.evidence = "repo/state/telemetry/runs/r1/artifacts/out_" + std::to_string(i) + ".txt";
             e.numbers = "{\"iter\":" + std::to_string(i) + "}";
             w.append(e);
         }
@@ -71,7 +71,7 @@ int main() {
         e.type = EventType::PhaseExit;
         e.actor = "lead";
         e.verdict = "PASS";
-        e.evidence = ".research/workbench.md";
+        e.evidence = "research/workbench.md";
         w2.append(e);
 
         TelemetryReader r(kPath);

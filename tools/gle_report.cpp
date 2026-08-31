@@ -1,6 +1,6 @@
 // ============================================================================
 // gle_report.cpp — GLE report generator (TRANSCRIPT.md PART-J.5)
-// Reads .research/telemetry/events.jsonl and prints a markdown summary.
+// Reads repo/state/telemetry/events.jsonl and prints a markdown summary.
 // Zero-dependency CLI: gle_report [events.jsonl]
 // ============================================================================
 #include "gle_telemetry.h"
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     std::string flag = argc > 1 ? argv[1] : "";
     if (flag == "--init") {
         const char* init_run_id = argc > 2 ? argv[2] : "master_plan_v2_20260822";
-        const char* init_path = ".research/telemetry/events.jsonl";
+        const char* init_path = "repo/state/telemetry/events.jsonl";
         gle::TelemetryWriter w(init_path);
         gle::Event e;
         e.run_id = init_run_id;
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    const char* path = argc > 1 ? argv[1] : ".research/telemetry/events.jsonl";
+    const char* path = argc > 1 ? argv[1] : "repo/state/telemetry/events.jsonl";
 
     gle::TelemetryReader r(path);
     const auto& rep = r.verify_chain();

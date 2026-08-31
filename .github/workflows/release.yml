@@ -79,7 +79,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          tar --exclude='.git' --exclude='build' --exclude='dist' --exclude='.kilo' --exclude='.research' \
+          tar --exclude='.git' --exclude='build' --exclude='dist' --exclude='.kilo' --exclude='research' --exclude='repo' \
             -czf dist/InNova-$VERSION-source.tar.gz .
           cd dist
           sha256sum InNova-$VERSION-source.tar.gz > InNova-$VERSION-source.tar.gz.sha256
