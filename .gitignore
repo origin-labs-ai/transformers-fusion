@@ -121,3 +121,4 @@ dist/linux/
 .bitnet/
 publication/
 dist/windows/x64/
+repo/.mimosa/
