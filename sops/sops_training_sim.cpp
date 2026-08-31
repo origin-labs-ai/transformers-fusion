@@ -62,7 +62,7 @@ struct SimFormat {
 static const SimFormat formats[] = {
     {"QUANT1",       0, 1.0,   32.000},
     {"QUANT_Q0",   1, 1.5,   21.333},
-    {"QUANT_Q0_GRP", 3, 1.5,   20.253},
+    {"QUANT_Q0_G", 3, 1.5,   20.253},
     {"QUANT2",       4, 2.0,   16.000},
     {"QUANT4",       5, 4.0,    8.000},
     {"QUANT8",       6, 8.0,    4.000},

@@ -178,7 +178,7 @@ FormatPlan FormatPlanner::allocate(int num_weight_blocks, int weights_per_block)
     // (four) blends. Each mix tier's ratio spreads across the (importance-
     // ordered) blocks, and the tier's RegFormat is mapped to its real Format
     // through the registry helper regformat_to_format(). This covers ARBITRARY
-    // tier sets, including GRP formats (Q1_GRP..Q8_GRP, Q0_GRP) and
+    // tier sets, including GRP formats (Q1_G..Q8_G, Q0_G) and
     // QUANT adaptive mixes, so the plan's achieved BPW is honest (it no longer
     // collapses a 4/2-tier mix like QUANT_QUAD_MIX_Q0/SARK_MIX_Q0 to Q1).
     const bool use_twi = (best_two_diff < single_diff &&

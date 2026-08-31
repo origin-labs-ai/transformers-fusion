@@ -5,7 +5,7 @@
 >
 > Already done / in progress (do NOT pick these): bench encode/decode timing
 > split, warmup+median stats, repo cleanup, `.gitignore` hardening, CSV
-> regression tracker, GLE telemetry module, Q3_GRP 3-bit affine fix,
+> regression tracker, GLE telemetry module, Q3_G 3-bit affine fix,
 > legacy alias purge.
 
 ---

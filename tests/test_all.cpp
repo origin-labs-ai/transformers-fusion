@@ -17,13 +17,14 @@ int main() {
 
     // 1. Format Registry Verification
     std::cout << "[Subsystem 1] Q-Series Format System Verification...\n";
-    assert(quant::FORMAT_COUNT == 37);
+    assert(quant::FORMAT_COUNT == 105);  // v3 re-arrange: base10+K27+GRP9+K_G27+half9+halfGRP9+MXQ14
     for (int i = 0; i < quant::FORMAT_COUNT; i++) {
+        if (i == 19) continue;  // deliberate enum gap (unknown), not a format
         auto fmt = static_cast<quant::Format>(i);
         assert(quant::format_bpw(fmt) > 0.0f);
         assert(quant::format_name(fmt) != nullptr);
     }
-    std::cout << "  -> PASSED: All 37 Q-series formats (Q1-Q32, GRP, TWI_MIX, QUAD_MIX) verified!\n\n";
+    std::cout << "  -> PASSED: All 104 defined v3 formats (base+K+GRP+K_G+half+halfGRP+MXQ) verified!\n\n";
 
     // 2. Hardware Backend Verification
     std::cout << "[Subsystem 2] Hardware Compute Backend & CUDA Probing...\n";

@@ -2,7 +2,7 @@
 // quant_import.cpp — CLI: auto-detect format & import -> single-format QUANT file
 // ============================================================================
 // Usage:
-//   quant_import --input <path> --output <out.quant> [--format QUANT_Q1_GRP]
+//   quant_import --input <path> --output <out.quant> [--format QUANT_Q1_G]
 //              [--bpw 2.0] [--block-size 256] [--verbose]
 //
 // Detects input format by magic bytes / extension, then dispatches to the
@@ -45,10 +45,10 @@ static std::string to_upper(std::string s) {
 static quant::Format nearest_format_for_bpw(float bpw) {
     if (bpw <= 1.25f) return quant::Format::QUANT1;
     if (bpw <= 1.75f) return quant::Format::QUANT_Q0;
-    if (bpw <= 3.0f)  return quant::Format::QUANT_Q1_GRP;
-    if (bpw <= 6.0f)  return quant::Format::QUANT4_GRP;
-    if (bpw <= 12.0f) return quant::Format::QUANT8_GRP;
-    if (bpw <= 24.0f) return quant::Format::QUANT16_GRP;
+    if (bpw <= 3.0f)  return quant::Format::QUANT_Q1_G;
+    if (bpw <= 6.0f)  return quant::Format::QUANT4_G;
+    if (bpw <= 12.0f) return quant::Format::QUANT8_G;
+    if (bpw <= 24.0f) return quant::Format::QUANT16_G;
     return quant::Format::QUANT32;
 }
 
@@ -66,15 +66,15 @@ static bool parse_format_name(const char* name, quant::Format& out, quant::RegFo
     else if (s == "QUANT8")         { out = quant::Format::QUANT8; }
     else if (s == "QUANT16")        { out = quant::Format::QUANT16; }
     else if (s == "QUANT32")        { out = quant::Format::QUANT32; }
-    else if (s == "QUANT1_GRP")     { out = quant::Format::QUANT1_GRP; }
-    else if (s == "QUANT2_GRP")     { out = quant::Format::QUANT2_GRP; }
-    else if (s == "QUANT4_GRP")     { out = quant::Format::QUANT4_GRP; }
-    else if (s == "QUANT8_GRP")     { out = quant::Format::QUANT8_GRP; }
-    else if (s == "QUANT16_GRP")    { out = quant::Format::QUANT16_GRP; }
+    else if (s == "QUANT1_G")     { out = quant::Format::QUANT1_G; }
+    else if (s == "QUANT2_G")     { out = quant::Format::QUANT2_G; }
+    else if (s == "QUANT4_G")     { out = quant::Format::QUANT4_G; }
+    else if (s == "QUANT8_G")     { out = quant::Format::QUANT8_G; }
+    else if (s == "QUANT16_G")    { out = quant::Format::QUANT16_G; }
     else if (s == "QUANT_Q1") { out = quant::Format::QUANT_Q1; }
-    else if (s == "QUANT_Q1_GRP") { out = quant::Format::QUANT_Q1_GRP; }
+    else if (s == "QUANT_Q1_G") { out = quant::Format::QUANT_Q1_G; }
     else if (s == "QUANT_Q0")     { out = quant::Format::QUANT_Q0; }
-    else if (s == "QUANT_Q0_GRP") { out = quant::Format::QUANT_Q0_GRP; }
+    else if (s == "QUANT_Q0_G") { out = quant::Format::QUANT_Q0_G; }
     // ---- TWI_MIX (two-tier) compounds ---- 
     else if (s == "MIX_QUANT8_QUANT2_01_99")  { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT8_QUANT2_01_99; is_compound = true; }
     else if (s == "MIX_QUANT8_QUANT4_05_95")  { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT8_QUANT4_05_95; is_compound = true; }
@@ -326,8 +326,8 @@ int main(int argc, char** argv) {
             "  --format <name>       Quantization format for ALL blocks\n"
             "                        (default: QUANT_MIX_Q1, exactly 2.0 BPW,\n"
             "                        adaptive QUAD_MIX)\n"
-            "                        Singles: QUANT1/2/4/8/16/32[_GRP], QUANT_Q0[_GRP],\n"
-            "                        QUANT_Q1[_GRP]. Compounds: MIX_* (TWI_MIX),\n"
+            "                        Singles: QUANT1/2/4/8/16/32[_G], QUANT_Q0[_G],\n"
+            "                        QUANT_Q1[_G]. Compounds: MIX_* (TWI_MIX),\n"
             "                        QUAD_* (QUAD_MIX), QUANT_MIX_Q0 (1.75 BPW exact)\n"
             "                        and QUANT_MIX_Q1 (2.0 BPW exact) mix member\n"
             "                        formats adaptively by measured benefit per byte\n"
@@ -339,9 +339,9 @@ int main(int argc, char** argv) {
             "  --verbose             Print per-tensor stats\n"
             "  -h, --help            Show this help\n\n"
             "Formats: QUANT_MIX_Q1 (2.0, adaptive QUAD_MIX), QUANT_MIX_Q0 (1.75,\n"
-            "         adaptive TWI_MIX), QUANT_Q1_GRP (2.0), QUANT_Q0 (1.5),\n"
-            "         QUANT1 (1.0), QUANT2_GRP (2.625), QUANT4_GRP (4.5), QUANT8_GRP (8.5),\n"
-            "         QUANT16_GRP (16.0), QUANT32 (32.0), + all GRP/single variants,\n"
+            "         adaptive TWI_MIX), QUANT_Q1_G (2.0), QUANT_Q0 (1.5),\n"
+            "         QUANT1 (1.0), QUANT2_G (2.625), QUANT4_G (4.5), QUANT8_G (8.5),\n"
+            "         QUANT16_G (16.0), QUANT32 (32.0), + all GRP/single variants,\n"
             "         MIX_* (TWI_MIX) and QUAD_* (QUAD_MIX) compounds\n"
             "Supported input formats (auto-detected):\n"
             "  GGUF, Safetensors (single file OR sharded dir/index.json),\n"
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) { cfg.target_bpw = (float)std::atof(argv[++i]); bpw_given = true; }
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc) {
             quant::Format f;
-            quant::RegFormat comp = quant::format_to_regformat(quant::Format::QUANT_Q1_GRP);
+            quant::RegFormat comp = quant::format_to_regformat(quant::Format::QUANT_Q1_G);
             if (!parse_format_name(argv[++i], f, comp)) {
                 std::fprintf(stderr, "Error: unknown format '%s'\n", argv[i]);
                 return 1;

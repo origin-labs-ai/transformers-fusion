@@ -1,5 +1,5 @@
 // probe_t4.cpp — replicate test_quant_mix Test 4 data + measure per-block
-// format MSE to find why QUANT2_GRP (affine) underperforms QUANT1_GRP on the
+// format MSE to find why QUANT2_G (affine) underperforms QUANT1_G on the
 // smooth sine blocks (negative benefit) after the sign-aware-min change.
 #include "quant/format_registry.h"
 #include "quant/block_codec.h"
@@ -37,11 +37,11 @@ int main() {
             data[(size_t)b * 256 + j] = (float)v;
         }
     }
-    printf("block type : QUANT1_GRP  QUANT2_GRP  benefit   QUANT2    QUANT_Q0\n");
+    printf("block type : QUANT1_G  QUANT2_G  benefit   QUANT2    QUANT_Q0\n");
     for (int b = 0; b < 8; b++) {
         const float* blk = data.data() + (size_t)b * 256;
-        const double q1 = block_mse_fmt(Format::QUANT1_GRP, blk, 256);
-        const double q2g = block_mse_fmt(Format::QUANT2_GRP, blk, 256);
+        const double q1 = block_mse_fmt(Format::QUANT1_G, blk, 256);
+        const double q2g = block_mse_fmt(Format::QUANT2_G, blk, 256);
         const double q2 = block_mse_fmt(Format::QUANT2, blk, 256);
         const double q0 = block_mse_fmt(Format::QUANT_Q0, blk, 256);
         printf("smooth %2d  : %.6f  %.6f  %+.6f  %.6f  %.6f\n",
@@ -49,8 +49,8 @@ int main() {
     }
     for (int b = 32; b < 40; b++) {
         const float* blk = data.data() + (size_t)b * 256;
-        const double q1 = block_mse_fmt(Format::QUANT1_GRP, blk, 256);
-        const double q2g = block_mse_fmt(Format::QUANT2_GRP, blk, 256);
+        const double q1 = block_mse_fmt(Format::QUANT1_G, blk, 256);
+        const double q2g = block_mse_fmt(Format::QUANT2_G, blk, 256);
         const double q2 = block_mse_fmt(Format::QUANT2, blk, 256);
         const double q0 = block_mse_fmt(Format::QUANT_Q0, blk, 256);
         printf("spikey %2d  : %.6f  %.6f  %+.6f  %.6f  %.6f\n",

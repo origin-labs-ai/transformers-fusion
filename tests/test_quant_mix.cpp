@@ -7,7 +7,7 @@
 //   1. Registry claims (exact effective BPW, tier members, adaptive flag)
 //   2. BPW hard cap: total bytes NEVER exceed ceil(claimed_bpw * n / 8);
 //      exactly the claimed value on full tensors
-//   3. Quality ladder vs same-BPW rivals (Q2 / Q1_GRP @ 2.0,
+//   3. Quality ladder vs same-BPW rivals (Q2 / Q1_G @ 2.0,
 //      Q0 @ 1.5) on random and designed data
 //   4. Adaptive beats magnitude-sorted ratio allocation when magnitude and
 //      quantization benefit are anti-correlated (priority-wise spending)
@@ -104,13 +104,13 @@ int main() {
                "Q0 ladder = Q1/Q4");
 
     const MixDescriptor q1 = FormatRegistry::get_four_mix(3.50f);
-    TEST_CHECK(q1.id == RegFormat::MXQ_3_5_GRP, "get_four_mix(3.50) -> MXQ_3_5_GRP");
+    TEST_CHECK(q1.id == RegFormat::MXQ_3_5_G, "get_four_mix(3.50) -> MXQ_3_5_G");
     TEST_CHECK(std::fabs(q1.effective_bpw - 3.50f) < 1e-4f, "Q1 effective BPW == 3.50");
     TEST_CHECK(q1.num_tiers == 4, "Q1 is a QUAD_MIX (4 tiers)");
     TEST_CHECK(q1.adaptive, "Q1 is adaptive");
 
-    TEST_CHECK(FormatRegistry::select_best_mix(3.50f, nullptr, 0).id == RegFormat::MXQ_3_5_GRP,
-               "select_best_mix(3.50) -> MXQ_3_5_GRP");
+    TEST_CHECK(FormatRegistry::select_best_mix(3.50f, nullptr, 0).id == RegFormat::MXQ_3_5_G,
+               "select_best_mix(3.50) -> MXQ_3_5_G");
 
     // ---- Test 2: BPW hard cap (never exceeds; tail alignment <= 1 B/block)
     printf("\n--- Test 2: BPW hard cap ---\n");
@@ -200,13 +200,13 @@ int main() {
         const double m_q1 = plan_mse(q1, data.data(), 16384, 256, nullptr);
         const double m_quant2 = plan_mse(single_mix(RegFormat::Q2, 2.0f), data.data(), 16384, 256, nullptr);
         const double m_quant0 = plan_mse(single_mix(RegFormat::Q1, 1.0f), data.data(), 16384, 256, nullptr);
-        const double m_sparse = plan_mse(single_mix(RegFormat::Q1_GRP, 2.0f), data.data(), 16384, 256, nullptr);
+        const double m_sparse = plan_mse(single_mix(RegFormat::Q1_G, 2.0f), data.data(), 16384, 256, nullptr);
         printf("  Q0(1.5)=%.6f  Q1(1.0)=%.6f\n", m_q0, m_quant0);
-        printf("  Q1(3.5)=%.6f  Q2(2.0)=%.6f  Q1_GRP(2.0)=%.6f\n", m_q1, m_quant2, m_sparse);
+        printf("  Q1(3.5)=%.6f  Q2(2.0)=%.6f  Q1_G(2.0)=%.6f\n", m_q1, m_quant2, m_sparse);
         TEST_CHECK(m_q0 < m_quant0 + 1e-9, "Q0 (1.5) beats Q1 (1.0)");
         TEST_CHECK(m_q1 < m_q0 + 1e-9, "Q1 (3.5) beats Q0 (1.5)");
-        TEST_CHECK(m_q0 < m_sparse + 1e-9, "Q0 (1.5) beats Q1_GRP (2.0)");
-        TEST_CHECK(m_q1 < m_sparse, "Q1 (adaptive 3.5) beats Q1_GRP (2.0)");
+        TEST_CHECK(m_q0 < m_sparse + 1e-9, "Q0 (1.5) beats Q1_G (2.0)");
+        TEST_CHECK(m_q1 < m_sparse, "Q1 (adaptive 3.5) beats Q1_G (2.0)");
         TEST_CHECK(m_q0 < 0.35, "Q0 absolute error sane (caught by ladder anyway)");
         TEST_CHECK(m_q1 < 0.25, "Q1 absolute error sane");
     }
@@ -271,7 +271,7 @@ int main() {
         TEST_CHECK(m_adapt <= m_mag + 1e-9, "adaptive allocation never worse than magnitude-sorted");
 
         // Priority-wise check: the allocator must spend its Q2 budget on
-        // the blocks where the measured Q1_GRP->Q2_GRP benefit is the
+        // the blocks where the measured Q1_G->Q2_G benefit is the
         // highest, so the mean benefit of upgraded blocks >= the mean benefit
         // of blocks left on the base tier.
         FormatRegistry::MixBlockPlan plan =
@@ -289,16 +289,16 @@ int main() {
             return e / 256.0;
         };
         for (int b = 0; b < 64; b++)
-            benefit[(size_t)b] = block_mse(Format::Q1_GRP, b) - block_mse(Format::Q2_GRP, b);
+            benefit[(size_t)b] = block_mse(Format::Q1_G, b) - block_mse(Format::Q2_G, b);
         double up = 0.0, dn = 0.0;
         int upc = 0, dnc = 0;
         for (int b = 0; b < 64; b++) {
-            if (plan.formats[(size_t)b] != Format::Q1_GRP) { up += benefit[(size_t)b]; upc++; }
+            if (plan.formats[(size_t)b] != Format::Q1_G) { up += benefit[(size_t)b]; upc++; }
             else { dn += benefit[(size_t)b]; dnc++; }
         }
         printf("  upgraded: %d blocks (mean benefit %.5f)  base-tier: %d blocks (mean %.5f)\n",
                upc, upc ? up / upc : 0.0, dnc, dnc ? dn / dnc : 0.0);
-        TEST_CHECK(upc > 0, "adaptive allocation actually reaches the Q2_GRP tier");
+        TEST_CHECK(upc > 0, "adaptive allocation actually reaches the Q2_G tier");
         TEST_CHECK(upc > 0 && (dnc == 0 || up / upc >= dn / dnc),
                    "priority-wise: 2-bit budget spent on the blocks that need it");
     }
@@ -427,7 +427,7 @@ int main() {
             }
             std::vector<Format> fmts = reader.tensor_formats(tensors[0].name);
             bool has_member = !fmts.empty();
-            // MXQ_3_5_GRP member formats: Q1/Q3/Q8/Q32 (non-GRP variant).
+            // MXQ_3_5_G member formats: Q1/Q3/Q8/Q32 (non-GRP variant).
             for (Format f : fmts)
                 if (f != Format::Q32 && f != Format::Q8 &&
                     f != Format::Q3 && f != Format::Q1)
@@ -611,17 +611,17 @@ int main() {
         const double m_q1c = plan_mse(q1, data.data(), 16384, 32, nullptr);
         const double m_quant16 = plan_mse(single_mix(RegFormat::Q16, 16.0f), data.data(), 16384, 256, nullptr);
         const double m_quant32 = plan_mse(single_mix(RegFormat::Q32, 32.0f), data.data(), 16384, 256, nullptr);
-        const double m_quant8g = plan_mse(single_mix(RegFormat::Q8_GRP, 8.5f), data.data(), 16384, 256, nullptr);
-        const double m_quant4g = plan_mse(single_mix(RegFormat::Q4_GRP, 4.5f), data.data(), 16384, 256, nullptr);
-        const double m_quant2g = plan_mse(single_mix(RegFormat::Q2_GRP, 2.625f), data.data(), 16384, 256, nullptr);
+        const double m_quant8g = plan_mse(single_mix(RegFormat::Q8_G, 8.5f), data.data(), 16384, 256, nullptr);
+        const double m_quant4g = plan_mse(single_mix(RegFormat::Q4_G, 4.5f), data.data(), 16384, 256, nullptr);
+        const double m_quant2g = plan_mse(single_mix(RegFormat::Q2_G, 2.625f), data.data(), 16384, 256, nullptr);
         const double m_quant2  = plan_mse(single_mix(RegFormat::Q2, 2.0f), data.data(), 16384, 256, nullptr);
-        const double m_sq0g = plan_mse(single_mix(RegFormat::Q1_GRP, 1.0f), data.data(), 16384, 256, nullptr);
-        const double m_sparse = plan_mse(single_mix(RegFormat::Q1_GRP, 2.0f), data.data(), 16384, 256, nullptr);
-        const double m_quant1g = plan_mse(single_mix(RegFormat::Q1_GRP, 1.0f), data.data(), 16384, 256, nullptr);
+        const double m_sq0g = plan_mse(single_mix(RegFormat::Q1_G, 1.0f), data.data(), 16384, 256, nullptr);
+        const double m_sparse = plan_mse(single_mix(RegFormat::Q1_G, 2.0f), data.data(), 16384, 256, nullptr);
+        const double m_quant1g = plan_mse(single_mix(RegFormat::Q1_G, 1.0f), data.data(), 16384, 256, nullptr);
         printf("  FP32(32.0)=0  Q32(32.0)=%.3e  Q16(16.0)=%.3e\n", m_quant32, m_quant16);
-        printf("  Q8_GRP(8.5)=%.3e  Q4_GRP(4.5)=%.3e  Q2_GRP(2.625)=%.3e\n", m_quant8g, m_quant4g, m_quant2g);
-        printf("  Q2(2.0)=%.3e  Q0_GRP(1.5)=%.3e  Q1_GRP(1.0)=%.3e\n", m_quant2, m_sq0g, m_quant1g);
-        printf("  Q1_GRP(2.0)=%.3e  QUANT_MIX_Q0(1.5)=%.3e  QUANT_MIX_Q1(3.5)=%.3e\n",
+        printf("  Q8_G(8.5)=%.3e  Q4_G(4.5)=%.3e  Q2_G(2.625)=%.3e\n", m_quant8g, m_quant4g, m_quant2g);
+        printf("  Q2(2.0)=%.3e  Q0_G(1.5)=%.3e  Q1_G(1.0)=%.3e\n", m_quant2, m_sq0g, m_quant1g);
+        printf("  Q1_G(2.0)=%.3e  QUANT_MIX_Q0(1.5)=%.3e  QUANT_MIX_Q1(3.5)=%.3e\n",
                m_sparse, m_q0, m_q1);
         printf("  QUANT_MIX_Q0 col-granular=%.3e  QUANT_MIX_Q1 col-granular=%.3e\n", m_q0c, m_q1c);
         // Adaptive + priority-wise + grouped mixes must beat every uniform
@@ -629,9 +629,9 @@ int main() {
         // pair must beat the lower one. Crossing to Q16/Q32 is a
         // rate-distortion boundary (more bits), reported but not asserted.
         TEST_CHECK(m_q0 <= m_quant2 + 1e-12, "Q0 (1.5, adaptive grouped) <= Q2 (2.0) uniform");
-        TEST_CHECK(m_q0 <= m_sq0g + 1e-12, "Q0 (1.5) <= Q0_GRP (1.5)");
+        TEST_CHECK(m_q0 <= m_sq0g + 1e-12, "Q0 (1.5) <= Q0_G (1.5)");
         TEST_CHECK(m_q1 <= m_quant2 + 1e-12, "Q1 (3.5, adaptive grouped) <= Q2 (2.0) uniform");
-        TEST_CHECK(m_q1 <= m_sparse + 1e-12, "Q1 (3.5) <= Q1_GRP (2.0)");
+        TEST_CHECK(m_q1 <= m_sparse + 1e-12, "Q1 (3.5) <= Q1_G (2.0)");
         TEST_CHECK(m_q1 < m_q0, "Q1 (3.5) beats Q0 (1.5) on realistic weights");
         TEST_CHECK(m_q0 < 0.05, "Q0 absolute error sane on realistic weights");
         TEST_CHECK(m_q1 < 0.05, "Q1 absolute error sane on realistic weights");
@@ -651,15 +651,15 @@ int main() {
         // honesty guardrails that (a) bound how far the mix may lag the
         // Q4_K_M-class format at 4.5 BPW and (b) forbid claiming near-lossless
         // parity with Q16. The caps below carry ~25-30% headroom over the
-        // current measured ratios on this data (Q0/Q4_GRP ~42.9x,
-        // Q1/Q4_GRP ~21.7x, Q1/Q16 ~10.0x).
+        // current measured ratios on this data (Q0/Q4_G ~42.9x,
+        // Q1/Q4_G ~21.7x, Q1/Q16 ~10.0x).
         TEST_CHECK(m_q0 < m_quant4g * 55.0 + 1e-12,
-                   "Q0 (1.5) within 55x of Q4_K_M-class (Q4_GRP 4.5) despite 3x fewer bits");
+                   "Q0 (1.5) within 55x of Q4_K_M-class (Q4_G 4.5) despite 3x fewer bits");
         TEST_CHECK(m_q1 < m_quant4g * 30.0 + 1e-12,
-                   "Q1 (3.5) within 30x of Q4_K_M-class (Q4_GRP 4.5) despite 1.3x fewer bits");
+                   "Q1 (3.5) within 30x of Q4_K_M-class (Q4_G 4.5) despite 1.3x fewer bits");
         TEST_CHECK(m_q1 > m_quant4g, "Q1 (3.5) does not falsely claim Q4_K_M-class parity");
         TEST_CHECK(m_q1 > m_quant16 * 8.0, "Q1 (3.5) does not falsely claim near-lossless parity");
-        printf("  Q1/Q16 MSE ratio = %.2f  Q0/Q4_GRP ratio = %.2f  Q1/Q4_GRP ratio = %.2f\n",
+        printf("  Q1/Q16 MSE ratio = %.2f  Q0/Q4_G ratio = %.2f  Q1/Q4_G ratio = %.2f\n",
                m_quant16 > 0 ? m_q1 / m_quant16 : 0.0, m_quant4g > 0 ? m_q0 / m_quant4g : 0.0,
                m_quant4g > 0 ? m_q1 / m_quant4g : 0.0);
         printf("  Q0 col/block MSE ratio = %.3f  Q1 col/block MSE ratio = %.3f\n",

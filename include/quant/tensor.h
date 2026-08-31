@@ -12,6 +12,16 @@
 
 namespace quant {
 
+class Tensor;
+
+namespace detail {
+// Layering-safe autograd cleanup hook: quant_core cannot link AutogradEngine
+// (its impl lives in quant_model, above quant_core in the lib graph), so the
+// engine installs this on first use and clears it in its destructor. ~Tensor
+// only pays the call when the tensor was ever registered.
+extern void (*autograd_unregister_hook)(Tensor*);
+}
+
 class Tensor {
 public:
     Tensor() noexcept;

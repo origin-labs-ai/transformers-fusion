@@ -68,9 +68,9 @@ static void mix_quantize_dequantize(const float* data, int64_t n, float target_b
         for (auto& s : singles) if (s.name == nm) return &s; return nullptr;
     };
     auto* f8 = find_fmt("QUANT8"); auto* f4 = find_fmt("QUANT4"); auto* f2 = find_fmt("QUANT2");
-    auto* fsp = find_fmt("QUANT_Q1_GRP");
-    if (!f8) f8 = find_fmt("QUANT8_GRP"); if (!f4) f4 = find_fmt("QUANT4_GRP");
-    if (!f2) f2 = find_fmt("QUANT2_GRP"); if (!fsp) fsp = f2;
+    auto* fsp = find_fmt("QUANT_Q1_G");
+    if (!f8) f8 = find_fmt("QUANT8_G"); if (!f4) f4 = find_fmt("QUANT4_G");
+    if (!f2) f2 = find_fmt("QUANT2_G"); if (!fsp) fsp = f2;
 
     std::vector<const FormatDescriptor*> assign(nb, f2);
     int idx = 0;
@@ -725,7 +725,7 @@ int main() {
         }
 
         md << "\n## Key Findings\n\n";
-        md << "1. **QUANT_Q1_GRP at 2.0 BPW** delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max + exact zero preservation)\n";
+        md << "1. **QUANT_Q1_G at 2.0 BPW** delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max + exact zero preservation)\n";
         md << "2. **QUANT8 at 8.0 BPW** dominates raw quality on every distribution\n";
         md << "3. **QUANT_MIX** routes QUANT8 to salient blocks and low-bit formats to the bulk — best quality/byte at fixed target BPW\n";
         md << "4. Real neural weights are sparse — QUANT's codebook quantization excels on sparse data\n\n";

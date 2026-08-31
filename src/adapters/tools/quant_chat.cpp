@@ -1,4 +1,4 @@
-// quant_chat.cpp — terminal chat with Ornith-1.0-9B @ 2 BPW (QUANT_Q1_GRP) QUANT model
+// quant_chat.cpp — terminal chat with Ornith-1.0-9B @ 2 BPW (QUANT_Q1_G) QUANT model
 #include "quant/qwen35_engine.h"
 #include "quant/qwen35_tokenizer.h"
 #include <cstdio>

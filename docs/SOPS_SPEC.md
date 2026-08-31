@@ -123,13 +123,13 @@ InNova uses 15 quantization formats, each with different bit-widths:
   QUANT8               8.0      1.0             1
   QUANT16              16.0     2.0             0.5
   QUANT32              32.0     4.0             0.25
-  QUANT1_GRP           1.0      0.125           8
-  QUANT2_GRP           2.5      0.3125          3.2
-  QUANT4_GRP           4.5      0.5625          1.78
-  QUANT8_GRP           8.5      1.0625          0.94
-  QUANT16_GRP          16.0     2.0             0.5
-  QUANT_Q0_GRP       1.5      0.1875          5.33
-  QUANT_Q1_GRP   2.0      0.25            4
+  QUANT1_G           1.0      0.125           8
+  QUANT2_G           2.5      0.3125          3.2
+  QUANT4_G           4.5      0.5625          1.78
+  QUANT8_G           8.5      1.0625          0.94
+  QUANT16_G          16.0     2.0             0.5
+  QUANT_Q0_G       1.5      0.1875          5.33
+  QUANT_Q1_G   2.0      0.25            4
 
 FLOPS cannot distinguish between any of these. SOPS can.
 

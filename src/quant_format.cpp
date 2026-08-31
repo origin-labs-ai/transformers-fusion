@@ -407,7 +407,10 @@ BlockData QUANTReader::read_block(uint32_t block_id) const {
 
     if (block_id < (uint32_t)cached_ft_.size()) {
         const uint8_t wire_fmt = cached_ft_[block_id].format;
-        bd.format = wire_fmt < 38 ? (Format)wire_fmt : Format::Q32;
+        // v3 enum spans 105 ids (hole at 19 by design); anything outside the
+        // valid set falls back to Q32 so a corrupt table cannot misdecode.
+        bd.format = (wire_fmt < FORMAT_COUNT && wire_fmt != 19)
+                        ? (Format)wire_fmt : Format::Q32;
     }
 
     return bd;
@@ -518,7 +521,8 @@ std::vector<Format> QUANTReader::tensor_formats(const std::string& name) const {
             for (uint32_t b = 0; b < num_blocks && (block_start + b) < (uint32_t)cached_ft_.size(); b++) {
                 uint32_t bid = block_start + b;
                 const uint8_t wire_fmt = cached_ft_[bid].format;
-                fmts.push_back(wire_fmt < 38 ? (Format)wire_fmt : Format::Q32);
+                fmts.push_back((wire_fmt < FORMAT_COUNT && wire_fmt != 19)
+                                   ? (Format)wire_fmt : Format::Q32);
             }
             return fmts;
         }

@@ -165,7 +165,7 @@ const char* external_format_name(ExternalFormat f) {
 //  - Embedding tables (embed_tokens, lm_head) must NOT be sparsified: the
 //    2.0 BPW sparse format keeps only ~8% of weights (92% zeros) which
 //    breaks the model. They are routed to the best DENSE GRP format within
-//    the claimed BPW (e.g. Q2_GRP @ 2.625 -> Q4-class quality -- the native
+//    the claimed BPW (e.g. Q2_G @ 2.625 -> Q4-class quality -- the native
 //    "GRP wins at 2x BPW" ladder).
 Format select_tensor_format(const std::string& name, int64_t numel, Format base) {
     const bool critical =
@@ -184,11 +184,11 @@ Format select_tensor_format(const std::string& name, int64_t numel, Format base)
     if (critical && numel <= 262144) return Format::Q32;
 
     const float b = target_bpw;
-    if (b <= 1.0f)  return Format::Q1_GRP;
-    if (b <= 2.0f)  return Format::Q2_GRP;
-    if (b <= 4.0f)  return Format::Q4_GRP;
-    if (b <= 8.0f)  return Format::Q8_GRP;
-    if (b <= 16.0f) return Format::Q16_GRP;
+    if (b <= 1.0f)  return Format::Q1_G;
+    if (b <= 2.0f)  return Format::Q2_G;
+    if (b <= 4.0f)  return Format::Q4_G;
+    if (b <= 8.0f)  return Format::Q8_G;
+    if (b <= 16.0f) return Format::Q16_G;
     return Format::Q32;
 }
 

@@ -16,8 +16,8 @@ enum class RoPEScalingMode : uint8_t { None, Linear, NTK, YARN };
 // ============================================================
 // Format enum — Q-series quantization formats — v3 RE-ARRANGED 2026-08-23
 // Rules: exact BPW (name == claimed BPW), 3 K variants per BPW (L/M/H),
-// GRP exact at same BPW (no extra), half-BPW GRP as Q_GRP_X_Y,
-// MXQ only as MXQ_(BPW)_GRP (4-variant mix, no TWI), no TWI_MIX.
+// GRP exact at same BPW (no extra), half-BPW GRP as Q_G_X_Y,
+// MXQ only as MXQ_(BPW)_G (4-variant mix, no TWI), no TWI_MIX.
 // ============================================================
 enum class Format : uint8_t {
     // --- Base integer BPW (10) ---
@@ -42,27 +42,27 @@ enum class Format : uint8_t {
     Q16_K_L         = 31, Q16_K_M         = 32, Q16_K_H         = 33,
     Q24_K_L         = 34, Q24_K_M         = 35, Q24_K_H         = 36,
     // --- GRP exact integer BPW (9) ---
-    Q1_GRP          = 37, Q2_GRP          = 38, Q3_GRP          = 39, Q4_GRP          = 40, Q6_GRP          = 41,
-    Q8_GRP          = 42, Q12_GRP         = 43, Q16_GRP         = 44, Q24_GRP         = 45,
-    // --- K_GRP exact integer BPW (27) ---
-    Q1_K_L_GRP      = 46, Q1_K_M_GRP      = 47, Q1_K_H_GRP      = 48,
-    Q2_K_L_GRP      = 49, Q2_K_M_GRP      = 50, Q2_K_H_GRP      = 51,
-    Q3_K_L_GRP      = 52, Q3_K_M_GRP      = 53, Q3_K_H_GRP      = 54,
-    Q4_K_L_GRP      = 55, Q4_K_M_GRP      = 56, Q4_K_H_GRP      = 57,
-    Q6_K_L_GRP      = 58, Q6_K_M_GRP      = 59, Q6_K_H_GRP      = 60,
-    Q8_K_L_GRP      = 61, Q8_K_M_GRP      = 62, Q8_K_H_GRP      = 63,
-    Q12_K_L_GRP     = 64, Q12_K_M_GRP     = 65, Q12_K_H_GRP     = 66,
-    Q16_K_L_GRP     = 67, Q16_K_M_GRP     = 68, Q16_K_H_GRP     = 69,
-    Q24_K_L_GRP     = 70, Q24_K_M_GRP     = 71, Q24_K_H_GRP     = 72,
+    Q1_G          = 37, Q2_G          = 38, Q3_G          = 39, Q4_G          = 40, Q6_G          = 41,
+    Q8_G          = 42, Q12_G         = 43, Q16_G         = 44, Q24_G         = 45,
+    // --- K_G exact integer BPW (27) ---
+    Q1_K_L_G      = 46, Q1_K_M_G      = 47, Q1_K_H_G      = 48,
+    Q2_K_L_G      = 49, Q2_K_M_G      = 50, Q2_K_H_G      = 51,
+    Q3_K_L_G      = 52, Q3_K_M_G      = 53, Q3_K_H_G      = 54,
+    Q4_K_L_G      = 55, Q4_K_M_G      = 56, Q4_K_H_G      = 57,
+    Q6_K_L_G      = 58, Q6_K_M_G      = 59, Q6_K_H_G      = 60,
+    Q8_K_L_G      = 61, Q8_K_M_G      = 62, Q8_K_H_G      = 63,
+    Q12_K_L_G     = 64, Q12_K_M_G     = 65, Q12_K_H_G     = 66,
+    Q16_K_L_G     = 67, Q16_K_M_G     = 68, Q16_K_H_G     = 69,
+    Q24_K_L_G     = 70, Q24_K_M_G     = 71, Q24_K_H_G     = 72,
     // --- Half BPW plain (9) ---
     Q1_5            = 73, Q2_5            = 74, Q3_5            = 75, Q4_5            = 76, Q6_5            = 77,
     Q8_5            = 78, Q12_5           = 79, Q16_5           = 80, Q24_5           = 81,
     // --- Half BPW GRP (9) ---
-    Q_GRP_1_5       = 82, Q_GRP_2_5       = 83, Q_GRP_3_5       = 84, Q_GRP_4_5       = 85, Q_GRP_6_5       = 86,
-    Q_GRP_8_5       = 87, Q_GRP_12_5      = 88, Q_GRP_16_5      = 89, Q_GRP_24_5      = 90,
+    Q_G_1_5       = 82, Q_G_2_5       = 83, Q_G_3_5       = 84, Q_G_4_5       = 85, Q_G_6_5       = 86,
+    Q_G_8_5       = 87, Q_G_12_5      = 88, Q_G_16_5      = 89, Q_G_24_5      = 90,
     // --- MXQ mix 4-variant (7 plain + 7 GRP) ---
     MXQ_3_5         = 91, MXQ_4_5         = 92, MXQ_6_5         = 93, MXQ_8_5         = 94, MXQ_12_5        = 95, MXQ_16_5        = 96, MXQ_24_5        = 97,
-    MXQ_3_5_GRP     = 98, MXQ_4_5_GRP     = 99, MXQ_6_5_GRP     = 100, MXQ_8_5_GRP     = 101, MXQ_12_5_GRP    = 102, MXQ_16_5_GRP    = 103, MXQ_24_5_GRP    = 104,
+    MXQ_3_5_G     = 98, MXQ_4_5_G     = 99, MXQ_6_5_G     = 100, MXQ_8_5_G     = 101, MXQ_12_5_G    = 102, MXQ_16_5_G    = 103, MXQ_24_5_G    = 104,
 };
 constexpr int FORMAT_COUNT = 105;
 inline const char* format_name(Format f) {
@@ -77,20 +77,20 @@ inline const char* format_name(Format f) {
         case Format::Q12_K_L: return "Q12_K_L"; case Format::Q12_K_M: return "Q12_K_M"; case Format::Q12_K_H: return "Q12_K_H";
         case Format::Q16_K_L: return "Q16_K_L"; case Format::Q16_K_M: return "Q16_K_M"; case Format::Q16_K_H: return "Q16_K_H";
         case Format::Q24_K_L: return "Q24_K_L"; case Format::Q24_K_M: return "Q24_K_M"; case Format::Q24_K_H: return "Q24_K_H";
-        case Format::Q1_GRP: return "Q1_GRP"; case Format::Q2_GRP: return "Q2_GRP"; case Format::Q3_GRP: return "Q3_GRP"; case Format::Q4_GRP: return "Q4_GRP"; case Format::Q6_GRP: return "Q6_GRP"; case Format::Q8_GRP: return "Q8_GRP"; case Format::Q12_GRP: return "Q12_GRP"; case Format::Q16_GRP: return "Q16_GRP"; case Format::Q24_GRP: return "Q24_GRP";
-        case Format::Q1_K_L_GRP: return "Q1_K_L_GRP"; case Format::Q1_K_M_GRP: return "Q1_K_M_GRP"; case Format::Q1_K_H_GRP: return "Q1_K_H_GRP";
-        case Format::Q2_K_L_GRP: return "Q2_K_L_GRP"; case Format::Q2_K_M_GRP: return "Q2_K_M_GRP"; case Format::Q2_K_H_GRP: return "Q2_K_H_GRP";
-        case Format::Q3_K_L_GRP: return "Q3_K_L_GRP"; case Format::Q3_K_M_GRP: return "Q3_K_M_GRP"; case Format::Q3_K_H_GRP: return "Q3_K_H_GRP";
-        case Format::Q4_K_L_GRP: return "Q4_K_L_GRP"; case Format::Q4_K_M_GRP: return "Q4_K_M_GRP"; case Format::Q4_K_H_GRP: return "Q4_K_H_GRP";
-        case Format::Q6_K_L_GRP: return "Q6_K_L_GRP"; case Format::Q6_K_M_GRP: return "Q6_K_M_GRP"; case Format::Q6_K_H_GRP: return "Q6_K_H_GRP";
-        case Format::Q8_K_L_GRP: return "Q8_K_L_GRP"; case Format::Q8_K_M_GRP: return "Q8_K_M_GRP"; case Format::Q8_K_H_GRP: return "Q8_K_H_GRP";
-        case Format::Q12_K_L_GRP: return "Q12_K_L_GRP"; case Format::Q12_K_M_GRP: return "Q12_K_M_GRP"; case Format::Q12_K_H_GRP: return "Q12_K_H_GRP";
-        case Format::Q16_K_L_GRP: return "Q16_K_L_GRP"; case Format::Q16_K_M_GRP: return "Q16_K_M_GRP"; case Format::Q16_K_H_GRP: return "Q16_K_H_GRP";
-        case Format::Q24_K_L_GRP: return "Q24_K_L_GRP"; case Format::Q24_K_M_GRP: return "Q24_K_M_GRP"; case Format::Q24_K_H_GRP: return "Q24_K_H_GRP";
+        case Format::Q1_G: return "Q1_G"; case Format::Q2_G: return "Q2_G"; case Format::Q3_G: return "Q3_G"; case Format::Q4_G: return "Q4_G"; case Format::Q6_G: return "Q6_G"; case Format::Q8_G: return "Q8_G"; case Format::Q12_G: return "Q12_G"; case Format::Q16_G: return "Q16_G"; case Format::Q24_G: return "Q24_G";
+        case Format::Q1_K_L_G: return "Q1_K_L_G"; case Format::Q1_K_M_G: return "Q1_K_M_G"; case Format::Q1_K_H_G: return "Q1_K_H_G";
+        case Format::Q2_K_L_G: return "Q2_K_L_G"; case Format::Q2_K_M_G: return "Q2_K_M_G"; case Format::Q2_K_H_G: return "Q2_K_H_G";
+        case Format::Q3_K_L_G: return "Q3_K_L_G"; case Format::Q3_K_M_G: return "Q3_K_M_G"; case Format::Q3_K_H_G: return "Q3_K_H_G";
+        case Format::Q4_K_L_G: return "Q4_K_L_G"; case Format::Q4_K_M_G: return "Q4_K_M_G"; case Format::Q4_K_H_G: return "Q4_K_H_G";
+        case Format::Q6_K_L_G: return "Q6_K_L_G"; case Format::Q6_K_M_G: return "Q6_K_M_G"; case Format::Q6_K_H_G: return "Q6_K_H_G";
+        case Format::Q8_K_L_G: return "Q8_K_L_G"; case Format::Q8_K_M_G: return "Q8_K_M_G"; case Format::Q8_K_H_G: return "Q8_K_H_G";
+        case Format::Q12_K_L_G: return "Q12_K_L_G"; case Format::Q12_K_M_G: return "Q12_K_M_G"; case Format::Q12_K_H_G: return "Q12_K_H_G";
+        case Format::Q16_K_L_G: return "Q16_K_L_G"; case Format::Q16_K_M_G: return "Q16_K_M_G"; case Format::Q16_K_H_G: return "Q16_K_H_G";
+        case Format::Q24_K_L_G: return "Q24_K_L_G"; case Format::Q24_K_M_G: return "Q24_K_M_G"; case Format::Q24_K_H_G: return "Q24_K_H_G";
         case Format::Q1_5: return "Q1.5"; case Format::Q2_5: return "Q2.5"; case Format::Q3_5: return "Q3.5"; case Format::Q4_5: return "Q4.5"; case Format::Q6_5: return "Q6.5"; case Format::Q8_5: return "Q8.5"; case Format::Q12_5: return "Q12.5"; case Format::Q16_5: return "Q16.5"; case Format::Q24_5: return "Q24.5";
-        case Format::Q_GRP_1_5: return "Q_GRP_1.5"; case Format::Q_GRP_2_5: return "Q_GRP_2.5"; case Format::Q_GRP_3_5: return "Q_GRP_3.5"; case Format::Q_GRP_4_5: return "Q_GRP_4.5"; case Format::Q_GRP_6_5: return "Q_GRP_6.5"; case Format::Q_GRP_8_5: return "Q_GRP_8.5"; case Format::Q_GRP_12_5: return "Q_GRP_12.5"; case Format::Q_GRP_16_5: return "Q_GRP_16.5"; case Format::Q_GRP_24_5: return "Q_GRP_24.5";
+        case Format::Q_G_1_5: return "Q_G_1.5"; case Format::Q_G_2_5: return "Q_G_2.5"; case Format::Q_G_3_5: return "Q_G_3.5"; case Format::Q_G_4_5: return "Q_G_4.5"; case Format::Q_G_6_5: return "Q_G_6.5"; case Format::Q_G_8_5: return "Q_G_8.5"; case Format::Q_G_12_5: return "Q_G_12.5"; case Format::Q_G_16_5: return "Q_G_16.5"; case Format::Q_G_24_5: return "Q_G_24.5";
         case Format::MXQ_3_5: return "MXQ_3.5"; case Format::MXQ_4_5: return "MXQ_4.5"; case Format::MXQ_6_5: return "MXQ_6.5"; case Format::MXQ_8_5: return "MXQ_8.5"; case Format::MXQ_12_5: return "MXQ_12.5"; case Format::MXQ_16_5: return "MXQ_16.5"; case Format::MXQ_24_5: return "MXQ_24.5";
-        case Format::MXQ_3_5_GRP: return "MXQ_3.5_GRP"; case Format::MXQ_4_5_GRP: return "MXQ_4.5_GRP"; case Format::MXQ_6_5_GRP: return "MXQ_6.5_GRP"; case Format::MXQ_8_5_GRP: return "MXQ_8.5_GRP"; case Format::MXQ_12_5_GRP: return "MXQ_12.5_GRP"; case Format::MXQ_16_5_GRP: return "MXQ_16.5_GRP"; case Format::MXQ_24_5_GRP: return "MXQ_24.5_GRP";
+        case Format::MXQ_3_5_G: return "MXQ_3.5_G"; case Format::MXQ_4_5_G: return "MXQ_4.5_G"; case Format::MXQ_6_5_G: return "MXQ_6.5_G"; case Format::MXQ_8_5_G: return "MXQ_8.5_G"; case Format::MXQ_12_5_G: return "MXQ_12.5_G"; case Format::MXQ_16_5_G: return "MXQ_16.5_G"; case Format::MXQ_24_5_G: return "MXQ_24.5_G";
         default: return "unknown";
     }
 }
@@ -106,20 +106,25 @@ inline float format_bpw(Format f) {
         case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: return 12.0f;
         case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: return 16.0f;
         case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: return 24.0f;
-        case Format::Q1_GRP: return 1.0f; case Format::Q2_GRP: return 2.0f; case Format::Q3_GRP: return 3.0f; case Format::Q4_GRP: return 4.0f; case Format::Q6_GRP: return 6.0f; case Format::Q8_GRP: return 8.0f; case Format::Q12_GRP: return 12.0f; case Format::Q16_GRP: return 16.0f; case Format::Q24_GRP: return 24.0f;
-        case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: return 1.0f;
-        case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: return 2.0f;
-        case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: return 3.0f;
-        case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: return 4.0f;
-        case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: return 6.0f;
-        case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: return 8.0f;
-        case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: return 12.0f;
-        case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: return 16.0f;
-        case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: return 24.0f;
+        // TRUTHFUL BPW (audit 2026-08-26 option-c): these report the wire
+        // budget the canonical encoder actually spends at n%256 (probe:
+        // tests/test_format_audit.cpp). Names stay Q*_G for API stability.
+        case Format::Q1_G: return 1.0f; case Format::Q2_G: return 2.625f; case Format::Q3_G: return 3.5f; case Format::Q4_G: return 4.5f; case Format::Q6_G: return 6.5625f; case Format::Q8_G: return 8.5f; case Format::Q12_G: return 12.5f; case Format::Q16_G: return 16.5f; case Format::Q24_G: return 24.5f;
+        case Format::Q1_K_L_G: case Format::Q1_K_M_G: case Format::Q1_K_H_G: return 1.0f;
+        case Format::Q2_K_L_G: case Format::Q2_K_M_G: case Format::Q2_K_H_G: return 2.4375f;
+        case Format::Q3_K_L_G: case Format::Q3_K_M_G: case Format::Q3_K_H_G: return 3.4375f;
+        case Format::Q4_K_L_G: case Format::Q4_K_M_G: case Format::Q4_K_H_G: return 4.4375f;
+        case Format::Q6_K_L_G: case Format::Q6_K_M_G: case Format::Q6_K_H_G: return 6.5625f;
+        case Format::Q8_K_L_G: case Format::Q8_K_M_G: case Format::Q8_K_H_G: return 8.5f;
+        case Format::Q12_K_L_G: case Format::Q12_K_M_G: case Format::Q12_K_H_G: return 12.5f;
+        case Format::Q16_K_L_G: case Format::Q16_K_M_G: case Format::Q16_K_H_G: return 16.0f;
+        case Format::Q24_K_L_G: case Format::Q24_K_M_G: case Format::Q24_K_H_G: return 24.0f;
         case Format::Q1_5: return 1.5f; case Format::Q2_5: return 2.5f; case Format::Q3_5: return 3.5f; case Format::Q4_5: return 4.5f; case Format::Q6_5: return 6.5f; case Format::Q8_5: return 8.5f; case Format::Q12_5: return 12.5f; case Format::Q16_5: return 16.5f; case Format::Q24_5: return 24.5f;
-        case Format::Q_GRP_1_5: return 1.5f; case Format::Q_GRP_2_5: return 2.5f; case Format::Q_GRP_3_5: return 3.5f; case Format::Q_GRP_4_5: return 4.5f; case Format::Q_GRP_6_5: return 6.5f; case Format::Q_GRP_8_5: return 8.5f; case Format::Q_GRP_12_5: return 12.5f; case Format::Q_GRP_16_5: return 16.5f; case Format::Q_GRP_24_5: return 24.5f;
+        case Format::Q_G_1_5: return 1.5f; case Format::Q_G_2_5: return 2.5f; case Format::Q_G_3_5: return 3.5f; case Format::Q_G_4_5: return 4.5f; case Format::Q_G_6_5: return 6.5f; case Format::Q_G_8_5: return 8.5f; case Format::Q_G_12_5: return 12.5f; case Format::Q_G_16_5: return 16.5f; case Format::Q_G_24_5: return 24.5f;
         case Format::MXQ_3_5: return 3.5f; case Format::MXQ_4_5: return 4.5f; case Format::MXQ_6_5: return 6.5f; case Format::MXQ_8_5: return 8.5f; case Format::MXQ_12_5: return 12.5f; case Format::MXQ_16_5: return 16.5f; case Format::MXQ_24_5: return 24.5f;
-        case Format::MXQ_3_5_GRP: return 3.5f; case Format::MXQ_4_5_GRP: return 4.5f; case Format::MXQ_6_5_GRP: return 6.5f; case Format::MXQ_8_5_GRP: return 8.5f; case Format::MXQ_12_5_GRP: return 12.5f; case Format::MXQ_16_5_GRP: return 16.5f; case Format::MXQ_24_5_GRP: return 24.5f;
+        // MXQ_G true wire BPW at canonical n=256 (per-32 dom scales + per-tier
+        // non-dom scales). MXQ_3.5_G has 92% sign tier → 8 dom scales → 3.78125.
+        case Format::MXQ_3_5_G: return 3.78125f; case Format::MXQ_4_5_G: return 4.5f; case Format::MXQ_6_5_G: return 6.5f; case Format::MXQ_8_5_G: return 8.5f; case Format::MXQ_12_5_G: return 12.5f; case Format::MXQ_16_5_G: return 16.5f; case Format::MXQ_24_5_G: return 24.5f;
         default: return 0;
     }
 }
@@ -134,13 +139,13 @@ inline bool format_is_twi_mix(Format f){ return false; }
 inline bool format_is_quad_mix(Format f){ return format_is_mx(f); }
 inline int format_codebook_size(Format f){
     switch(f){
-        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_GRP: case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: case Format::Q1_5: case Format::Q_GRP_1_5: return 1;
-        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_GRP: case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: case Format::Q2_5: case Format::Q_GRP_2_5: return 4;
-        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_GRP: case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: case Format::Q3_5: case Format::Q_GRP_3_5: return 8;
-        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_GRP: case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: case Format::Q4_5: case Format::Q_GRP_4_5: return 16;
-        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_GRP: case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: case Format::Q6_5: case Format::Q_GRP_6_5: return 64;
-        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_GRP: case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: case Format::Q8_5: case Format::Q_GRP_8_5: return 256;
-        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_GRP: case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: case Format::Q12_5: case Format::Q_GRP_12_5: return 4096;
+        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_G: case Format::Q1_K_L_G: case Format::Q1_K_M_G: case Format::Q1_K_H_G: case Format::Q1_5: case Format::Q_G_1_5: return 1;
+        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_G: case Format::Q2_K_L_G: case Format::Q2_K_M_G: case Format::Q2_K_H_G: case Format::Q2_5: case Format::Q_G_2_5: return 4;
+        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_G: case Format::Q3_K_L_G: case Format::Q3_K_M_G: case Format::Q3_K_H_G: case Format::Q3_5: case Format::Q_G_3_5: return 8;
+        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_G: case Format::Q4_K_L_G: case Format::Q4_K_M_G: case Format::Q4_K_H_G: case Format::Q4_5: case Format::Q_G_4_5: return 16;
+        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_G: case Format::Q6_K_L_G: case Format::Q6_K_M_G: case Format::Q6_K_H_G: case Format::Q6_5: case Format::Q_G_6_5: return 64;
+        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_G: case Format::Q8_K_L_G: case Format::Q8_K_M_G: case Format::Q8_K_H_G: case Format::Q8_5: case Format::Q_G_8_5: return 256;
+        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_G: case Format::Q12_K_L_G: case Format::Q12_K_M_G: case Format::Q12_K_H_G: case Format::Q12_5: case Format::Q_G_12_5: return 4096;
         default: return 0;
     }
 }
@@ -148,15 +153,15 @@ enum class DType : uint8_t { I64,I32,U8,U4,U16,F16,F32 };
 inline size_t dtype_size(DType dt){ switch(dt){case DType::I64:return 8;case DType::I32:return 4;case DType::U8:return 1;case DType::U4:return 1;case DType::U16:return 2;case DType::F16:return 2;case DType::F32:return 4;default:return 0;}}
 inline DType format_to_dtype(Format f){
     switch(f){
-        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_GRP: case Format::Q1_K_L_GRP: case Format::Q1_K_M_GRP: case Format::Q1_K_H_GRP: case Format::Q1_5: case Format::Q_GRP_1_5: return DType::U8;
-        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_GRP: case Format::Q2_K_L_GRP: case Format::Q2_K_M_GRP: case Format::Q2_K_H_GRP: case Format::Q2_5: case Format::Q_GRP_2_5: return DType::U8;
-        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_GRP: case Format::Q3_K_L_GRP: case Format::Q3_K_M_GRP: case Format::Q3_K_H_GRP: case Format::Q3_5: case Format::Q_GRP_3_5: return DType::U8;
-        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_GRP: case Format::Q4_K_L_GRP: case Format::Q4_K_M_GRP: case Format::Q4_K_H_GRP: case Format::Q4_5: case Format::Q_GRP_4_5: return DType::U4;
-        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_GRP: case Format::Q6_K_L_GRP: case Format::Q6_K_M_GRP: case Format::Q6_K_H_GRP: case Format::Q6_5: case Format::Q_GRP_6_5: return DType::U8;
-        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_GRP: case Format::Q8_K_L_GRP: case Format::Q8_K_M_GRP: case Format::Q8_K_H_GRP: case Format::Q8_5: case Format::Q_GRP_8_5: return DType::U8;
-        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_GRP: case Format::Q12_K_L_GRP: case Format::Q12_K_M_GRP: case Format::Q12_K_H_GRP: case Format::Q12_5: case Format::Q_GRP_12_5: return DType::U16;
-        case Format::Q16: case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: case Format::Q16_GRP: case Format::Q16_K_L_GRP: case Format::Q16_K_M_GRP: case Format::Q16_K_H_GRP: case Format::Q16_5: case Format::Q_GRP_16_5: return DType::F16;
-        case Format::Q24: case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: case Format::Q24_GRP: case Format::Q24_K_L_GRP: case Format::Q24_K_M_GRP: case Format::Q24_K_H_GRP: case Format::Q24_5: case Format::Q_GRP_24_5: return DType::U8;
+        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::Q1_G: case Format::Q1_K_L_G: case Format::Q1_K_M_G: case Format::Q1_K_H_G: case Format::Q1_5: case Format::Q_G_1_5: return DType::U8;
+        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::Q2_G: case Format::Q2_K_L_G: case Format::Q2_K_M_G: case Format::Q2_K_H_G: case Format::Q2_5: case Format::Q_G_2_5: return DType::U8;
+        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::Q3_G: case Format::Q3_K_L_G: case Format::Q3_K_M_G: case Format::Q3_K_H_G: case Format::Q3_5: case Format::Q_G_3_5: return DType::U8;
+        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::Q4_G: case Format::Q4_K_L_G: case Format::Q4_K_M_G: case Format::Q4_K_H_G: case Format::Q4_5: case Format::Q_G_4_5: return DType::U4;
+        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::Q6_G: case Format::Q6_K_L_G: case Format::Q6_K_M_G: case Format::Q6_K_H_G: case Format::Q6_5: case Format::Q_G_6_5: return DType::U8;
+        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::Q8_G: case Format::Q8_K_L_G: case Format::Q8_K_M_G: case Format::Q8_K_H_G: case Format::Q8_5: case Format::Q_G_8_5: return DType::U8;
+        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::Q12_G: case Format::Q12_K_L_G: case Format::Q12_K_M_G: case Format::Q12_K_H_G: case Format::Q12_5: case Format::Q_G_12_5: return DType::U16;
+        case Format::Q16: case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: case Format::Q16_G: case Format::Q16_K_L_G: case Format::Q16_K_M_G: case Format::Q16_K_H_G: case Format::Q16_5: case Format::Q_G_16_5: return DType::F16;
+        case Format::Q24: case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: case Format::Q24_G: case Format::Q24_K_L_G: case Format::Q24_K_M_G: case Format::Q24_K_H_G: case Format::Q24_5: case Format::Q_G_24_5: return DType::U8;
         case Format::Q32: return DType::F32;
         default: return DType::U8;
     }

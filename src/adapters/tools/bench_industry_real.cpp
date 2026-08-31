@@ -769,8 +769,8 @@ int main(int argc, char** argv) {
     add_industry("INDUSTRY F16", 16.0);
 
     const char* quant_singles[] = {
-        "QUANT_Q0", "QUANT_Q0_GRP", "QUANT2", "QUANT_Q1", "QUANT2_GRP",
-        "QUANT4", "QUANT4_GRP", "QUANT_6_K", "QUANT8", "QUANT8_GRP", "QUANT16"
+        "QUANT_Q0", "QUANT_Q0_G", "QUANT2", "QUANT_Q1", "QUANT2_G",
+        "QUANT4", "QUANT4_G", "QUANT_6_K", "QUANT8", "QUANT8_G", "QUANT16"
     };
     for (const char* nm : quant_singles) {
         FormatDescriptor fd = FormatRegistry::parse_format_name(nm);
@@ -894,10 +894,10 @@ int main(int argc, char** argv) {
     printf("\n===== HEAD-TO-HEAD BY TIER (best of each family) =====\n");
 
     { // 1.9-2.7 BPW
-        const int q_ids[] = { (int)RegFormat::QUANT_Q0, (int)RegFormat::QUANT_Q0_GRP,
+        const int q_ids[] = { (int)RegFormat::QUANT_Q0, (int)RegFormat::QUANT_Q0_G,
                               (int)RegFormat::QUANT_TWI_MIX_Q0, (int)RegFormat::QUANT_QUAD_MIX_Q0,
                               (int)RegFormat::QUANT2, (int)RegFormat::QUANT_Q1,
-                              (int)RegFormat::MIX_QUANT8_QUANT2_01_99, (int)RegFormat::QUANT2_GRP };
+                              (int)RegFormat::MIX_QUANT8_QUANT2_01_99, (int)RegFormat::QUANT2_G };
         const char* ind[] = { "Q2_K" };
         printf("\n[1.5-2.7 BPW band]\n");
         double qb = 0, ib = 0;
@@ -907,7 +907,7 @@ int main(int argc, char** argv) {
                                      qb, ib, (1.0 - qb/ib) * 100.0);
     }
     { // 4-4.5 BPW
-        const int q_ids[] = { (int)RegFormat::QUANT4, (int)RegFormat::QUANT4_GRP,
+        const int q_ids[] = { (int)RegFormat::QUANT4, (int)RegFormat::QUANT4_G,
                               (int)RegFormat::MIX_QUANT8_QUANT4_05_95,
                               (int)RegFormat::MIX_QUANT16_QUANT4_01_99 };
         const char* ind[] = { "Q4_0", "Q4_K" };
@@ -930,7 +930,7 @@ int main(int argc, char** argv) {
                                      qb, ib, (1.0 - qb/ib) * 100.0);
     }
     { // 8-9.1 BPW
-        const int q_ids[] = { (int)RegFormat::QUANT8, (int)RegFormat::QUANT8_GRP,
+        const int q_ids[] = { (int)RegFormat::QUANT8, (int)RegFormat::QUANT8_G,
                               (int)RegFormat::MIX_QUANT32_QUANT8_01_99 };
         const char* ind[] = { "Q8_0", "Q8_K" };
         printf("\n[8.0-9.1 BPW band]\n");
@@ -950,10 +950,10 @@ int main(int argc, char** argv) {
     }
 
     printf("\n===== GRP GROUPING AUDIT (is per-group state really stored?) =====\n");
-    printf("  QUANT4_GRP stores a REAL 6-bit scale + 6-bit min per 32-weight group\n");
-    printf("  + FP16 d/dm (144 B/256w = +14 B vs QUANT4). QUANT2_GRP stores a REAL\n");
+    printf("  QUANT4_G stores a REAL 6-bit scale + 6-bit min per 32-weight group\n");
+    printf("  + FP16 d/dm (144 B/256w = +14 B vs QUANT4). QUANT2_G stores a REAL\n");
     printf("  4-bit scale + 4-bit min per 16-weight group + FP16 d/dm (84 B/256w =\n");
-    printf("  +18 B vs QUANT2). QUANT8_GRP stores a per-16-weight 7-bit scale + FP16\n");
+    printf("  +18 B vs QUANT2). QUANT8_G stores a per-16-weight 7-bit scale + FP16\n");
     printf("  d (272 B/256w = +16 B vs QUANT8). Proof: on identical data the GRP\n");
     printf("  payload must be exactly that much larger than its plain twin, and a\n");
     printf("  block split into distinct-scale groups must decode each group with\n");
@@ -968,9 +968,9 @@ int main(int argc, char** argv) {
         }
         struct GrpTwin { Format plain, grp; const char* name; };
         const GrpTwin twins[] = {
-            { Format::QUANT2, Format::QUANT2_GRP, "QUANT2" },
-            { Format::QUANT4, Format::QUANT4_GRP, "QUANT4" },
-            { Format::QUANT8, Format::QUANT8_GRP, "QUANT8" },
+            { Format::QUANT2, Format::QUANT2_G, "QUANT2" },
+            { Format::QUANT4, Format::QUANT4_G, "QUANT4" },
+            { Format::QUANT8, Format::QUANT8_G, "QUANT8" },
         };
         for (const auto& tw : twins) {
             std::vector<uint8_t> ip, ig, cb;
@@ -981,11 +981,11 @@ int main(int argc, char** argv) {
                 tw.name[5] == '2' ? "(16x16w 4b sc + 16x16w 4b min + FP16 d/dm)" :
                                     "(16x16w 7b sc + FP16 d)";
             printf("  %-9s plain %3zu B   %-12s GRP %3zu B   (+%zu B = %s)\n",
-                   tw.name, ip.size(), (std::string(tw.name) + "_GRP").c_str(),
+                   tw.name, ip.size(), (std::string(tw.name) + "_G").c_str(),
                    ig.size(), ig.size() - ip.size(), note);
         }
         // (b) distinct-scale groups must decode with their own scale/min.
-        // QUANT4_GRP groups 32 weights, QUANT2_GRP groups 16 weights.
+        // QUANT4_G groups 32 weights, QUANT2_G groups 16 weights.
         {
             std::vector<float> wg(256);
             for (int g = 0; g < 8; ++g) {
@@ -993,19 +993,19 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < 32; ++i) wg[(size_t)g * 32 + i] = s * 20.0f;
             }
             std::vector<uint8_t> i4, cb;
-            quantize_block_all(Format::QUANT4_GRP, wg.data(), 256, i4, cb);
+            quantize_block_all(Format::QUANT4_G, wg.data(), 256, i4, cb);
             std::vector<float> d4(256);
-            dequantize_block_all(Format::QUANT4_GRP, i4.data(), i4.size(), cb.data(), cb.size(), 256, d4.data());
+            dequantize_block_all(Format::QUANT4_G, i4.data(), i4.size(), cb.data(), cb.size(), 256, d4.data());
             int ok4 = 1;
             for (int g = 0; g < 8; ++g) {
                 const float exp = 0.1f * (float)(g + 1) * 20.0f;
                 const float got = d4[(size_t)g * 32];
                 const double rel = std::fabs(got - exp) / (exp > 0 ? exp : 1.0);
-                printf("    QUANT4_GRP grp %d expected %5.1f decoded %5.1f (rel err %.1f%%)\n",
+                printf("    QUANT4_G grp %d expected %5.1f decoded %5.1f (rel err %.1f%%)\n",
                        g, exp, got, rel * 100.0);
                 if (rel > 0.15) ok4 = 0;
             }
-            printf("  => QUANT4_GRP per-32 scale+min actually applied: %s\n", ok4 ? "YES" : "NO");
+            printf("  => QUANT4_G per-32 scale+min actually applied: %s\n", ok4 ? "YES" : "NO");
         }
         {
             std::vector<float> wg(256);
@@ -1014,19 +1014,19 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < 16; ++i) wg[(size_t)g * 16 + i] = s * 20.0f;
             }
             std::vector<uint8_t> i2, cb;
-            quantize_block_all(Format::QUANT2_GRP, wg.data(), 256, i2, cb);
+            quantize_block_all(Format::QUANT2_G, wg.data(), 256, i2, cb);
             std::vector<float> d2(256);
-            dequantize_block_all(Format::QUANT2_GRP, i2.data(), i2.size(), cb.data(), cb.size(), 256, d2.data());
+            dequantize_block_all(Format::QUANT2_G, i2.data(), i2.size(), cb.data(), cb.size(), 256, d2.data());
             int ok2 = 1;
             for (int g = 0; g < 16; ++g) {
                 const float exp = 0.1f * (float)(g + 1) * 20.0f;
                 const float got = d2[(size_t)g * 16];
                 const double rel = std::fabs(got - exp) / (exp > 0 ? exp : 1.0);
-                printf("    QUANT2_GRP grp %2d expected %5.1f decoded %5.1f (rel err %.1f%%)\n",
+                printf("    QUANT2_G grp %2d expected %5.1f decoded %5.1f (rel err %.1f%%)\n",
                        g, exp, got, rel * 100.0);
                 if (rel > 0.15) ok2 = 0;
             }
-            printf("  => QUANT2_GRP per-16 scale+min actually applied: %s\n", ok2 ? "YES" : "NO");
+            printf("  => QUANT2_G per-16 scale+min actually applied: %s\n", ok2 ? "YES" : "NO");
         }
     }
 

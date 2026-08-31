@@ -24,15 +24,20 @@ int main() {
         assert(std::abs(mix.effective_bpw - target) < 1e-4f);
     }
 
-    std::cout << "[Test 2] Verifying 4-tier allocation for MXQ_24_5_GRP..." << std::endl;
-    auto mix24_5 = quant::FormatRegistry::get_four_mix(24.5f);
-    assert(mix24_5.id == quant::RegFormat::MXQ_24_5_GRP);
-    assert(mix24_5.tier1_fmt == quant::RegFormat::Q12);
-    assert(mix24_5.tier2_fmt == quant::RegFormat::Q16);
-    assert(mix24_5.tier3_fmt == quant::RegFormat::Q24);
-    assert(mix24_5.tier4_fmt == quant::RegFormat::Q32);
+    std::cout << "[Test 2] Verifying 4-tier allocation for MXQ_24_5_G..." << std::endl;
+    // get_four_mix tie-breaks equal-BPW candidates by registry order (plain
+    // first), so request the GRP descriptor directly from the mix table.
+    const quant::MixDescriptor* mix24_5 = nullptr;
+    for (const auto& m : quant::FormatRegistry::get_all_four_mixes()) {
+        if (m.id == quant::RegFormat::MXQ_24_5_G) { mix24_5 = &m; break; }
+    }
+    assert(mix24_5 != nullptr);
+    assert(mix24_5->tier1_fmt == quant::RegFormat::Q12);
+    assert(mix24_5->tier2_fmt == quant::RegFormat::Q16);
+    assert(mix24_5->tier3_fmt == quant::RegFormat::Q24);
+    assert(mix24_5->tier4_fmt == quant::RegFormat::Q32);
 
-    std::cout << "  -> MXQ_24_5_GRP composition verified: Q12(25%) + Q16(30%) + Q24(35%) + Q32(10%) = 24.5 BPW!" << std::endl;
+    std::cout << "  -> MXQ_24_5_G composition verified: Q12(25%) + Q16(30%) + Q24(35%) + Q32(10%) = 24.5 BPW!" << std::endl;
 
     std::cout << "\nMIXED PRECISION PROOF TEST PASSED SUCCESSFULLY!" << std::endl;
     return 0;

@@ -1,5 +1,4 @@
 #include "quant/tensor.h"
-#include "quant/autograd.h"
 #include "quant/memory.h"
 #include "quant/types.h"
 #include <cstring>
@@ -8,6 +7,10 @@
 #include <cmath>
 
 namespace quant {
+
+namespace detail {
+void (*autograd_unregister_hook)(Tensor*) = nullptr;
+}
 
 // IEEE 754 FP16 conversion helpers
 static inline uint16_t float_to_half(float f) {
@@ -91,11 +94,11 @@ Tensor::Tensor(Shape shape, std::shared_ptr<Buffer> buffer, DType dtype)
 
 Tensor::~Tensor() noexcept {
     // Self-cleaning autograd registry: only tensors that were ever registered
-    // pay the lookup cost. Prevents address-reuse stale entries (flaky exit
-    // crashes) from outliving the owning model. registry_alive() is checked
-    // first so we never resurrect the singleton during static teardown.
-    if (autograd_registered_ && AutogradEngine::registry_alive()) {
-        AutogradEngine::instance().unregister_parameter(this);
+    // pay the lookup cost. The hook (installed by AutogradEngine) is cleared
+    // before the engine's members die, so static-teardown ~Tensor calls can
+    // never touch the dying registry nor resurrect the singleton.
+    if (autograd_registered_ && detail::autograd_unregister_hook) {
+        detail::autograd_unregister_hook(this);
     }
 }
 

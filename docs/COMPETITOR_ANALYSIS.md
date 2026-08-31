@@ -43,28 +43,28 @@ Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
 |---|---|---|---|---|
 | Q32 (32.0) | FP32 identity | 100/100 | lossless | TIE by definition (reference) |
 | Q16 (16.0) | IEEE FP16 (16.0) | 102.45/104.50 | 86.47/86.28 | **WIN +15.98/+18.22** (vmin/vmax fp16-corner trick beats raw FP16 rounding) |
-| Q16_GRP (16.0) | FP16 (16.0) | >Q16 | 86.47/86.28 | WIN (GRP >= plain, strict) |
-| Q12_GRP (12.0) | no industrial 12-bit exists; vs Q12 plain | 58.28/54.11 | 57.22/48.28 | WIN vs plain; industrial gap honest |
-| Q8_GRP (8.0) | INT8 uniform (8.125) | 54.72/57.07* | 56.67/58.74* | *Q8 has 0.125 BPW LESS; at equal bits Q8_GRP(8.5-class) wins — see Q_GRP_8.5 |
-| Q_GRP_8.5 (8.5) | GGUF Q8_0 (8.5) | 58.56/60.15 | 58.14/59.75 | **WIN +0.42/+0.40** |
-| Q_GRP_6.5 (6.5) | GGUF Q6_K (6.5625) | 46.06/47.60 | 45.87/46.12 | **WIN +0.19/+1.48 at LESS bpw** |
+| Q16_G (16.0) | FP16 (16.0) | >Q16 | 86.47/86.28 | WIN (GRP >= plain, strict) |
+| Q12_G (12.0) | no industrial 12-bit exists; vs Q12 plain | 58.28/54.11 | 57.22/48.28 | WIN vs plain; industrial gap honest |
+| Q8_G (8.0) | INT8 uniform (8.125) | 54.72/57.07* | 56.67/58.74* | *Q8 has 0.125 BPW LESS; at equal bits Q8_G(8.5-class) wins — see Q_G_8.5 |
+| Q_G_8.5 (8.5) | GGUF Q8_0 (8.5) | 58.56/60.15 | 58.14/59.75 | **WIN +0.42/+0.40** |
+| Q_G_6.5 (6.5) | GGUF Q6_K (6.5625) | 46.06/47.60 | 45.87/46.12 | **WIN +0.19/+1.48 at LESS bpw** |
 | MXQ_8.5 (8.5) | GGUF Q8_0 (8.5) | 36.60/— | 58.14/— | LOSS — mix routing tuned for real saliency, not gaussian; MXQ family is importance-mix, honest flag |
-| Q_GRP_4.5 (4.5) | GGUF Q4_K (4.5) | see bench | see bench | verdict in bench verdicts section |
-| Q1_GRP (1.0) | Binary 1-bit sign (1.0) | 16.75/16.95 | 8.10/— | **WIN +8.65** (optimal scale search vs naive sign) |
-| Q1_GRP (1.0) | BitNet b1.58 (1.58) | 16.75 | 16.36 | **WIN +0.39 at 0.58 LESS bpw** (PTQ vs their QAT — noted honestly: BitNet's parity comes from training-time ternary, not post-training) |
-| Q2_GRP (2.0) | GGUF Q2_K (2.5625) | 23.89/— | ~19.5-class | WIN at 0.56 less bpw (weight-MSE proxy) |
+| Q_G_4.5 (4.5) | GGUF Q4_K (4.5) | see bench | see bench | verdict in bench verdicts section |
+| Q1_G (1.0) | Binary 1-bit sign (1.0) | 16.75/16.95 | 8.10/— | **WIN +8.65** (optimal scale search vs naive sign) |
+| Q1_G (1.0) | BitNet b1.58 (1.58) | 16.75 | 16.36 | **WIN +0.39 at 0.58 LESS bpw** (PTQ vs their QAT — noted honestly: BitNet's parity comes from training-time ternary, not post-training) |
+| Q2_G (2.0) | GGUF Q2_K (2.5625) | 23.89/— | ~19.5-class | WIN at 0.56 less bpw (weight-MSE proxy) |
 | Q4_K_L/M/H (4.0) | AWQ 4-bit g128 (~4.15 eff) / GPTQ 4-bit | weight-PSNR only | not publishable same-metric | AWQ/GPTQ optimize end-task via calibration; our K variants are calibration-free RTN+optimal-scale — different spec, honest note |
 | MXQ family | EXL2 mixed-bit / GGUF IQ (imatrix) | importance-mix under hard budget | per-row search / imatrix | same design family (saliency-mixed bits); EXL2 uses Hessian calibration, MXQ uses magnitude ranking — honest difference |
 
 ## 3. Honest gaps (no fake wins)
 
-1. **x2 rule vs honest double-BPW**: Q4_GRP cannot beat Q8-class lossless
+1. **x2 rule vs honest double-BPW**: Q4_G cannot beat Q8-class lossless
    (information theory: 6 dB/bit). The industrial GRP 2x rule is enforced at
-   SAME-BPW industrial refs instead (Q8_GRP>Q8_0, Q6_GRP>Q6_K, Q16>FP16).
+   SAME-BPW industrial refs instead (Q8_G>Q8_0, Q6_G>Q6_K, Q16>FP16).
 2. **End-task metrics**: we measure weight PSNR. Perplexity/KL/MMLU parity
    claims vs AWQ/AQLM/QuIP# require a full LLM eval harness — listed as
    Phase 9 backlog, not claimed today.
-3. **QAT vs PTQ**: BitNet b1.58 parity is a TRAINING-time result. Our Q1_GRP
+3. **QAT vs PTQ**: BitNet b1.58 parity is a TRAINING-time result. Our Q1_G
    is post-training; beating its PTQ sign baseline (+8.65 dB) is the honest
    same-class comparison.
 4. **Calibration-based competitors** (GPTQ/AWQ/imatrix/EXL2) use data; our
@@ -74,9 +74,9 @@ Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
 
 | Paradigm | Projects | What it costs | What it buys | InNova position |
 |---|---|---|---|---|
-| PTQ data-free (RTN+optimal scale, Lloyd) | our base/K formats; GGUF legacy; HQQ (calibration-free) | nothing | minutes quantize, any model, no data | **Home turf** — all Q/K/Q_GRP/MXQ formats are data-free PTQ with true-MSE scale search |
+| PTQ data-free (RTN+optimal scale, Lloyd) | our base/K formats; GGUF legacy; HQQ (calibration-free) | nothing | minutes quantize, any model, no data | **Home turf** — all Q/K/Q_G/MXQ formats are data-free PTQ with true-MSE scale search |
 | PTQ calibration-based (Hessian/activation-aware) | GPTQ, AWQ, SpQR, SqueezeLLM, EXL2, imatrix IQ-quants | 128–512 samples, GPU-hours, per-model rerun on data change | 0.03–0.3 ppl better at 4-bit; saliency protection | Our MXQ importance-mix is the data-FREE analogue of this family (magnitude ranking vs their activation stats); honest gap at 2–4 bit end-task quality until a calibration pass lands |
-| QAT (quantization-aware training) | BitNet b1.58, BitNet b1, direct low-bit training | full pretraining run with fake-quant in graph | 1.58-bit FP16-parity at >=3B — impossible for any PTQ | Not comparable same-class: our Q1_GRP beats their PTQ sign baseline (+8.65 dB weight-MSE), NOT their QAT result; noted honestly |
+| QAT (quantization-aware training) | BitNet b1.58, BitNet b1, direct low-bit training | full pretraining run with fake-quant in graph | 1.58-bit FP16-parity at >=3B — impossible for any PTQ | Not comparable same-class: our Q1_G beats their PTQ sign baseline (+8.65 dB weight-MSE), NOT their QAT result; noted honestly |
 
 STE (straight-through estimator) is the *mechanism* inside QAT that passes
 gradients through the non-differentiable round(); it is not a separate
@@ -94,10 +94,10 @@ Dequant+dot-product arithmetic cost per reconstructed weight (decode path):
 | GGUF Q8_0 | 1 | 1 | fp16->fp32 convert | scale mul folded into accumulator |
 | GGUF Q6_K / Q4_K | 1 | 1 | scale LUT (6b) + code unpack | sub-block scale gather |
 | InNova Q8/K8 (LUT grid) | 1 | 1 | 256-entry float LUT | comp8_table() static, zero transcendentals on hot path |
-| InNova Q8_GRP compound | 1 | 1 | LUT + per-group fp16 scale load | same op count as GGUF Q8_0-class |
+| InNova Q8_G compound | 1 | 1 | LUT + per-group fp16 scale load | same op count as GGUF Q8_0-class |
 | InNova MXQ tiers | 0..1 | 1 | tier table | 1-bit tier = sign only -> adder tree, 32-bit tier = raw FMA |
-| InNova Q1_GRP / sign tiers | **0** | 1 | none | value = ±scale: dot product becomes pure accumulate (**SOPs**) |
-| BitNet b1.58 (competitor, QAT) | 0 | 1 | none | ternary adder-only matmul — same SOPs class as Q1_GRP |
+| InNova Q1_G / sign tiers | **0** | 1 | none | value = ±scale: dot product becomes pure accumulate (**SOPs**) |
+| BitNet b1.58 (competitor, QAT) | 0 | 1 | none | ternary adder-only matmul — same SOPs class as Q1_G |
 
 Measured decode throughput proxy lives in bench CSV `decode_us` column
 (weights/sec = n / decode_us). Honest note: end-to-end tok/s requires engine

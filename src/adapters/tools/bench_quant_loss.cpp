@@ -1,5 +1,5 @@
 // ============================================================================
-// bench_quant_loss.cpp — Measure QUANT_Q1_GRP vs BF16 quality loss on model
+// bench_quant_loss.cpp — Measure QUANT_Q1_G vs BF16 quality loss on model
 // ============================================================================
 // Usage:
 //   bench_quant_loss --input ./Ornith-1.0-9B [--verbose]
@@ -35,7 +35,7 @@ static Args parse_args(int argc, char** argv) {
             a.verbose = true;
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::printf("Usage: bench_quant_loss --input <model_dir|safetensors> [--verbose]\n");
-            std::printf("Measures QUANT_Q1_GRP quantization MSE vs BF16/FP32 reference.\n");
+            std::printf("Measures QUANT_Q1_G quantization MSE vs BF16/FP32 reference.\n");
             return a;
         }
     }
@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    FormatDescriptor quant_fmt = FormatRegistry::parse_format_name("QUANT_Q1_GRP");
+    FormatDescriptor quant_fmt = FormatRegistry::parse_format_name("QUANT_Q1_G");
     if (quant_fmt.name.empty()) {
-        std::fprintf(stderr, "Error: QUANT_Q1_GRP not found in registry\n");
+        std::fprintf(stderr, "Error: QUANT_Q1_G not found in registry\n");
         return 1;
     }
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::printf("QUANT_Q1_GRP Quality Loss Measurement\n");
+    std::printf("QUANT_Q1_G Quality Loss Measurement\n");
     std::printf("Input: %s  (%zu shard(s))\n", args.input_path.c_str(), shard_files.size());
     std::printf("Format: %s (BPW=%.2f)\n", quant_fmt.name.c_str(), quant_fmt.bpw);
     std::printf("\n%-56s %10s %12s %8s %8s\n",
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
         std::printf("%-56s %10lld %12.4e %7.1f %7.4f\n",
                     "AVERAGE", (long long)total_elems, avg_mse, avg_snr, avg_rel);
         std::printf("Metrics over %d tensors | BF16 reference (zero-loss -> FP32 then quantized)\n", total_tensors);
-        std::printf("QUANT_Q1_GRP @2.0 BPW | Expected inference loss: negligible\n");
+        std::printf("QUANT_Q1_G @2.0 BPW | Expected inference loss: negligible\n");
     } else {
         std::fprintf(stderr, "Error: no tensors loaded\n");
         return 1;

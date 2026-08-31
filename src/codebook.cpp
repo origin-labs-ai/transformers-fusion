@@ -201,7 +201,7 @@ CodebookQUANT8 CodebookQUANT8::deserialize(const uint8_t* src, size_t& offset, s
     uint32_t magic;
     std::memcpy(&magic, src + offset, sizeof(magic));
     offset += sizeof(magic);
-    if (magic != 0x4F494C38) throw Error("CodebookQUANT8::deserialize: invalid magic");
+    if (magic != 0x51554138) throw Error("CodebookQUANT8::deserialize: invalid magic");
     std::memcpy(cb.centroids, src + offset, SIZE * sizeof(float));
     offset += SIZE * sizeof(float);
     return cb;
@@ -350,7 +350,7 @@ CodebookQUANT4 CodebookQUANT4::deserialize(const uint8_t* src, size_t& offset, s
     uint32_t magic;
     std::memcpy(&magic, src + offset, sizeof(magic));
     offset += sizeof(magic);
-    if (magic != 0x4F494C34) throw Error("CodebookQUANT4::deserialize: invalid magic");
+    if (magic != 0x51554134) throw Error("CodebookQUANT4::deserialize: invalid magic");
     std::memcpy(cb.centroids, src + offset, SIZE * sizeof(uint16_t));
     offset += SIZE * sizeof(uint16_t);
     return cb;

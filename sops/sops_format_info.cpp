@@ -26,13 +26,13 @@ static const FormatInfo base_formats[] = {
     {"QUANT8",             8.0,    4.000},
     {"QUANT16",           16.0,    2.000},
     {"QUANT32",           32.0,    1.000},
-    {"QUANT1_GRP",         1.0,   32.000},
-    {"QUANT2_GRP",         2.625, 12.190},
-    {"QUANT4_GRP",         4.50,   7.111},
-    {"QUANT8_GRP",         8.50,   3.765},
-    {"QUANT16_GRP",       16.0,    2.000},
-    {"QUANT_Q0_GRP",     1.50,  21.333},
-    {"QUANT_Q1_GRP", 2.0,   16.000},
+    {"QUANT1_G",         1.0,   32.000},
+    {"QUANT2_G",         2.625, 12.190},
+    {"QUANT4_G",         4.50,   7.111},
+    {"QUANT8_G",         8.50,   3.765},
+    {"QUANT16_G",       16.0,    2.000},
+    {"QUANT_Q0_G",     1.50,  21.333},
+    {"QUANT_Q1_G", 2.0,   16.000},
 };
 static constexpr int NUM_BASE = 15;
 

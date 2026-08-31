@@ -211,18 +211,18 @@ QUANT defines a complete family of weight formats spanning 1.0–32.0 BPW, enabl
 | Format | BPW | Index Storage | Codebook | Compute | Quality |
 |--------|-----|--------------|----------|---------|---------|
 | QUANT\_Q0 | 1.5 | 2b per element | 4 centroids per block | Gather-add | 1.5 BPW baseline |
-| QUANT\_Q0\_GRP | 1.5 | 2b per element | 4 centroids per group | Sparse gather | GRP quality improvement |
+| QUANT\_Q0\_G | 1.5 | 2b per element | 4 centroids per group | Sparse gather | GRP quality improvement |
 | QUANT\_SPARSE | 2.0 | uint16 index + int8 value | Per-block scale | Sparse add | Variable BPW sparse |
 | QUANT1 | 1.0 | 1 centroid per block | Per-block mean | Gather | 1.0 BPW baseline |
 | QUANT2 | 2.0 | 2b index | 4 × FP32 Lloyd-Max | Gather+FMA | 2.0 BPW Lloyd-Max |
-| QUANT2\_GRP | 2.5 | 2b index + group scale | 4 centroids per group | Gather+FMA | GRP quality improvement |
-| QUANT\_SPARSE\_GRP | 2.0 | uint16 index + int8 value + group | Per-group scale | Sparse gather | GRP sparse quality improvement |
+| QUANT2\_G | 2.5 | 2b index + group scale | 4 centroids per group | Gather+FMA | GRP quality improvement |
+| QUANT\_SPARSE\_G | 2.0 | uint16 index + int8 value + group | Per-group scale | Sparse gather | GRP sparse quality improvement |
 | QUANT4 | 4.0 | 4b nibble | 16 × FP16 Lloyd-Max | Gather+FMA | 4.0 BPW Lloyd-Max |
-| QUANT4\_GRP | 4.5 | 4b index + group scale | 16 per 64-weight group | Gather+FMA | GRP quality improvement |
+| QUANT4\_G | 4.5 | 4b index + group scale | 16 per 64-weight group | Gather+FMA | GRP quality improvement |
 | QUANT8 | 8.0 | 8b index | 256 × FP32 Lloyd-Max | Gather+FMA | 8.0 BPW Lloyd-Max |
-| QUANT8\_GRP | 8.5 | 8b index + group scale | 256 per 64-weight group | Gather+FMA | GRP quality improvement |
+| QUANT8\_G | 8.5 | 8b index + group scale | 256 per 64-weight group | Gather+FMA | GRP quality improvement |
 | QUANT16 | 16.0 | FP16 storage | None (FP16 rebranded) | FP16-to-FP32 cast | 16.0 BPW FP16 precision |
-| QUANT16\_GRP | 16.0 | FP16 storage | None (FP16 native) | FP16-to-FP32 cast | FP16 precision (no grouping at 16 BPW) |
+| QUANT16\_G | 16.0 | FP16 storage | None (FP16 native) | FP16-to-FP32 cast | FP16 precision (no grouping at 16 BPW) |
 | QUANT32 | 32.0 | FP32 native | None (FP32 identity) | Native FP32 | **Lossless** (FP32 identity) |
 
 **Table 1b: QUANT Two-Mix and Four-Mix Formats**
@@ -239,7 +239,7 @@ QUANT defines a complete family of weight formats spanning 1.0–32.0 BPW, enabl
 | QUANT32+QUANT8 1/99 | 8.24 | QUANT32 (1%) + QUANT8 (99%) | Critical weight protection |
 | 4-mix QUAD | 2.92-5.84 | Multiple QUANT formats | Full CID spectrum |
 
-**Key innovation: Sub-block grouping (GRP) improves quantization quality.** QUANT2_GRP, QUANT4_GRP, and QUANT8_GRP store REAL per-64-weight group state (FP16 zero-point + FP16 scale) applied on decode, at a cost of 0.5 BPW included in the honest claim: QUANT2_GRP (2.5), QUANT4_GRP (4.5), QUANT8_GRP (8.5). QUANT_Q0_GRP (1.5) and QUANT1_GRP (1.0) store a single block-level FP16 scale, and QUANT_Q1_GRP (2.0) stores two per-half-block FP16 scales, all inside their claimed BPW. QUANT16_GRP is FP16-native storage, identical to QUANT16 (16.0 BPW; grouping adds nothing at full precision). The per-group normalization lets the fixed lattice levels track each group's local mean/scale, so grouped variants achieve lower MSE than their ungrouped twins at the same index rate.
+**Key innovation: Sub-block grouping (GRP) improves quantization quality.** QUANT2_G, QUANT4_G, and QUANT8_G store REAL per-64-weight group state (FP16 zero-point + FP16 scale) applied on decode, at a cost of 0.5 BPW included in the honest claim: QUANT2_G (2.5), QUANT4_G (4.5), QUANT8_G (8.5). QUANT_Q0_G (1.5) and QUANT1_G (1.0) store a single block-level FP16 scale, and QUANT_Q1_G (2.0) stores two per-half-block FP16 scales, all inside their claimed BPW. QUANT16_G is FP16-native storage, identical to QUANT16 (16.0 BPW; grouping adds nothing at full precision). The per-group normalization lets the fixed lattice levels track each group's local mean/scale, so grouped variants achieve lower MSE than their ungrouped twins at the same index rate.
 
 **QUANT8** uses an 8-bit index into a 256-entry codebook of FP32 centroids. During inference, each weight is dequantized by gathering the FP32 centroid value from the codebook, then performing a standard fused multiply-add (FMA) with the activation. The 256-entry codebook provides sufficient granularity to match FP32 quality for most weight distributions, with quantization variance σ²\_Q₈ = (6/256)²/12 = 4.58×10⁻⁵.
 
@@ -1181,7 +1181,7 @@ Post-training quantization takes an FP32-optimal solution and projects it into a
 
 ### 9.2 Per-Block Format Routing
 
-FormatPlanner scores each 256-wide weight block by activation magnitude and allocates per-block formats so total storage hits a target BPW exactly. Salient blocks receive QUANT32/QUANT16/QUANT8, the bulk receives QUANT4/QUANT2/QUANT, and sparse blocks receive QUANT_Q1_GRP. Exact tier ratios are registered in FormatRegistry and enforced by tests, so claimed BPW equals actual stored bytes.
+FormatPlanner scores each 256-wide weight block by activation magnitude and allocates per-block formats so total storage hits a target BPW exactly. Salient blocks receive QUANT32/QUANT16/QUANT8, the bulk receives QUANT4/QUANT2/QUANT, and sparse blocks receive QUANT_Q1_G. Exact tier ratios are registered in FormatRegistry and enforced by tests, so claimed BPW equals actual stored bytes.
 
 ### 9.3 Measured Results (reproducible via `bench_poc`)
 
@@ -1193,13 +1193,13 @@ Quantization quality is measured on synthetic Gaussian, uniform and Laplace dist
 |--------|-----|------------------|-------|
 | FP32 | 32.0 | 0 (reference) | Identity |
 | QUANT32 | 32.0 | 0 | Identity |
-| QUANT16 / QUANT16_GRP | 16.0 | 2.0×10⁻⁷ | Near-lossless (no grouping at 16 BPW) |
-| QUANT8 / QUANT8_GRP | 8.0 / 8.5 | 1.3×10⁻⁴ / 1.5×10⁻⁴ | High quality |
-| QUANT4 / QUANT4_GRP | 4.0 / 4.5 | N/A (see test_quant_mix) / 1.9×10⁻⁴ | Good |
-| QUANT2 / QUANT2_GRP | 2.0 / 2.5 | N/A (see test_quant_mix) | Compressed |
-| QUANT1 / QUANT1_GRP | 1.0 | N/A (see test_quant_mix) | Max compression |
-| QUANT_Q0 / QUANT_Q0_GRP | 1.5 | N/A (see test_quant_mix) | Sign + scale |
-| QUANT_Q1_GRP | 2.0 | 6.7×10⁻⁴ | Sparse-friendly (dense-data bound) |
+| QUANT16 / QUANT16_G | 16.0 | 2.0×10⁻⁷ | Near-lossless (no grouping at 16 BPW) |
+| QUANT8 / QUANT8_G | 8.0 / 8.5 | 1.3×10⁻⁴ / 1.5×10⁻⁴ | High quality |
+| QUANT4 / QUANT4_G | 4.0 / 4.5 | N/A (see test_quant_mix) / 1.9×10⁻⁴ | Good |
+| QUANT2 / QUANT2_G | 2.0 / 2.5 | N/A (see test_quant_mix) | Compressed |
+| QUANT1 / QUANT1_G | 1.0 | N/A (see test_quant_mix) | Max compression |
+| QUANT_Q0 / QUANT_Q0_G | 1.5 | N/A (see test_quant_mix) | Sign + scale |
+| QUANT_Q1_G | 2.0 | 6.7×10⁻⁴ | Sparse-friendly (dense-data bound) |
 | QUANT_MIX_Q0 | 1.925 | 2.6×10⁻² | Adaptive 1.925 BPW hard cap |
 | QUANT_MIX_Q1 | 2.075 | 1.5×10⁻² | Adaptive 2.075 BPW hard cap |
 
@@ -1574,13 +1574,13 @@ QUANT_Q0/QUANT1 gather kernels achieve lower ops/watt than full-precision FMA bu
 | QUANT16 | 16.0 | — (FP16 native) | — | — | 0.5 wt/byte | FP16→FP32 convert |
 | QUANT32 | 32.0 | — (FP32 native) | — | — | 0.25 wt/byte | Native FP32 |
 | **Grouped (lossy)** | | | | | | |
-| QUANT1\_GRP | 1.00 | 1b × sub-blk | 16 slots + 1b·(n−16) | Block FP16 scale | 1 wt/byte | Gather+FMA |
-| QUANT2\_GRP | 2.50 | 2b × sub-blk | 4 levels | Per-group FP16 zp+scale | 4 wt/byte | Gather+FMA |
-| QUANT4\_GRP | 4.50 | 4b × sub-blk | 16 levels | Per-group FP16 zp+scale | 2 wt/byte | Gather+FMA |
-| QUANT8\_GRP | 8.50 | 8b × sub-blk | 256 levels | Per-group FP16 zp+scale | 1 wt/byte | Gather+FMA |
-| QUANT16\_GRP | 16.0 | — (FP16 native, same as QUANT16) | — | — | 0.5 wt/byte | FP16→FP32 convert |
-| QUANT\_Q0\_GRP | 1.50 | sign bits + refinement | ±1 + refine | Block FP16 scale | 1 wt/byte | Gather+add |
-| QUANT\_SPARSE\_GRP | 2.0 | 2×FP16 hdr + 3B records | {0, ±1} sparse | Per-half-block FP16 | Sparse | Sparse gather |
+| QUANT1\_G | 1.00 | 1b × sub-blk | 16 slots + 1b·(n−16) | Block FP16 scale | 1 wt/byte | Gather+FMA |
+| QUANT2\_G | 2.50 | 2b × sub-blk | 4 levels | Per-group FP16 zp+scale | 4 wt/byte | Gather+FMA |
+| QUANT4\_G | 4.50 | 4b × sub-blk | 16 levels | Per-group FP16 zp+scale | 2 wt/byte | Gather+FMA |
+| QUANT8\_G | 8.50 | 8b × sub-blk | 256 levels | Per-group FP16 zp+scale | 1 wt/byte | Gather+FMA |
+| QUANT16\_G | 16.0 | — (FP16 native, same as QUANT16) | — | — | 0.5 wt/byte | FP16→FP32 convert |
+| QUANT\_Q0\_G | 1.50 | sign bits + refinement | ±1 + refine | Block FP16 scale | 1 wt/byte | Gather+add |
+| QUANT\_SPARSE\_G | 2.0 | 2×FP16 hdr + 3B records | {0, ±1} sparse | Per-half-block FP16 | Sparse | Sparse gather |
 
 **Table E.2: File Header Specification**
 

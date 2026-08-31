@@ -38,16 +38,16 @@ struct AdapterTensor {
 
 // Configuration for the QUANT conversion funnel.
 struct BridgeConfig {
-    // Single on-disk format for ALL blocks (default: Q2_GRP at
+    // Single on-disk format for ALL blocks (default: Q2_G at
     // 2.625 BPW, highly recommended).
-    // Note: this is ignored if compound != Q2_GRP
-    Format format = Format::Q2_GRP;
+    // Note: this is ignored if compound != Q2_G
+    Format format = Format::Q2_G;
 
     // Compound format (TWI_MIX / QUAD): when set to a MIX_*/QUAD_* RegFormat,
     // blocks are routed to the member formats by importance with the exact
     // registry ratios, so the file's average BPW equals the claimed
     // effective_bpw. Defaults to the single format above.
-    RegFormat compound = RegFormat::Q2_GRP;
+    RegFormat compound = RegFormat::Q2_G;
 
     // Kept for CLI/API compatibility; write_quant_mixed ignores it in favor of
     // `format`. The nearest matching format is chosen when set.

@@ -46,7 +46,7 @@ void test_format_enum_properties() {
     assert(std::abs(quant::format_bpw(quant::Format::Q24) - 24.0f) < 1e-4f);
     assert(std::abs(quant::format_bpw(quant::Format::Q32) - 32.0f) < 1e-4f);
 
-    // Verify GRP exact variants (Q1_GRP..Q24_GRP at enum 37..45)
+    // Verify GRP exact variants (Q1_G..Q24_G at enum 37..45)
     for (int i = 37; i <= 45; i++) {
         auto fmt = static_cast<quant::Format>(i);
         assert(quant::format_is_grp(fmt));
@@ -62,13 +62,13 @@ void test_format_enum_properties() {
     }
 
     // Verify QUAD_MIX variants
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_3_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_4_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_6_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_8_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_12_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_16_5_GRP));
-    assert(quant::format_is_quad_mix(quant::Format::MXQ_24_5_GRP));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_3_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_4_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_6_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_8_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_12_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_16_5_G));
+    assert(quant::format_is_quad_mix(quant::Format::MXQ_24_5_G));
 
     std::cout << "  -> PASSED: All 38 format enum definitions verified!" << std::endl;
 }
@@ -134,33 +134,33 @@ void test_all_requested_formats() {
     test_format_roundtrip(quant::Format::Q24, "Q24");
 
     // All 9 GRP variants
-    test_format_roundtrip(quant::Format::Q1_GRP, "Q1_GRP");
-    test_format_roundtrip(quant::Format::Q2_GRP, "Q2_GRP");
-    test_format_roundtrip(quant::Format::Q3_GRP, "Q3_GRP");
-    test_format_roundtrip(quant::Format::Q4_GRP, "Q4_GRP");
-    test_format_roundtrip(quant::Format::Q6_GRP, "Q6_GRP");
-    test_format_roundtrip(quant::Format::Q8_GRP, "Q8_GRP");
-    test_format_roundtrip(quant::Format::Q12_GRP, "Q12_GRP");
-    test_format_roundtrip(quant::Format::Q16_GRP, "Q16_GRP");
-    test_format_roundtrip(quant::Format::Q24_GRP, "Q24_GRP");
+    test_format_roundtrip(quant::Format::Q1_G, "Q1_G");
+    test_format_roundtrip(quant::Format::Q2_G, "Q2_G");
+    test_format_roundtrip(quant::Format::Q3_G, "Q3_G");
+    test_format_roundtrip(quant::Format::Q4_G, "Q4_G");
+    test_format_roundtrip(quant::Format::Q6_G, "Q6_G");
+    test_format_roundtrip(quant::Format::Q8_G, "Q8_G");
+    test_format_roundtrip(quant::Format::Q12_G, "Q12_G");
+    test_format_roundtrip(quant::Format::Q16_G, "Q16_G");
+    test_format_roundtrip(quant::Format::Q24_G, "Q24_G");
 
     // All 4 TWI_MIX variants
 
     // All 14 QUAD_MIX variants
-    test_format_roundtrip(quant::Format::MXQ_3_5_GRP, "MXQ_3_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_4_5_GRP, "MXQ_4_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_6_5_GRP, "MXQ_6_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_8_5_GRP, "MXQ_8_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_12_5_GRP, "MXQ_12_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_16_5_GRP, "MXQ_16_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_24_5_GRP, "MXQ_24_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_3_5_GRP, "MXQ_3_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_4_5_GRP, "MXQ_4_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_6_5_GRP, "MXQ_6_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_8_5_GRP, "MXQ_8_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_12_5_GRP, "MXQ_12_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_16_5_GRP, "MXQ_16_5_GRP");
-    test_format_roundtrip(quant::Format::MXQ_24_5_GRP, "MXQ_24_5_GRP");
+    test_format_roundtrip(quant::Format::MXQ_3_5_G, "MXQ_3_5_G");
+    test_format_roundtrip(quant::Format::MXQ_4_5_G, "MXQ_4_5_G");
+    test_format_roundtrip(quant::Format::MXQ_6_5_G, "MXQ_6_5_G");
+    test_format_roundtrip(quant::Format::MXQ_8_5_G, "MXQ_8_5_G");
+    test_format_roundtrip(quant::Format::MXQ_12_5_G, "MXQ_12_5_G");
+    test_format_roundtrip(quant::Format::MXQ_16_5_G, "MXQ_16_5_G");
+    test_format_roundtrip(quant::Format::MXQ_24_5_G, "MXQ_24_5_G");
+    test_format_roundtrip(quant::Format::MXQ_3_5_G, "MXQ_3_5_G");
+    test_format_roundtrip(quant::Format::MXQ_4_5_G, "MXQ_4_5_G");
+    test_format_roundtrip(quant::Format::MXQ_6_5_G, "MXQ_6_5_G");
+    test_format_roundtrip(quant::Format::MXQ_8_5_G, "MXQ_8_5_G");
+    test_format_roundtrip(quant::Format::MXQ_12_5_G, "MXQ_12_5_G");
+    test_format_roundtrip(quant::Format::MXQ_16_5_G, "MXQ_16_5_G");
+    test_format_roundtrip(quant::Format::MXQ_24_5_G, "MXQ_24_5_G");
 }
 
 int main() {

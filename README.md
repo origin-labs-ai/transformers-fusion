@@ -173,13 +173,13 @@ Large Language Models are transforming the world, but the stack to build them is
 
 | Format | BPW | Grouping | Description |
 |--------|-----|----------|-------------|
-| **QUANT1_GRP** | 1.0 | block-level | 1-bit signs + FP16 block scale (16 slots fund the scale) |
-| **QUANT2_GRP** | 2.5 | per-64-weight | 2-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
-| **QUANT4_GRP** | 4.5 | per-64-weight | 4-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
-| **QUANT8_GRP** | 8.5 | per-64-weight | 8-bit lattice + per-64-group FP16 range/zp (+0.5 BPW) |
-| **QUANT16_GRP** | 16.0 | none | FP16 native (same as QUANT16; no grouping at 16 BPW) |
-| **QUANT_Q0_GRP** | 1.50 | block-level | sign bits + FP16 block scale + in-budget refinement bits |
-| **QUANT_Q1_GRP** | 2.0 | per-half-block | sparse + per-block-half FP16 scales |
+| **QUANT1_G** | 1.0 | block-level | 1-bit signs + FP16 block scale (16 slots fund the scale) |
+| **QUANT2_G** | 2.5 | per-64-weight | 2-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
+| **QUANT4_G** | 4.5 | per-64-weight | 4-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
+| **QUANT8_G** | 8.5 | per-64-weight | 8-bit lattice + per-64-group FP16 range/zp (+0.5 BPW) |
+| **QUANT16_G** | 16.0 | none | FP16 native (same as QUANT16; no grouping at 16 BPW) |
+| **QUANT_Q0_G** | 1.50 | block-level | sign bits + FP16 block scale + in-budget refinement bits |
+| **QUANT_Q1_G** | 2.0 | per-half-block | sparse + per-block-half FP16 scales |
 
 *\*Note: measured reconstruction MSE for each format is computed at runtime by FormatRegistry on fixed unit-variance datasets — see `tests/test_quant_mix.cpp`; figures are not asserted here.*
 
@@ -242,7 +242,7 @@ Every design decision in InNova is grounded in peer-reviewed research and in-hou
 **How it works (in-house, activation-aware):**
 1. Each 256-wide weight block gets an importance score from activation magnitudes (one forward pass)
 2. FormatPlanner allocates per-block formats so total storage matches a target BPW exactly
-3. Salient blocks receive QUANT32/QUANT16/QUANT8; the bulk receives QUANT4/QUANT2/QUANT; sparse blocks receive QUANT_Q1_GRP
+3. Salient blocks receive QUANT32/QUANT16/QUANT8; the bulk receives QUANT4/QUANT2/QUANT; sparse blocks receive QUANT_Q1_G
 4. Exact tier ratios are registered in FormatRegistry — claimed BPW is guaranteed by tests, not marketing
 
 **Impact on QUANT:** Per-block importance routing is what lets QUANT beat every uniform format in the same bit-budget band — bits are spent where they matter. Low-bit reconstruction still cannot reach FP32-level MSE; the tested gains are the in-band win and the column-granular (32-w) quality lift (see `tests/test_quant_mix.cpp`).
@@ -1104,8 +1104,8 @@ Usage:             adapter_edition/quant_import --input model.gguf --output mode
 quant::FormatRegistry::get_single_format(bpw)    any BPW from 1.0 to 32.0
 quant::FormatPlanner::plan_for_target(bpw)       auto-select optimal mix (2-mix/4-mix)
 Available singles: QUANT_Q0(1.5), QUANT_Q1(2.0),
-                   QUANT2(2), QUANT2_GRP(2.5), QUANT_Q1_GRP(2.0),
-                   QUANT4(4), QUANT4_GRP(4.5), QUANT8(8), QUANT8_GRP(8.5), QUANT16(16), QUANT32(32)
+                   QUANT2(2), QUANT2_G(2.5), QUANT_Q1_G(2.0),
+                   QUANT4(4), QUANT4_G(4.5), QUANT8(8), QUANT8_G(8.5), QUANT16(16), QUANT32(32)
 ```
 
 #### Training Loop
@@ -4022,11 +4022,11 @@ The engine's numeric backbone is a family of in-house formats that the benchmark
 - QUANT8 — 8.0 bits per weight, pinned Lloyd-Max codebook.
 - QUANT16 — 16 bits per weight.
 - QUANT32 — 32 bits per weight, the lossless reference.
-- QUANT1_GRP, QUANT2_GRP, QUANT4_GRP, QUANT8_GRP — grouped variants of the same formats.
+- QUANT1_G, QUANT2_G, QUANT4_G, QUANT8_G — grouped variants of the same formats.
 - QUANT_Q1 — a sparse-preserving format that keeps exact zeros.
-- QUANT_Q1_GRP — the grouped sparse variant.
+- QUANT_Q1_G — the grouped sparse variant.
 - QUANT_Q0 — the 1.50-bit format with sign plus learnable scale.
-- QUANT_Q0_GRP — grouped variant of QUANT_Q0.
+- QUANT_Q0_G — grouped variant of QUANT_Q0.
 - QUANT4_CW — the in-house column-wise variant: per-column min/max with a shared pinned Lloyd-Max codebook.
 - QUANT_MIX@2bpw, QUANT_MIX@3bpw, QUANT_MIX@4bpw — mixed formats that route high-bit formats to salient blocks and low-bit formats to the bulk, holding a fixed average bit budget.
 
@@ -4042,15 +4042,15 @@ The first benchmark measured every format against a Gaussian distribution (block
 | QUANT8 | 8.00 | 3.3630e-06 | 20.8 |
 | QUANT16 | 16.00 | 1.7240e-11 | 73.7 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_GRP | 1.00 | 1.7625e-04 | 3.6 |
-| QUANT2_GRP | 2.50 | 4.4744e-05 | 9.5 |
-| QUANT4_GRP | 4.50 | 3.6083e-06 | 20.5 |
-| QUANT8_GRP | 8.50 | 1.1254e-08 | 45.5 |
-| QUANT16_GRP | 16.00 | 1.7240e-11 | 73.7 |
+| QUANT1_G | 1.00 | 1.7625e-04 | 3.6 |
+| QUANT2_G | 2.50 | 4.4744e-05 | 9.5 |
+| QUANT4_G | 4.50 | 3.6083e-06 | 20.5 |
+| QUANT8_G | 8.50 | 1.1254e-08 | 45.5 |
+| QUANT16_G | 16.00 | 1.7240e-11 | 73.7 |
 | QUANT_Q1 | 2.00 | 2.5284e-04 | 2.0 |
-| QUANT_Q1_GRP | 2.00 | 2.5284e-04 | 2.0 |
+| QUANT_Q1_G | 2.00 | 2.5284e-04 | 2.0 |
 | QUANT_Q0 | 1.50 | 1.5791e-04 | 4.0 |
-| QUANT_Q0_GRP | 1.50 | 1.1498e-04 | 5.4 |
+| QUANT_Q0_G | 1.50 | 1.1498e-04 | 5.4 |
 | QUANT4_CW | 4.00 | 1.5837e-06 | 24.0 |
 | QUANT_MIX@2bpw | 2.00 | 2.5284e-04 | 2.0 |
 | QUANT_MIX@3bpw | 3.00 | 1.2186e-04 | 5.2 |
@@ -4068,15 +4068,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 1.1987e-03 | 19.5 |
 | QUANT16 | 16.00 | 4.9712e-09 | 73.3 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_GRP | 1.00 | 1.5279e-01 | -1.6 |
-| QUANT2_GRP | 2.50 | 5.1299e-02 | 3.1 |
-| QUANT4_GRP | 4.50 | 1.6401e-02 | 8.1 |
-| QUANT8_GRP | 8.50 | 8.4515e-06 | 41.0 |
-| QUANT16_GRP | 16.00 | 4.9712e-09 | 73.3 |
+| QUANT1_G | 1.00 | 1.5279e-01 | -1.6 |
+| QUANT2_G | 2.50 | 5.1299e-02 | 3.1 |
+| QUANT4_G | 4.50 | 1.6401e-02 | 8.1 |
+| QUANT8_G | 8.50 | 8.4515e-06 | 41.0 |
+| QUANT16_G | 16.00 | 4.9712e-09 | 73.3 |
 | QUANT_Q1 | 2.00 | 1.8143e-03 | 17.7 |
-| QUANT_Q1_GRP | 2.00 | 1.8138e-03 | 17.7 |
+| QUANT_Q1_G | 2.00 | 1.8138e-03 | 17.7 |
 | QUANT_Q0 | 1.50 | 1.4802e-01 | -1.5 |
-| QUANT_Q0_GRP | 1.50 | 1.1698e-01 | -0.4 |
+| QUANT_Q0_G | 1.50 | 1.1698e-01 | -0.4 |
 | QUANT4_CW | 4.00 | 3.5871e-04 | 24.7 |
 | QUANT_MIX@2bpw | 2.00 | 1.8138e-03 | 17.7 |
 | QUANT_MIX@3bpw | 3.00 | 1.3094e-02 | 9.1 |
@@ -4092,15 +4092,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 9.3214e-04 | 17.7 |
 | QUANT16 | 16.00 | 2.3839e-09 | 73.6 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_GRP | 1.00 | 8.6142e-02 | -2.0 |
-| QUANT2_GRP | 2.50 | 3.2013e-02 | 2.3 |
-| QUANT4_GRP | 4.50 | 1.3228e-02 | 6.1 |
-| QUANT8_GRP | 8.50 | 4.2876e-06 | 41.0 |
-| QUANT16_GRP | 16.00 | 2.3839e-09 | 73.6 |
+| QUANT1_G | 1.00 | 8.6142e-02 | -2.0 |
+| QUANT2_G | 2.50 | 3.2013e-02 | 2.3 |
+| QUANT4_G | 4.50 | 1.3228e-02 | 6.1 |
+| QUANT8_G | 8.50 | 4.2876e-06 | 41.0 |
+| QUANT16_G | 16.00 | 2.3839e-09 | 73.6 |
 | QUANT_Q1 | 2.00 | 1.2071e-06 | 46.5 |
-| QUANT_Q1_GRP | 2.00 | 8.1230e-07 | 48.3 |
+| QUANT_Q1_G | 2.00 | 8.1230e-07 | 48.3 |
 | QUANT_Q0 | 1.50 | 8.2454e-02 | -1.8 |
-| QUANT_Q0_GRP | 1.50 | 6.8751e-02 | -1.0 |
+| QUANT_Q0_G | 1.50 | 6.8751e-02 | -1.0 |
 | QUANT4_CW | 4.00 | 1.4679e-04 | 25.7 |
 | QUANT_MIX@2bpw | 2.00 | 8.1230e-07 | 48.3 |
 | QUANT_MIX@3bpw | 3.00 | 1.0884e-02 | 7.0 |
@@ -4116,15 +4116,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 1.1342e-03 | 8.5 |
 | QUANT16 | 16.00 | 3.6768e-10 | 73.4 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_GRP | 1.00 | 1.4145e-02 | -2.5 |
-| QUANT2_GRP | 2.50 | 5.6357e-03 | 1.5 |
-| QUANT4_GRP | 4.50 | 2.9615e-03 | 4.3 |
-| QUANT8_GRP | 8.50 | 4.1486e-07 | 42.9 |
-| QUANT16_GRP | 16.00 | 3.6768e-10 | 73.4 |
+| QUANT1_G | 1.00 | 1.4145e-02 | -2.5 |
+| QUANT2_G | 2.50 | 5.6357e-03 | 1.5 |
+| QUANT4_G | 4.50 | 2.9615e-03 | 4.3 |
+| QUANT8_G | 8.50 | 4.1486e-07 | 42.9 |
+| QUANT16_G | 16.00 | 3.6768e-10 | 73.4 |
 | QUANT_Q1 | 2.00 | 5.2437e-08 | 51.9 |
-| QUANT_Q1_GRP | 2.00 | 2.9690e-08 | 54.3 |
+| QUANT_Q1_G | 2.00 | 2.9690e-08 | 54.3 |
 | QUANT_Q0 | 1.50 | 1.2931e-02 | -2.1 |
-| QUANT_Q0_GRP | 1.50 | 1.1650e-02 | -1.6 |
+| QUANT_Q0_G | 1.50 | 1.1650e-02 | -1.6 |
 | QUANT4_CW | 4.00 | 5.6891e-06 | 31.5 |
 | QUANT_MIX@2bpw | 2.00 | 2.9690e-08 | 54.3 |
 | QUANT_MIX@3bpw | 3.00 | 3.8973e-03 | 3.1 |
@@ -4146,15 +4146,15 @@ FFN-down distribution:
 | QUANT8 | 8.00 | 5.2548e-06 | 20.8 |
 | QUANT16 | 16.00 | 2.7172e-11 | 73.6 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_GRP | 1.00 | 2.7540e-04 | 3.6 |
-| QUANT2_GRP | 2.50 | 6.9913e-05 | 9.5 |
-| QUANT4_GRP | 4.50 | 5.6376e-06 | 20.5 |
-| QUANT8_GRP | 8.50 | 1.7636e-08 | 45.5 |
-| QUANT16_GRP | 16.00 | 2.7172e-11 | 73.6 |
+| QUANT1_G | 1.00 | 2.7540e-04 | 3.6 |
+| QUANT2_G | 2.50 | 6.9913e-05 | 9.5 |
+| QUANT4_G | 4.50 | 5.6376e-06 | 20.5 |
+| QUANT8_G | 8.50 | 1.7636e-08 | 45.5 |
+| QUANT16_G | 16.00 | 2.7172e-11 | 73.6 |
 | QUANT_Q1 | 2.00 | 3.9506e-04 | 2.0 |
-| QUANT_Q1_GRP | 2.00 | 3.9506e-04 | 2.0 |
+| QUANT_Q1_G | 2.00 | 3.9506e-04 | 2.0 |
 | QUANT_Q0 | 1.50 | 2.4673e-04 | 4.0 |
-| QUANT_Q0_GRP | 1.50 | 1.7966e-04 | 5.4 |
+| QUANT_Q0_G | 1.50 | 1.7966e-04 | 5.4 |
 | QUANT4_CW | 4.00 | 2.4746e-06 | 24.0 |
 | QUANT_MIX@2bpw | 2.00 | 3.9506e-04 | 2.0 |
 | QUANT_MIX@3bpw | 3.00 | 1.9041e-04 | 5.2 |
@@ -4167,28 +4167,28 @@ The comprehensive head-to-head benchmark ran every format against every distribu
 | Format | BPW | Avg MSE | Best at tier |
 |---|---|---|---|
 | QUANT1 | 1.00 | 8.1200e-02 | |
-| QUANT1_GRP | 1.00 | 7.2681e-02 | yes |
+| QUANT1_G | 1.00 | 7.2681e-02 | yes |
 | QUANT_Q0 | 1.50 | 6.8451e-02 | |
-| QUANT_Q0_GRP | 1.50 | 5.3871e-02 | yes |
+| QUANT_Q0_G | 1.50 | 5.3871e-02 | yes |
 | QUANT2 | 2.00 | 2.9860e-02 | yes |
 | QUANT_Q1 | 2.00 | 3.2018e-02 | |
-| QUANT_Q1_GRP | 2.00 | 3.2018e-02 | |
+| QUANT_Q1_G | 2.00 | 3.2018e-02 | |
 | QUANT_MIX@2bpw | 2.00 | 3.2018e-02 | |
-| QUANT2_GRP | 2.50 | 2.3392e-02 | yes |
+| QUANT2_G | 2.50 | 2.3392e-02 | yes |
 | QUANT_MIX@3bpw | 3.00 | 2.0832e-02 | yes |
 | QUANT4 | 4.00 | 1.0418e-02 | |
 | QUANT4_CW | 4.00 | 3.0052e-04 | yes |
 | QUANT_MIX@4bpw | 4.00 | 1.0418e-02 | |
-| QUANT4_GRP | 4.50 | 6.9698e-03 | yes |
+| QUANT4_G | 4.50 | 6.9698e-03 | yes |
 | QUANT8 | 8.00 | 1.0741e-03 | yes |
-| QUANT8_GRP | 8.50 | 4.0430e-06 | yes |
+| QUANT8_G | 8.50 | 4.0430e-06 | yes |
 | QUANT16 | 16.00 | 3.7384e-09 | yes |
-| QUANT16_GRP | 16.00 | 3.7384e-09 | yes |
+| QUANT16_G | 16.00 | 3.7384e-09 | yes |
 | QUANT32 | 32.00 | 0.0000e+00 | |
 
 The key findings, locked:
 
-1. QUANT_Q1_GRP at 2.0 BPW delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max plus exact zero preservation).
+1. QUANT_Q1_G at 2.0 BPW delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max plus exact zero preservation).
 2. QUANT8 at 8.0 BPW dominates raw quality on every distribution.
 3. QUANT_MIX routes QUANT8 to salient blocks and low-bit formats to the bulk — the best quality per byte at a fixed target bit budget.
 4. Real neural weights are sparse, and QUANT's codebook quantization excels on sparse data — the format family is matched to the data the engine actually stores.
@@ -4298,12 +4298,12 @@ Hardware numbers:
 - NVIDIA Inception: free infrastructure, cloud compute, funding routes.
 
 Benchmark numbers (locked from the in-house runs):
-- Gaussian: QUANT1 3.8910e-04 MSE; QUANT4 9.4696e-06; QUANT4_CW 1.5837e-06; QUANT8_GRP 1.1254e-08; QUANT16 1.7240e-11; QUANT32 0.
-- Sparse_90: QUANT4_CW 3.5871e-04; QUANT8_GRP 8.4515e-06; QUANT_Q1_GRP 1.8138e-03.
-- Sparse_95: QUANT4_CW 1.4679e-04; QUANT8_GRP 4.2876e-06; QUANT_Q1_GRP 8.1230e-07.
-- Sparse_99: QUANT4_CW 5.6891e-06; QUANT8_GRP 4.1486e-07; QUANT_Q1_GRP 2.9690e-08.
-- FFN-down: QUANT4 1.4796e-05; QUANT4_CW 2.4746e-06; QUANT8_GRP 1.7636e-08.
-- Grand summary: QUANT4_CW best at 4.0 tier (3.0052e-04); QUANT8 best at 8.0 tier (1.0741e-03); QUANT16/16_GRP 3.7384e-09.
+- Gaussian: QUANT1 3.8910e-04 MSE; QUANT4 9.4696e-06; QUANT4_CW 1.5837e-06; QUANT8_G 1.1254e-08; QUANT16 1.7240e-11; QUANT32 0.
+- Sparse_90: QUANT4_CW 3.5871e-04; QUANT8_G 8.4515e-06; QUANT_Q1_G 1.8138e-03.
+- Sparse_95: QUANT4_CW 1.4679e-04; QUANT8_G 4.2876e-06; QUANT_Q1_G 8.1230e-07.
+- Sparse_99: QUANT4_CW 5.6891e-06; QUANT8_G 4.1486e-07; QUANT_Q1_G 2.9690e-08.
+- FFN-down: QUANT4 1.4796e-05; QUANT4_CW 2.4746e-06; QUANT8_G 1.7636e-08.
+- Grand summary: QUANT4_CW best at 4.0 tier (3.0052e-04); QUANT8 best at 8.0 tier (1.0741e-03); QUANT16/16_G 3.7384e-09.
 - STE training: FP32 1.5506e-03; QUANT4_STE 1.2291e-03 (21% better); QUANT_Q0_STE 2.3183e-03 (49% worse); QUANT2_STE 6.2237e-03 (301% worse); QUANT1_STE 5.6560e-03 (264% worse).
 
 Engine numbers:
@@ -5024,7 +5024,7 @@ The repository's own changelog is primary evidence for the engineering claims, a
 
 Version 0.1.00 — Internal alpha release (2026-07-20). Initial QUANT format prototypes (QUANT2, QUANT4, QUANT8), basic transformer model scaffolding, tensor and memory management foundations, a math library with scalar and SIMD paths, and the project structure and build system. The reference libraries (`.llama/` and `.bitnet/`) were present but never linked — the project does not vendor competitors' code; it references for study.
 
-Version 0.1.01 — Initial public release (2026-07-24). The core QUANT format system shipped: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32; QUANT_Q0, QUANT_Q1, Binary and Ternary formats; the GRP grouped variants (QUANT2_GRP, QUANT4_GRP, QUANT_Q1_GRP); the Lloyd-Max vector quantization codebook system; sub-block grouping for lossless quantization at low bits per weight. The compute backends: Vulkan (dynamically loaded, no SDK required) and DirectX 12 on Windows; the AVX2/SIMD kernel library. The model side: a transformer architecture with flash attention, a KV cache with the QUANT4 quantized variant, an autograd engine, a BPE tokenizer with Unicode support, dense and MoE trainers with vision, audio, embeddings, OCR, video, and text modules, MoE variants with expert parallelism, distributed training with tensor parallelism, FSDP and DDP, RingAllReduce and ParameterServer, an inference engine with sampler and generator, quantization and conversion CLI tools, a benchmark suite, a hardware probe, a production inference engine with streaming, and the QUANT quantize and codec engines. The claims ledger tracked 47 claims, 46 proven and one pending.
+Version 0.1.01 — Initial public release (2026-07-24). The core QUANT format system shipped: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32; QUANT_Q0, QUANT_Q1, Binary and Ternary formats; the GRP grouped variants (QUANT2_G, QUANT4_G, QUANT_Q1_G); the Lloyd-Max vector quantization codebook system; sub-block grouping for lossless quantization at low bits per weight. The compute backends: Vulkan (dynamically loaded, no SDK required) and DirectX 12 on Windows; the AVX2/SIMD kernel library. The model side: a transformer architecture with flash attention, a KV cache with the QUANT4 quantized variant, an autograd engine, a BPE tokenizer with Unicode support, dense and MoE trainers with vision, audio, embeddings, OCR, video, and text modules, MoE variants with expert parallelism, distributed training with tensor parallelism, FSDP and DDP, RingAllReduce and ParameterServer, an inference engine with sampler and generator, quantization and conversion CLI tools, a benchmark suite, a hardware probe, a production inference engine with streaming, and the QUANT quantize and codec engines. The claims ledger tracked 47 claims, 46 proven and one pending.
 
 The 0.1.01 release also recorded two critical benchmark corrections: QUANT8 per-block k-means now beats Q8_0 by 1.02x (previously 1.4x worse with global k-means), and QUANT4 per-block Lloyd-Max now beats Q4_0 by 1.11x (previously 1.6x worse). The lesson locked in the changelog: quantization quality is a property of the block statistics, not the format name.
 
@@ -5227,7 +5227,7 @@ graph TD
     QUANT["QUANT Formats"]
     QUANT --> S0["QUANT_Q0 (sign + learnable scale)"]
     QUANT --> SS["QUANT_Q1 (exact zeros preserved)"]
-    QUANT --> SG["QUANT_Q1_GRP"]
+    QUANT --> SG["QUANT_Q1_G"]
 ```
 
 ## G.3 The F1-F68 Relationship Map

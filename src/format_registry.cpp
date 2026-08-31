@@ -30,16 +30,16 @@ static std::vector<FormatDescriptor> build_singles() {
     v.push_back({"Q24",     RegFormat::Q24,     24.0f, 0,    false, false, 1,    0.0f,  0.0f,  "Per-block FP24 (16b mantissa + 8b exp)"});
     v.push_back({"Q32",     RegFormat::Q32,     32.0f, 0,    true,  false, 1,    0.0f,  0.0f,  "FP32 identity (lossless)"});
 
-    // GRP variants — exact BPW (no extra)
-    v.push_back({"Q1_GRP",  RegFormat::Q1_GRP,  1.0f,  1,    false, true,  256,  0.0f,  0.0f,  "1-bit + block FP16 scale"});
-    v.push_back({"Q2_GRP",  RegFormat::Q2_GRP,  2.0f,  4,    false, true,  16,   16.0f, 0.0f,  "2-bit lattice + per-16 scale"});
-    v.push_back({"Q3_GRP",  RegFormat::Q3_GRP,  3.0f,  8,    false, true,  32,   16.0f, 0.0f,  "3-bit lattice + per-32 scale"});
-    v.push_back({"Q4_GRP",  RegFormat::Q4_GRP,  4.0f,  16,   false, true,  32,   16.0f, 0.0f,  "4-bit lattice + per-32 scale"});
-    v.push_back({"Q6_GRP",  RegFormat::Q6_GRP,  6.0f,  64,   false, true,  16,   16.0f, 0.0f,  "6-bit lattice + per-16 scale"});
-    v.push_back({"Q8_GRP",  RegFormat::Q8_GRP,  8.0f,  256,  false, true,  16,   16.0f, 0.0f,  "8-bit lattice + per-16 scale"});
-    v.push_back({"Q12_GRP", RegFormat::Q12_GRP, 12.0f, 4096, false, true,  16,   16.0f, 0.0f,  "12-bit lattice + per-16 scale"});
-    v.push_back({"Q16_GRP", RegFormat::Q16_GRP, 16.0f, 0,    false, true,  16,   16.0f, 0.0f,  "16-bit adaptive + per-16 scale"});
-    v.push_back({"Q24_GRP", RegFormat::Q24_GRP, 24.0f, 0,    false, true,  8,    8.0f,  0.0f,  "FP24 + per-8 scale"});
+    // G variants — TRUE wire BPW (matches types.h format_bpw, audit option-c)
+    v.push_back({"Q1_G",  RegFormat::Q1_G,  1.0f,   1,    false, true,  256,  0.0f,  0.0f,  "1-bit + block FP16 scale"});
+    v.push_back({"Q2_G",  RegFormat::Q2_G,  2.625f, 4,    false, true,  16,   16.0f, 0.0f,  "2-bit affine per-16 (4b scale+min)"});
+    v.push_back({"Q3_G",  RegFormat::Q3_G,  3.5f,   8,    false, true,  32,   16.0f, 0.0f,  "3-bit affine per-32 (6b scale+min)"});
+    v.push_back({"Q4_G",  RegFormat::Q4_G,  4.5f,   16,   false, true,  32,   16.0f, 0.0f,  "4-bit affine per-32 (6b scale+min)"});
+    v.push_back({"Q6_G",  RegFormat::Q6_G,  6.5625f,64,   false, true,  16,   16.0f, 0.0f,  "6-bit Q6_K scheme, per-16 int8 scales"});
+    v.push_back({"Q8_G",  RegFormat::Q8_G,  8.5f,   256,  false, true,  32,   16.0f, 0.0f,  "8-bit compound: fp16 scale per-32"});
+    v.push_back({"Q12_G", RegFormat::Q12_G, 12.5f,  4096, false, true,  32,   16.0f, 0.0f,  "12-bit compound: fp16 scale per-32"});
+    v.push_back({"Q16_G", RegFormat::Q16_G, 16.5f,  0,    false, true,  32,   16.0f, 0.0f,  "16-bit adaptive + mean-residual tail"});
+    v.push_back({"Q24_G", RegFormat::Q24_G, 24.5f,  0,    false, true,  32,   8.0f,  0.0f,  "FP24 + mean-residual tail"});
 
     const int64_t n_mse = 16384;
     std::vector<float> g_data((size_t)n_mse), u_data((size_t)n_mse), l_data((size_t)n_mse);
@@ -84,13 +84,13 @@ static std::vector<MixDescriptor> build_four_mixes() {
     v.push_back({"MXQ_12.5",         RegFormat::MXQ_12_5,         4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, false});
     v.push_back({"MXQ_16.5",         RegFormat::MXQ_16_5,         4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, false});
     v.push_back({"MXQ_24.5",         RegFormat::MXQ_24_5,         4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, false});
-    v.push_back({"MXQ_3.5_GRP",      RegFormat::MXQ_3_5_GRP,      4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  true});
-    v.push_back({"MXQ_4.5_GRP",      RegFormat::MXQ_4_5_GRP,      4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  true});
-    v.push_back({"MXQ_6.5_GRP",      RegFormat::MXQ_6_5_GRP,      4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  true});
-    v.push_back({"MXQ_8.5_GRP",      RegFormat::MXQ_8_5_GRP,      4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  true});
-    v.push_back({"MXQ_12.5_GRP",     RegFormat::MXQ_12_5_GRP,     4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, true});
-    v.push_back({"MXQ_16.5_GRP",     RegFormat::MXQ_16_5_GRP,     4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, true});
-    v.push_back({"MXQ_24.5_GRP",     RegFormat::MXQ_24_5_GRP,     4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, true});
+    v.push_back({"MXQ_3.5_G",      RegFormat::MXQ_3_5_G,      4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  true});
+    v.push_back({"MXQ_4.5_G",      RegFormat::MXQ_4_5_G,      4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  true});
+    v.push_back({"MXQ_6.5_G",      RegFormat::MXQ_6_5_G,      4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  true});
+    v.push_back({"MXQ_8.5_G",      RegFormat::MXQ_8_5_G,      4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  true});
+    v.push_back({"MXQ_12.5_G",     RegFormat::MXQ_12_5_G,     4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, true});
+    v.push_back({"MXQ_16.5_G",     RegFormat::MXQ_16_5_G,     4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, true});
+    v.push_back({"MXQ_24.5_G",     RegFormat::MXQ_24_5_G,     4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, true});
     return v;
 }
 
@@ -215,7 +215,7 @@ QuantResult FormatRegistry::quantize_q8(const float* data, int64_t n) {
 }
 
 QuantResult FormatRegistry::quantize_q_twi_mix_1_5(const float* data, int64_t n, int) {
-    return quantize(data, n, parse_format_name("Q_GRP_1_5"));
+    return quantize(data, n, parse_format_name("Q_G_1_5"));
 }
 
 QuantResult FormatRegistry::quantize_q_sparse(const float* data, int64_t n) {

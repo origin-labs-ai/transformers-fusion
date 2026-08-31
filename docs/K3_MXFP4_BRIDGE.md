@@ -27,7 +27,7 @@ HF shard (MXFP4 block) --E8M0 dequant--> FP32 block (32 values)
 ```
 
 - Dequant: `fp32 = ldexp((mantissa / 8.0) , shared_exp - 2)` for E2M1 variant; probe both S1E2M1 vs S1E1M2 on first block vs Python reference.
-- Re-quant to Q4: reuse existing `codebook` + `block_codec` Lloyd-Max paths; Q4_GRP not needed for experts (already grouped by MoE sharding).
+- Re-quant to Q4: reuse existing `codebook` + `block_codec` Lloyd-Max paths; Q4_G not needed for experts (already grouped by MoE sharding).
 - Converter skeleton: `tools/k3_convert.cpp` (not yet landed) will stream shards, dequant on the fly, and emit `.quant` with preserved `num_experts/top_k` in model header.
 
 ## 4. Validation Plan (When Weights Drop)

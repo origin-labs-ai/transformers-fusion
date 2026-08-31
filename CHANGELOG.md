@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial public release of InNova
 - Core QUANT format system: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32
 - QUANT_Q0, QUANT_Q1, Binary, Ternary formats
-- GRP (Grouped) variants: QUANT2_GRP, QUANT4_GRP, QUANT_Q1_GRP
+- GRP (Grouped) variants: QUANT2_G, QUANT4_G, QUANT_Q1_G
 - Lloyd-Max vector quantization codebook system
 - Sub-block grouping for lossless quantization at low BPW
 - Vulkan compute backend (dynamic loading, no SDK required)

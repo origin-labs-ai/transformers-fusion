@@ -28,21 +28,21 @@
 <circle cx='844' cy='82' r='3' fill='#06c'/>
 <text x='849' y='78' fill='#06c'>Q32</text>
 <circle cx='653' cy='56' r='3' fill='#083'/>
-<text x='658' y='52' fill='#083'>Q_GRP_24.5</text>
+<text x='658' y='52' fill='#083'>Q_G_24.5</text>
 <circle cx='653' cy='56' r='3' fill='#06c'/>
 <text x='658' y='52' fill='#06c'>Q24.5</text>
 <circle cx='653' cy='177' r='3' fill='#c6a700'/>
 <text x='658' y='173' fill='#c6a700'>MXQ_24.5</text>
 <circle cx='653' cy='177' r='3' fill='#c6a700'/>
-<text x='658' y='173' fill='#c6a700'>MXQ_24.5_GRP</text>
+<text x='658' y='173' fill='#c6a700'>MXQ_24.5_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_H_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_H_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_M_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_M_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_L_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_L_G</text>
 <circle cx='640' cy='56' r='3' fill='#06c'/>
 <text x='645' y='52' fill='#06c'>Q24</text>
 <circle cx='640' cy='56' r='3' fill='#06c'/>
@@ -54,19 +54,19 @@
 <circle cx='450' cy='76' r='3' fill='#06c'/>
 <text x='455' y='72' fill='#06c'>Q16.5</text>
 <circle cx='450' cy='76' r='3' fill='#083'/>
-<text x='455' y='72' fill='#083'>Q_GRP_16.5</text>
+<text x='455' y='72' fill='#083'>Q_G_16.5</text>
 <circle cx='450' cy='192' r='3' fill='#c6a700'/>
 <circle cx='450' cy='203' r='3' fill='#c6a700'/>
 <circle cx='437' cy='75' r='3' fill='#083'/>
-<text x='442' y='71' fill='#083'>Q16_GRP</text>
+<text x='442' y='71' fill='#083'>Q16_G</text>
 <circle cx='437' cy='76' r='3' fill='#06c'/>
 <text x='442' y='72' fill='#06c'>Q16</text>
 <circle cx='437' cy='76' r='3' fill='#083'/>
-<text x='442' y='72' fill='#083'>Q16_K_H_GRP</text>
+<text x='442' y='72' fill='#083'>Q16_K_H_G</text>
 <circle cx='437' cy='76' r='3' fill='#083'/>
-<text x='442' y='72' fill='#083'>Q16_K_M_GRP</text>
+<text x='442' y='72' fill='#083'>Q16_K_M_G</text>
 <circle cx='437' cy='76' r='3' fill='#083'/>
-<text x='442' y='72' fill='#083'>Q16_K_L_GRP</text>
+<text x='442' y='72' fill='#083'>Q16_K_L_G</text>
 <circle cx='437' cy='76' r='3' fill='#06c'/>
 <text x='442' y='72' fill='#06c'>Q16_K_L</text>
 <circle cx='437' cy='76' r='3' fill='#06c'/>
@@ -169,7 +169,7 @@
 <text x='61' y='305' fill='#d33'>[ref] Binary 1-bit</text>
 <rect x='640' y='8' width='252' height='52' fill='#fff' stroke='#ccc'/>
 <circle cx='654' cy='20' r='3' fill='#06c'/><text x='662' y='23'>InNova plain</text>
-<circle cx='654' cy='34' r='3' fill='#083'/><text x='662' y='37'>InNova GRP/K_GRP</text>
+<circle cx='654' cy='34' r='3' fill='#083'/><text x='662' y='37'>InNova GRP/K_G</text>
 <circle cx='654' cy='48' r='3' fill='#c6a700'/><text x='662' y='51'>InNova MXQ mix</text>
 <circle cx='760' cy='20' r='4' fill='#d33' stroke='#900'/><text x='768' y='23'>[ref] industrial</text>
 </svg>
@@ -177,14 +177,14 @@
 | InNova | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |
 |---|---|---|---|---|---|---|---|
 |Q16|16|102.449|[ref] IEEE FP16|16|86.4696|+15.9794 dB|**WIN**|
-|MXQ_16.5_GRP|16.5|51.1035|[ref] IEEE FP16|16|86.4696|-35.3661 dB|LOSS|
-|Q_GRP_8.5|8.5|58.5633|[ref] GGUF Q8_0|8.5|58.1409|+0.4224 dB|**WIN**|
+|MXQ_16.5_G|16.5|51.1035|[ref] IEEE FP16|16|86.4696|-35.3661 dB|LOSS|
+|Q_G_8.5|8.5|58.5633|[ref] GGUF Q8_0|8.5|58.1409|+0.4224 dB|**WIN**|
 |MXQ_8.5|8.5|36.5958|[ref] GGUF Q8_0|8.5|58.1409|-21.5451 dB|LOSS|
-|Q_GRP_6.5|6.5|46.0612|[ref] GGUF Q6_K|6.5625|45.8702|+0.191 dB|**WIN**|
-|Q_GRP_4.5|4.5|34.8508|[ref] GGUF Q4_K|4.5|17.0351|+17.8157 dB|**WIN**|
-|MXQ_4.5_GRP|4.5|17.8036|[ref] GGUF Q4_K|4.5|17.0351|+0.7685 dB|**WIN**|
-|Q1_GRP|1|16.7458|[ref] BitNet b1.58|1.58|16.3621|+0.3837 dB|**WIN**|
-|Q1_GRP|1|16.7458|[ref] Binary 1-bit|1|8.10012|+8.64568 dB|**WIN**|
+|Q_G_6.5|6.5|46.0612|[ref] GGUF Q6_K|6.5625|45.8702|+0.191 dB|**WIN**|
+|Q_G_4.5|4.5|34.8508|[ref] GGUF Q4_K|4.5|17.0351|+17.8157 dB|**WIN**|
+|MXQ_4.5_G|4.5|17.8036|[ref] GGUF Q4_K|4.5|17.0351|+0.7685 dB|**WIN**|
+|Q1_G|1|16.7458|[ref] BitNet b1.58|1.58|16.3621|+0.3837 dB|**WIN**|
+|Q1_G|1|16.7458|[ref] Binary 1-bit|1|8.10012|+8.64568 dB|**WIN**|
 |Q8_K_M|8|54.7213|[ref] INT8 uniform|8.125|56.6672|-1.9459 dB|LOSS|
 
 ## Real trained weights — PSNR vs BPW
@@ -211,19 +211,19 @@
 <circle cx='844' cy='83' r='3' fill='#06c'/>
 <text x='849' y='79' fill='#06c'>Q32</text>
 <circle cx='653' cy='56' r='3' fill='#083'/>
-<text x='658' y='52' fill='#083'>Q_GRP_24.5</text>
+<text x='658' y='52' fill='#083'>Q_G_24.5</text>
 <circle cx='653' cy='56' r='3' fill='#06c'/>
 <text x='658' y='52' fill='#06c'>Q24.5</text>
 <circle cx='653' cy='186' r='3' fill='#c6a700'/>
 <circle cx='653' cy='186' r='3' fill='#c6a700'/>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_H_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_H_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_M_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_M_G</text>
 <circle cx='640' cy='56' r='3' fill='#083'/>
-<text x='645' y='52' fill='#083'>Q24_K_L_GRP</text>
+<text x='645' y='52' fill='#083'>Q24_K_L_G</text>
 <circle cx='640' cy='56' r='3' fill='#06c'/>
 <text x='645' y='52' fill='#06c'>Q24</text>
 <circle cx='640' cy='56' r='3' fill='#06c'/>
@@ -235,19 +235,19 @@
 <circle cx='450' cy='71' r='3' fill='#06c'/>
 <text x='455' y='67' fill='#06c'>Q16.5</text>
 <circle cx='450' cy='71' r='3' fill='#083'/>
-<text x='455' y='67' fill='#083'>Q_GRP_16.5</text>
+<text x='455' y='67' fill='#083'>Q_G_16.5</text>
 <circle cx='450' cy='203' r='3' fill='#c6a700'/>
 <circle cx='450' cy='214' r='3' fill='#c6a700'/>
 <circle cx='437' cy='71' r='3' fill='#083'/>
-<text x='442' y='67' fill='#083'>Q16_GRP</text>
+<text x='442' y='67' fill='#083'>Q16_G</text>
 <circle cx='437' cy='71' r='3' fill='#06c'/>
 <text x='442' y='67' fill='#06c'>Q16</text>
 <circle cx='437' cy='71' r='3' fill='#083'/>
-<text x='442' y='67' fill='#083'>Q16_K_H_GRP</text>
+<text x='442' y='67' fill='#083'>Q16_K_H_G</text>
 <circle cx='437' cy='71' r='3' fill='#083'/>
-<text x='442' y='67' fill='#083'>Q16_K_M_GRP</text>
+<text x='442' y='67' fill='#083'>Q16_K_M_G</text>
 <circle cx='437' cy='71' r='3' fill='#083'/>
-<text x='442' y='67' fill='#083'>Q16_K_L_GRP</text>
+<text x='442' y='67' fill='#083'>Q16_K_L_G</text>
 <circle cx='437' cy='71' r='3' fill='#06c'/>
 <text x='442' y='67' fill='#06c'>Q16_K_L</text>
 <circle cx='437' cy='71' r='3' fill='#06c'/>
@@ -350,7 +350,7 @@
 <text x='61' y='311' fill='#d33'>[ref] Binary 1-bit</text>
 <rect x='640' y='8' width='252' height='52' fill='#fff' stroke='#ccc'/>
 <circle cx='654' cy='20' r='3' fill='#06c'/><text x='662' y='23'>InNova plain</text>
-<circle cx='654' cy='34' r='3' fill='#083'/><text x='662' y='37'>InNova GRP/K_GRP</text>
+<circle cx='654' cy='34' r='3' fill='#083'/><text x='662' y='37'>InNova GRP/K_G</text>
 <circle cx='654' cy='48' r='3' fill='#c6a700'/><text x='662' y='51'>InNova MXQ mix</text>
 <circle cx='760' cy='20' r='4' fill='#d33' stroke='#900'/><text x='768' y='23'>[ref] industrial</text>
 </svg>
@@ -358,14 +358,14 @@
 | InNova | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |
 |---|---|---|---|---|---|---|---|
 |Q16|16|104.504|[ref] IEEE FP16|16|86.283|+18.221 dB|**WIN**|
-|MXQ_16.5_GRP|16.5|49.5144|[ref] IEEE FP16|16|86.283|-36.7686 dB|LOSS|
-|Q_GRP_8.5|8.5|60.1462|[ref] GGUF Q8_0|8.5|59.7495|+0.3967 dB|**WIN**|
+|MXQ_16.5_G|16.5|49.5144|[ref] IEEE FP16|16|86.283|-36.7686 dB|LOSS|
+|Q_G_8.5|8.5|60.1462|[ref] GGUF Q8_0|8.5|59.7495|+0.3967 dB|**WIN**|
 |MXQ_8.5|8.5|36.1751|[ref] GGUF Q8_0|8.5|59.7495|-23.5744 dB|LOSS|
-|Q_GRP_6.5|6.5|47.5974|[ref] GGUF Q6_K|6.5625|46.1225|+1.4749 dB|**WIN**|
-|Q_GRP_4.5|4.5|36.1331|[ref] GGUF Q4_K|4.5|18.3321|+17.801 dB|**WIN**|
-|MXQ_4.5_GRP|4.5|19.5346|[ref] GGUF Q4_K|4.5|18.3321|+1.2025 dB|**WIN**|
-|Q1_GRP|1|16.9532|[ref] BitNet b1.58|1.58|17.667|-0.7138 dB|LOSS|
-|Q1_GRP|1|16.9532|[ref] Binary 1-bit|1|10.4861|+6.4671 dB|**WIN**|
+|Q_G_6.5|6.5|47.5974|[ref] GGUF Q6_K|6.5625|46.1225|+1.4749 dB|**WIN**|
+|Q_G_4.5|4.5|36.1331|[ref] GGUF Q4_K|4.5|18.3321|+17.801 dB|**WIN**|
+|MXQ_4.5_G|4.5|19.5346|[ref] GGUF Q4_K|4.5|18.3321|+1.2025 dB|**WIN**|
+|Q1_G|1|16.9532|[ref] BitNet b1.58|1.58|17.667|-0.7138 dB|LOSS|
+|Q1_G|1|16.9532|[ref] Binary 1-bit|1|10.4861|+6.4671 dB|**WIN**|
 |Q8_K_M|8|57.0714|[ref] INT8 uniform|8.125|58.7437|-1.6723 dB|LOSS|
 
 ## Competitor landscape

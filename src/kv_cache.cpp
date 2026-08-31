@@ -1,5 +1,6 @@
 #include "quant/kv_cache.h"
 #include <cstring>
+#include <iostream> // DEBUG-A
 #include <cmath>
 #include <algorithm>
 #include <fstream>
@@ -381,7 +382,13 @@ void PagedKVCacheBase::append(int layer, int64_t logical_pos, const Tensor& k, c
     if (copy_k > 0) std::memcpy(blk.k_data.data() + write_offset, ksrc, (size_t)copy_k * sizeof(float));
     if (copy_v > 0) std::memcpy(blk.v_data.data() + write_offset, vsrc, (size_t)copy_v * sizeof(float));
 
-    if (logical_pos + 1 > ls.current_pos) ls.current_pos = logical_pos + 1;
+    // current_pos tracks the appended TOKEN extent. The copy above accepts a
+    // whole block ({heads, tokens, dim}) — advance by the token count actually
+    // written, not by 1, or get_range clamps multi-token appends to one token.
+    const int64_t tokens_written =
+        (num_heads_ > 0 && head_dim_ > 0) ? k_num / (num_heads_ * head_dim_) : 0;
+    const int64_t new_end = logical_pos + (tokens_written > 0 ? tokens_written : 1);
+    if (new_end > ls.current_pos) ls.current_pos = new_end;
 }
 
 std::pair<Tensor, Tensor> PagedKVCacheBase::get_range(int layer, int64_t start, int64_t end) const {
@@ -543,29 +550,38 @@ void PagedKVCacheBase::flush_to_disk() {
 }
 
 void PagedKVCacheBase::load_from_disk() {
+    std::cerr << "D-lfd-enter" << std::endl;
     for (int layer = 0; layer < num_layers_; layer++) {
         auto& ls = layers_[layer];
+        std::cerr << "D-lfd-layer n=" << ls.blocks.size() << std::endl;
         for (auto& [id, blk] : ls.blocks) {
             if (blk.on_disk) load_from_disk(layer, id);
         }
     }
+    std::cerr << "D-lfd-exit" << std::endl;
 }
 
 void PagedKVCacheBase::clear() {
+    std::cerr << "D-clear-enter" << std::endl;
     for (auto& ls : layers_) {
+        std::cerr << "D-clear-blocks n=" << ls.blocks.size() << std::endl;
         for (auto& [id, blk] : ls.blocks) {
             if (blk.on_disk && !blk.disk_file.empty()) {
                 std::remove(blk.disk_file.c_str());
             }
         }
         ls.blocks.clear();
+        std::cerr << "D-clear-pos" << std::endl;
         ls.current_pos = 0;
+        std::cerr << "D-destroy-root" << std::endl;
         destroy_root(ls.root);
+        std::cerr << "D-new-root" << std::endl;
         ls.root = create_root();
     }
     current_memory_used_ = 0;
     next_block_id_ = 0;
     access_counter_ = 0;
+    std::cerr << "D-clear-exit" << std::endl;
 }
 
 // ===========================================================================

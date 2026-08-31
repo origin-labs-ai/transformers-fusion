@@ -176,9 +176,6 @@ set_tests_properties(grp_proof_test PROPERTIES LABELS "core")
 add_quant_test_full(test_fp32_gather_quality test_fp32_gather_quality.cpp quant_format quant_core      ${_long_timeout})
 set_tests_properties(test_fp32_gather_quality PROPERTIES LABELS "core")
 
-add_quant_test_full(test_bpw_150_proof test_bpw_150_proof.cpp quant_format quant_core                  ${_long_timeout})
-set_tests_properties(test_bpw_150_proof PROPERTIES LABELS "core")
-
 add_quant_test_full(test_block_codec test_block_codec.cpp quant_kernel quant_format quant_core              ${_long_timeout})
 set_tests_properties(test_block_codec PROPERTIES LABELS "core")
 
@@ -219,10 +216,14 @@ set_tests_properties(
   test_moe_training test_native_quant_moe test_multimodal_encoders
   test_agi_flywheel test_inference_batch test_paged_kv_4m
   test_training_features grp_proof_test test_block_codec
-  test_fp32_gather_quality test_bpw_150_proof test_quant_mix test_format_registry_complete
+  test_fp32_gather_quality test_quant_mix test_format_registry_complete
   PROPERTIES COST 2.0
 )
 
 # ── codec fuzz roundtrip (L036) ───────────────────────────────────
 add_quant_test_full(test_fuzz_codec test_fuzz_codec.cpp quant_kernel quant_format quant_core ${_long_timeout})
 set_tests_properties(test_fuzz_codec PROPERTIES LABELS "codec;core")
+
+# ── BPW ironclad probe (audit 2026-08-26): claims vs actual bytes ──
+add_quant_test_full(test_format_audit test_format_audit.cpp quant_kernel quant_format quant_core ${_default_timeout})
+set_tests_properties(test_format_audit PROPERTIES LABELS "codec;core")

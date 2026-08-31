@@ -2,7 +2,7 @@
 
 > Everything needed to announce InNova and attract contributors.
 > Rule for ALL posts: **claim only measured facts.** Current verified claims:
-> Q16 > FP16 (+16 dB gaussian / +18 dB real), Q6_GRP > GGUF Q6_K (+1.5/+2.5 dB),
+> Q16 > FP16 (+16 dB gaussian / +18 dB real), Q6_G > GGUF Q6_K (+1.5/+2.5 dB),
 > 120K LOC pure C++20, zero dependencies, 44-test suite, Windows+Linux CI.
 > Do NOT post perf numbers still under investigation.
 

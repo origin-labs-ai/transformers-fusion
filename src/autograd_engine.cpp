@@ -11,9 +11,10 @@ std::atomic<bool> AutogradEngine::enabled_{false};
 std::atomic<bool> AutogradEngine::registry_alive_{true};
 
 AutogradEngine::~AutogradEngine() {
-    // Order matters: flip the flag BEFORE members are destroyed so any
-    // ~Tensor running later (static teardown) early-returns instead of
-    // touching the dying param_map_.
+    // Order matters: drop the hook and flip the flag BEFORE members are
+    // destroyed so any ~Tensor running later (static teardown) early-returns
+    // instead of touching the dying param_map_.
+    detail::autograd_unregister_hook = nullptr;
     registry_alive_.store(false, std::memory_order_relaxed);
 }
 
@@ -472,6 +473,14 @@ void AutogradEngine::reset() {
 
 AutogradEngine& AutogradEngine::instance() {
     static AutogradEngine engine;
+    // Install the layering-safe ~Tensor cleanup hook once the engine exists.
+    static const bool hook_installed = [] {
+        detail::autograd_unregister_hook = +[](Tensor* t) {
+            instance().unregister_parameter(t);
+        };
+        return true;
+    }();
+    (void)hook_installed;
     return engine;
 }
 

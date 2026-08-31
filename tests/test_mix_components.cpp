@@ -66,9 +66,11 @@ int main() {
     const auto bpw = make_bpw_map();
 
     const auto& twis = FormatRegistry::get_all_twi_mixes();
-    CHECK(twis.size() >= 2, "at least two TWI_MIX variants registered");
+    // v3 removed TWI_MIX by design (types.h header comment; registry stub is
+    // deliberately empty) — assert the removal contract instead of variants.
+    CHECK(twis.size() == 0, "TWI_MIX removed in v3: registry must be empty");
     for (const auto& m : twis) validate(m, 2, bpw);
-    std::cout << "  TWI_MIX variants validated: " << twis.size() << std::endl;
+    std::cout << "  TWI_MIX variants registered (must be 0): " << twis.size() << std::endl;
 
     const auto& quads = FormatRegistry::get_all_four_mixes();
     CHECK(quads.size() >= 14, "all fourteen QUAD_MIX variants registered");
@@ -78,7 +80,7 @@ int main() {
     // Spot-check the flagship: QUAD_MIX@12.5 components are Q6/Q12/Q24/Q32.
     bool found_flagship = false;
     for (const auto& m : quads) {
-        if (m.id == RegFormat::MXQ_12_5_GRP) {
+        if (m.id == RegFormat::MXQ_12_5_G) {
             found_flagship = true;
             CHECK(m.tier1_fmt == RegFormat::Q6 && m.tier2_fmt == RegFormat::Q12 &&
                   m.tier3_fmt == RegFormat::Q24 && m.tier4_fmt == RegFormat::Q32,
@@ -89,7 +91,8 @@ int main() {
 
     // Targeted getters must return descriptors of the right tier count.
     CHECK(FormatRegistry::get_four_mix(12.5f).num_tiers == 4, "get_four_mix -> 4 tiers");
-    CHECK(FormatRegistry::get_twi_mix(1.5f).num_tiers == 2, "get_twi_mix -> 2 tiers");
+    CHECK(FormatRegistry::get_twi_mix(1.5f).num_tiers == 0,
+          "get_twi_mix on emptied v3 registry -> empty descriptor");
 
     if (failures == 0) {
         std::cout << "MIX COMPONENTS: ALL TESTS PASSED" << std::endl;

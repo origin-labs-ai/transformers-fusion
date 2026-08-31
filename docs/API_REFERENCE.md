@@ -56,14 +56,14 @@ enum class Format : uint8_t {
     QUANT8            = 4,  // 8.00 BPW, 256 centroids Lloyd-Max (lossy)
     QUANT16           = 5,  // 16.00 BPW, FP16 storage (lossy)
     QUANT32           = 6,  // 32.00 BPW, FP32 identity (lossless)
-    QUANT1_GRP        = 7,  // 1.0 BPW, block FP16 scale + sign bits (no per-64 zp/scale)
-    QUANT_Q0_GRP    = 8,  // 1.5 BPW, block FP16 scale + sign + refinement
-    QUANT2_GRP        = 9,  // 2.5 BPW, 2-bit lattice + per-64-group FP16 zp/scale
-    QUANT4_GRP        = 10, // 4.5 BPW, 4-bit lattice + per-64-group FP16 zp/scale
-    QUANT8_GRP        = 11, // 8.5 BPW, 8-bit lattice + per-64-group FP16 range/zp
-    QUANT16_GRP       = 12, // 16.0 BPW, FP16 storage (same as QUANT16; no grouping at 16 BPW)
+    QUANT1_G        = 7,  // 1.0 BPW, block FP16 scale + sign bits (no per-64 zp/scale)
+    QUANT_Q0_G    = 8,  // 1.5 BPW, block FP16 scale + sign + refinement
+    QUANT2_G        = 9,  // 2.5 BPW, 2-bit lattice + per-64-group FP16 zp/scale
+    QUANT4_G        = 10, // 4.5 BPW, 4-bit lattice + per-64-group FP16 zp/scale
+    QUANT8_G        = 11, // 8.5 BPW, 8-bit lattice + per-64-group FP16 range/zp
+    QUANT16_G       = 12, // 16.0 BPW, FP16 storage (same as QUANT16; no grouping at 16 BPW)
     QUANT_Q1     = 13, // 2.0 BPW, lossy sparse (uint16 index, int8 value)
-    QUANT_Q1_GRP = 14, // 2.0 BPW, lossy grouped sparse (per-half-block FP16 scale)
+    QUANT_Q1_G = 14, // 2.0 BPW, lossy grouped sparse (per-half-block FP16 scale)
 };
 
 // Usage
