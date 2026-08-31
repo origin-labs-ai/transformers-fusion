@@ -4,11 +4,15 @@ Snapshot of ground truth at the end of the 2026-08-31 Verdent session. Update th
 
 ## 1. Git state
 
-- Branch: `main`.
-- Recent commits: `10735a6` perf(codec) speed round 1 · `557c32f` docs+audit competitor analysis + Wave 3 ledger C-01..C-21 + faithful GGUF Q4_K ref · `a8b4a26` MXQ/K/GRP rename propagation (remove TWI, dot BPW) · `390079a` format variants re-arranged per BPW · `9da085f` GRP≥plain tie elimination.
-- **~60-65 entries uncommitted** (git status count: 65 at restructure time). Contents: the whole Aug 25-26 repair set (B-1/2/3 build breakers, codec bug fixes, 6 test migrations, `_GRP`→`_G` rename completion, BPW truth fix, BPW probe test, FastBitReader speed paths) PLUS the Aug 31 restructure (research/ rename, repo/ tree, path updates in tools/tests/CI) PLUS the memory system itself.
-- **First priority on owner's green light: commit this tree** (conventional message, English). Suggested split: (1) audit fixes, (2) rename+truthfix, (3) restructure+memory.
-- Tracked `.research/*` files appear as deletions; renames auto-detect on commit (moves were done with plain mv/robocopy because `git mv` hit Windows locks).
+- Branch: `main`. **WORKING TREE CLEAN as of 2026-08-31 21:0x — the long-pending uncommitted set is committed** in 5 commits:
+  - `96295e9` chore: drop TRANSCRIPT.md from root (it was the owner's move — completed by 1a376f1)
+  - `7d1e762` fix: post-audit repair set — codec bugs (codebook magic QUA8/QUA4, Q6_K_G truncation, wire_fmt coercion guard), kv_cache append extent, tensor/autograd layering hook, `_GRP`→`_G` completion, 6 test migrations, BPW probe test added, bpw_150 refs removed (50 files)
+  - `9ff54cf` chore(restructure): `.research` → `research/` (reports only), `repo/` tree (sessions/state), tool-path sync (24 files; renames auto-detected)
+  - `d07b66d` docs(memory): persistent agent memory system — 12 files + gitignore
+  - `1a376f1` chore: TRANSCRIPT.md relocated to `repo/` (content-identical, hash-matched to `10735a6:TRANSCRIPT.md`)
+- Earlier commits: `10735a6` perf(codec) speed round 1 · `557c32f` docs+audit Wave 3 ledger C-01..C-21 · `a8b4a26` MXQ/K/GRP rename propagation (remove TWI, dot BPW) · `390079a` format variants re-arranged per BPW · `9da085f` GRP ties eliminated.
+- `repo/.mimosa/` is gitignored (41 MB / 3158 files of mutable hook cache — on disk, NOT versioned; see 09 §5).
+- **TRANSCRIPT.md now lives at `repo/TRANSCRIPT.md`** (2048 lines — the iron-rules source of truth; the root deletion in 96295e9 was this move, not a removal).
 
 ## 2. Test state (last full fresh run: Aug 26; smoke re-run Aug 31)
 
