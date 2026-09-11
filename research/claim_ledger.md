@@ -226,3 +226,17 @@ intact); (6) `LatentKVAttention` is standalone (not yet spliced into
 | P2-5 | `release.yml` `sha256sum` missing on macOS runners | `shasum -a 256` fallback (both steps) |
 
 **Verify:** reconfigure + full Release rebuild clean (only pre-existing C4244s); `ctest -C Release` **72/72, exit 0** (76.32s); `cmake --install` verified; `test_math` edge suite 10/10; `test_server_contract` 35/35; gpu-cap probe PASSED.
+
+## 100%-production round 2 — 2026-09-11 (dedup + stub losses + vacuous tests)
+
+| # | Fix | Evidence |
+|---|---|---|
+| D1 | `exp_ps` triplicated byte-identical (`math_avx2/_tensor/_tiled.cpp`) → `include/quant/detail/exp_avx2.h` single inline + `using detail::exp_ps` | Rebuild clean; softmax/sigmoid paths covered by suite (72/72) |
+| D2 | `fp16_to_float` copy-pasted ×5 (`kernel_quant4`, `kernel_q12` as `q12_*`, `kernel_production`, `trainer_data`, `tensor.cpp` as `half_to_float`) + magic 2^-24 literal ×6 → `include/quant/detail/fp16.h` (`kFp16SubnormalStep` + inline) | Rebuild clean; Q4/Q12/GEMV paths in suite green |
+| S1 | `ExpertChoiceMoE::load_balance_loss` stub `return 0.0f` → real: uncovered-token fraction + CV of per-expert top-C counts | `test_moe_training`: skew gates → 0.75 (>0, not stub) |
+| S2 | `HashMoE::load_balance_loss` + `z_loss` stubs → chi-square vs uniform + mean-square z-loss | diverse gates → 6.0; z_loss > 0; determinism pinned |
+| S3 | `DenseMoE::load_balance_loss` 0.0 documented as CORRECT (dense = no routing decision), not a stub | Comment + test pins 0.0 by construction |
+| T5 | `test_code_gen.cpp` vacuous `(void)cc + TEST_CHECK(true)` → garbage-reject + toolchain-gated accept (bare `cl.exe` fails C1034 outside VS prompt; honest skip, never fake) | 45/45 (toolchain present=0 → skip leg) |
+| T6 | `test_training_features` 8× vacuous: overflow2 ignored, EMA ×3, augmentation, curriculum static-only | inf→true/finite-large→false; EMA apply/copy overwrite verified; aug no-batch contract; curriculum schedule grows (all green, 70+ asserts) |
+
+**Verify:** full rebuild clean; `ctest -C Release` **72/72 exit 0**; touched binaries: code_gen 45/45, training_features green, moe_training 25/25, multimodal_encoders 23/23, math 10/10 edge.

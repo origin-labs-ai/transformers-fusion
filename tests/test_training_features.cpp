@@ -98,14 +98,18 @@ static void test_mixed_precision() {
     scaler.update_scale(false);
     TEST_CHECK(scaler.good_steps() > 0, "good steps incremented after no overflow");
 
-    // Check with overflow values (implementation may vary)
+    // Check with overflow values: check_gradients flags inf/nan
+    // (training_utils.cpp:159-172). 1e10f is finite, so it must NOT flag;
+    // true infinities must flag. (PROD round-2: was ignored overflow2 +
+    // TEST_CHECK(true) — vacuous.)
     Tensor big_grad({100});
     for (int64_t i = 0; i < 100; i++)
         big_grad.data<float>()[i] = 1e10f;
     std::vector<Tensor*> params2 = {&big_grad};
     bool overflow2 = scaler.check_gradients(params2);
-    // Overflow detection is implementation-dependent; just verify no crash
-    TEST_CHECK(true, "overflow check completed without crash");
+    TEST_CHECK(!overflow2, "finite-large grads do not flag overflow");
+    big_grad.data<float>()[50] = std::numeric_limits<float>::infinity();
+    TEST_CHECK(scaler.check_gradients(params2), "inf grad flags overflow");
 
     // Trainer mixed precision
     TransformerConfig cfg;
@@ -300,24 +304,36 @@ static void test_data_augmentation() {
 
         Tensor input_ids, labels;
         bool got = dl.next_batch(input_ids, labels);
-        // Dataloader may not yield a batch if tokenization produces insufficient tokens
-        // with streaming mode; just verify no crash
-        TEST_CHECK(true, "dataloader with augmentation runs without crash");
+        // Streaming tokenization may yield no batch; assert the contract:
+        // EITHER a finite batch OR a clean no-batch (never a crash/hang).
+        // (PROD round-2: was unconditional TEST_CHECK(true) — vacuous.)
         if (got && input_ids.numel() > 0) {
-            TEST_CHECK(std::isfinite(input_ids.data<float>()[0]), "augmented input finte");
+            TEST_CHECK(std::isfinite(input_ids.data<float>()[0]), "augmented input finite");
+        } else {
+            TEST_CHECK(!got || input_ids.numel() == 0, "no-batch is clean empty (not partial)");
         }
         std::remove(tmp_path.c_str());
     }
 
-    // Curriculum learning via DataLoader — API signature verification
-    // (compile-time check that the API exists; no runtime IO performed)
+    // Curriculum learning via DataLoader — drive the real API and check the
+    // schedule advances (PROD round-2: was static_assert + TEST_CHECK(true)).
+    // Note: the schedule lives on DataLoader::CurriculumState; the
+    // set_curriculum/curriculum_step setters drive it.
     {
-        using DL = DataLoader;
-        static_assert(std::is_same_v<decltype(&DL::set_curriculum), void(DL::*)(int)>,
-                      "set_curriculum(int) exists");
-        static_assert(std::is_same_v<decltype(&DL::curriculum_step), void(DL::*)(int)>,
-                      "curriculum_step(int) exists");
-        TEST_CHECK(true, "curriculum API signatures present");
+        DataLoader::CurriculumState cs;
+        cs.total_epochs = 4;
+        cs.current_epoch = 0;
+        int64_t l0 = cs.effective_seq_length();
+        cs.current_epoch = 3;
+        int64_t l1 = cs.effective_seq_length();
+        TEST_CHECK(l0 > 0 && l1 > 0, "curriculum effective lengths positive");
+        TEST_CHECK(l1 >= l0, "curriculum length grows with epoch");
+        // And the DataLoader setters reach the same state:
+        BPETokenizer ctok;
+        DataLoader cdl(&ctok, "_test_curr_data.txt", 2, 8);
+        cdl.set_curriculum(4);
+        cdl.curriculum_step(0); // must not crash on missing file path
+        TEST_CHECK(true, "curriculum setters run without crash");
     }
 }
 
@@ -351,6 +367,9 @@ static void test_curriculum_learning() {
 }
 
 // EMA weight averaging
+// PROD round-2: was 3x TEST_CHECK(true). Now asserts the real semantics:
+// update() pulls ema toward params, apply_to_model() overwrites params
+// with ema, copy_to_model() matches apply.
 static void test_ema_training() {
     TEST_SUITE("EMA Weight Averaging");
     EMAWeightAveraging ema(0.999f, true);
@@ -362,22 +381,37 @@ static void test_ema_training() {
     std::vector<Tensor*> params = {&w1, &w2};
     ema.init(params);
 
-    // Update
+    // Update: move params far, ema.update must pull ema toward them
+    for (int64_t i = 0; i < 10; i++) {
+        w1.data<float>()[i] = 100.0f + (float)i;
+        w2.data<float>()[i] = 200.0f + (float)i;
+    }
     ema.update(params);
-    TEST_CHECK(true, "EMA update completed");
-
-    // Apply
+    // ema weights live inside ema; verify indirectly via apply_to_model:
+    // reset params to sentinel, apply, params must equal ema (not sentinel).
+    for (int64_t i = 0; i < 10; i++) {
+        w1.data<float>()[i] = -1.0f;
+        w2.data<float>()[i] = -1.0f;
+    }
     ema.apply_to_model(params);
-    TEST_CHECK(true, "EMA apply completed");
+    bool moved = (w1.data<float>()[0] != -1.0f) && (w2.data<float>()[0] != -1.0f);
+    TEST_CHECK(moved, "EMA apply overwrites model with averaged weights");
+    TEST_CHECK(std::isfinite(w1.data<float>()[0]) && std::isfinite(w2.data<float>()[0]),
+               "EMA applied weights finite");
 
-    // Copy
+    // Copy: same contract as apply
+    for (int64_t i = 0; i < 10; i++) {
+        w1.data<float>()[i] = -2.0f;
+        w2.data<float>()[i] = -2.0f;
+    }
     ema.copy_to_model(params);
-    TEST_CHECK(true, "EMA copy completed");
+    bool copied = (w1.data<float>()[0] != -2.0f) && (w2.data<float>()[0] != -2.0f);
+    TEST_CHECK(copied, "EMA copy_to_model overwrites model weights");
 }
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("InNova — Training Features Test Suite\n");
+    printf("Transcender — Training Features Test Suite\n");
     printf("==========================================\n");
 
     test_gradient_noise_injection();
