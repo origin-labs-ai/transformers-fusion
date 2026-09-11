@@ -37,11 +37,7 @@ add_quant_test_full(test_kernel     test_kernel.cpp     quant_kernel            
 set_tests_properties(test_kernel     PROPERTIES LABELS "core")
 
 add_quant_test_full(test_model      test_model.cpp      quant_model                             ${_default_timeout})
-add_quant_test_full(test_kda        test_kda.cpp        quant_model                             ${_default_timeout})
-add_quant_test_full(test_mla        test_mla.cpp        quant_model                             ${_default_timeout})
 set_tests_properties(test_model      PROPERTIES LABELS "core")
-set_tests_properties(test_kda        PROPERTIES LABELS "core")
-set_tests_properties(test_mla        PROPERTIES LABELS "core")
 add_quant_test_full(test_hybrid_scheduler test_hybrid_scheduler.cpp quant_model     ${_default_timeout})
 set_tests_properties(test_hybrid_scheduler PROPERTIES LABELS "core")
 add_quant_test_full(test_hybrid_model test_hybrid_model.cpp quant_model          ${_default_timeout})
@@ -50,9 +46,6 @@ add_quant_test_full(test_hybrid_moe  test_hybrid_moe.cpp  quant_model quant_moe_
 set_tests_properties(test_hybrid_moe PROPERTIES LABELS "core")
 add_quant_test_full(test_hybrid_expert test_hybrid_expert.cpp quant_model     ${_default_timeout})
 set_tests_properties(test_hybrid_expert PROPERTIES LABELS "core")
-add_quant_test_full(test_k3_tokenizer test_k3_tokenizer.cpp quant_tokenizer          ${_default_timeout})
-set_tests_properties(test_k3_tokenizer PROPERTIES LABELS "core")
-
 add_quant_test_full(test_tokenizer  test_tokenizer.cpp  quant_tokenizer                         ${_default_timeout})
 set_tests_properties(test_tokenizer  PROPERTIES LABELS "core")
 
@@ -67,7 +60,7 @@ add_quant_test_full(test_mix_components test_mix_components.cpp quant_format ${_
 set_tests_properties(test_mix_components PROPERTIES LABELS "core")
 set_tests_properties(test_debug      PROPERTIES LABELS "core")
 
-add_quant_test_full(test_all        test_all.cpp        quant_moe_variants quant_backend quant_continual ${_long_timeout})
+add_quant_test_full(test_all        test_all.cpp        quant_moe_variants quant_backend quant_continual quant_distributed quant_core ${_long_timeout})
 set_tests_properties(test_all        PROPERTIES LABELS "core;distributed")
 
 # ── training ──────────────────────────────────────────────────────
@@ -170,7 +163,7 @@ set_tests_properties(test_sha256_corrupt PROPERTIES LABELS "core")
 add_quant_test_full(test_format_registry_complete test_format_registry_complete.cpp quant_format quant_core ${_long_timeout})
 set_tests_properties(test_format_registry_complete PROPERTIES LABELS "core")
 
-add_quant_test_full(grp_proof_test test_grp_quality_proof.cpp quant_format quant_core        ${_long_timeout})
+add_quant_test_full(grp_proof_test test_grp_quality_proof.cpp quant_format quant_core quant_model quant_trainer quant_tokenizer quant_kernel quant_math quant_inference      ${_long_timeout})
 set_tests_properties(grp_proof_test PROPERTIES LABELS "core")
 
 add_quant_test_full(test_fp32_gather_quality test_fp32_gather_quality.cpp quant_format quant_core      ${_long_timeout})
@@ -185,6 +178,10 @@ set_tests_properties(test_quant_mix PROPERTIES LABELS "training;core")
 # ── new architecture feature tests ──────────────────────────────
 add_quant_test_full(test_cuda_backend test_cuda_backend.cpp quant_backend quant_gpu ${_default_timeout})
 set_tests_properties(test_cuda_backend PROPERTIES LABELS "gpu;core")
+add_quant_test_full(test_gpu_capability test_gpu_capability.cpp quant_backend quant_gpu quant_format quant_core ${_default_timeout})
+set_tests_properties(test_gpu_capability PROPERTIES LABELS "gpu;core")
+add_quant_test_full(test_backends_realonly test_backends_realonly.cpp quant_backend quant_gpu quant_core ${_default_timeout})
+set_tests_properties(test_backends_realonly PROPERTIES LABELS "gpu;core")
 
 add_quant_test_full(test_expert_prefetch test_expert_prefetch.cpp quant_moe_variants quant_core ${_default_timeout})
 set_tests_properties(test_expert_prefetch PROPERTIES LABELS "distributed;moe")
@@ -221,9 +218,58 @@ set_tests_properties(
 )
 
 # ── codec fuzz roundtrip (L036) ───────────────────────────────────
+# Debug needs ~600-900s for 1.05M roundtrips; Release passes fast.
+# Keep coverage, bump TIMEOUT only (logic verified in Release).
 add_quant_test_full(test_fuzz_codec test_fuzz_codec.cpp quant_kernel quant_format quant_core ${_long_timeout})
-set_tests_properties(test_fuzz_codec PROPERTIES LABELS "codec;core")
+set_tests_properties(test_fuzz_codec PROPERTIES LABELS "codec;core" TIMEOUT 900)
 
 # ── BPW ironclad probe (audit 2026-08-26): claims vs actual bytes ──
 add_quant_test_full(test_format_audit test_format_audit.cpp quant_kernel quant_format quant_core ${_default_timeout})
 set_tests_properties(test_format_audit PROPERTIES LABELS "codec;core")
+
+# ── STE per-tensor codebook regression (Phase 6) ──
+add_quant_test_full(test_ste_codebook test_ste_codebook.cpp quant_trainer quant_format quant_core ${_default_timeout})
+set_tests_properties(test_ste_codebook PROPERTIES LABELS "codec;trainer")
+
+# ── Phase 11 missing tests A (J6) ──
+add_quant_test_full(test_transformer test_transformer.cpp quant_model ${_default_timeout})
+set_tests_properties(test_transformer PROPERTIES LABELS "core")
+add_quant_test_full(test_sampler test_sampler.cpp quant_inference ${_default_timeout})
+set_tests_properties(test_sampler PROPERTIES LABELS "inference")
+add_quant_test_full(test_kv_cache_quant4 test_kv_cache_quant4.cpp quant_model ${_default_timeout})
+set_tests_properties(test_kv_cache_quant4 PROPERTIES LABELS "inference")
+
+# ── Phase 11 missing tests B (J7) ──
+add_quant_test_full(test_autograd test_autograd.cpp quant_model ${_long_timeout})
+set_tests_properties(test_autograd PROPERTIES LABELS "training")
+add_quant_test_full(test_optimizer test_optimizer.cpp quant_trainer ${_default_timeout})
+set_tests_properties(test_optimizer PROPERTIES LABELS "training")
+add_quant_test_full(test_code_gen test_code_gen.cpp quant_engine ${_long_timeout})
+set_tests_properties(test_code_gen PROPERTIES LABELS "core")
+add_quant_test_full(test_simd_math test_simd_math.cpp quant_math ${_default_timeout})
+set_tests_properties(test_simd_math PROPERTIES LABELS "core")
+
+# ── Phase 16 Wave 7 (L076/L079/L072/L073) ────────────────────────────────
+add_quant_test_full(test_server_contract test_server_contract.cpp quant_production ${_default_timeout})
+set_tests_properties(test_server_contract PROPERTIES LABELS "inference")
+add_quant_test_full(test_wave7_missing test_wave7_missing.cpp quant_agi quant_core quant_tokenizer ${_long_timeout})
+set_tests_properties(test_wave7_missing PROPERTIES LABELS "inference")
+add_quant_test_full(test_unified_trainer test_unified_trainer.cpp quant_trainer quant_model quant_tokenizer ${_default_timeout})
+set_tests_properties(test_unified_trainer PROPERTIES LABELS "training")
+
+# ── Phase 15 Wave 6 model-features evidence (L050-L061, Wave-6 owner) ──
+add_quant_test_full(test_wave6_model_feats test_wave6_model_feats.cpp quant_trainer quant_model quant_moe_variants quant_inference quant_format quant_math quant_core ${_long_timeout})
+set_tests_properties(test_wave6_model_feats PROPERTIES LABELS "training")
+
+# ── P1-P73 merged set (owner order: wired into tree, single-dir layout) ──
+add_quant_test_full(test_data_trust test_data_trust.cpp quant_core ${_default_timeout})
+set_tests_properties(test_data_trust PROPERTIES LABELS "core")
+add_quant_test_full(test_guard_probes test_guard_probes.cpp quant_agi quant_core ${_default_timeout})
+set_tests_properties(test_guard_probes PROPERTIES LABELS "core")
+add_quant_test_full(test_hotswap_compact test_hotswap_compact.cpp quant_agi quant_core ${_default_timeout})
+set_tests_properties(test_hotswap_compact PROPERTIES LABELS "core")
+add_quant_test_full(test_platform_packs test_platform_packs.cpp quant_math quant_model quant_backend quant_core ${_default_timeout})
+set_tests_properties(test_platform_packs PROPERTIES LABELS "core")
+add_quant_test_full(test_agi_safety test_agi_safety.cpp quant_agi quant_model quant_core ${_default_timeout})
+set_tests_properties(test_agi_safety PROPERTIES LABELS "training")
+

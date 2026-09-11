@@ -47,8 +47,10 @@ private:
     std::mutex barrier_mutex_;
     std::condition_variable barrier_cv_;
     int barrier_count_ = 0;
+    int barrier_gen_ = 0; // PROD round-7: barrier generation (reset-counter deadlock fix)
     std::mutex reduce_mutex_;
     std::vector<float> reduce_buffer_;
+    bool reduce_cleared_ = false; // PROD round-7b: one-clearer flag for all_reduce
 };
 
 // C23: DDP wrapper — replicates model across ranks, synchronizes gradients
@@ -148,6 +150,7 @@ private:
     std::mutex ring_barrier_mutex_;
     std::condition_variable ring_barrier_cv_;
     int ring_barrier_count_ = 0;
+    int ring_barrier_gen_ = 0; // PROD round-7: same generation fix
 
     void scatter_reduce(float* data, size_t chunk, ReduceOp op);
     void all_gather(float* data, size_t chunk);

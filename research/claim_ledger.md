@@ -278,3 +278,14 @@ These three ledger PARTIALs were written against an older tree. Re-verified at C
 |---|---|---|---|
 | C-16 MLA support | PARTIAL (projection real, cache discarded, savings are formulas) | **RETIRED (owner purge 2026-09-07 — no MLA code exists)** | `LatentKVAttention`/old `mla_attention.*` fully purged: zero hits in `src/ include/ tests/ CMakeLists.txt` (`git grep` clean); only the purge tombstone remains (`src/model/transformer.cpp:627-638` comment). L050's t051-style proof died with the purge by owner decision. Do NOT claim MLA support anywhere — and nothing does (docs grep clean this round) |
 | C-21 YARN scaling | PARTIAL (yarn_attn_factor/mscale DISCARDED via `(void)`) | **VERIFIED (applied exactly once)** | `RotaryEmbedding` computes `mscale` from extension ratio (`src/model/transformer.cpp:148-150`) and exposes `attn_scale_mult() = mscale * yarn_attn_factor` (`include/quant/transformer.h:84`); attention applies it via Q pre-scale exactly once with a double-apply guard comment (`transformer.cpp:320-329`); `t056_yarn` asserts mode separation + `attn_scale_mult == mscale*factor` + determinism. Old `(void)` discard is gone |
+
+## 100%-production round 7 — 2026-09-11 (C-22: two REAL concurrency bugs fixed)
+
+The new `test_all` subsystem-5 (single-host shared-context all_reduce) caught **two genuine data-race/deadlock bugs** in the distributed primitives — the exact class C-22 warned about:
+
+| # | Bug | Fix | Evidence |
+|---|---|---|---|
+| B1 | `DistributedContext::barrier` + `RingAllReduce::barrier`: reset-counter deadlock — woken waiter re-checked `count >= ws` against the reset 0 and slept forever (`test_all` hung with zero output) | Generation counters (`barrier_gen_`/`ring_barrier_gen_`); waiters sleep on generation, waker bumps it (`src/trainer/distributed.cpp:26-48,239-252`; members in `include/quant/distributed.h:49-52,150-153`) | `test_all` proceeds past barrier |
+| B2 | `all_reduce` copy-vs-clear race: per-thread memcpy+fill(0) under separate locks — first clearer stole the sum (`[FAIL] sums correctly`) | 3-phase protocol: add → B1 → copy (no clear) → B2 → exactly-one clearer (`reduce_cleared_` flag) → B3 → re-arm (`distributed.cpp:43-72`) | `[ok] 2-thread shared-context all_reduce sums correctly`, exit 0 |
+| T13 | `test_all.cpp` bare asserts + zero distributed coverage | `SYS_CHECK` (NDEBUG-safe) + subsystem-5 (2-thread sum + scope note); linked `quant_distributed`; unbuffered stdio for hang visibility | `test_all` exit 0, all 5 subsystems pass |
+| C-22 scope | "DDP/FSDP/ZeRO functional" untestable as stated (no IPC/NCCL transport exists) | **SCOPED (honest): single-host threading SUPPORTED + tested; multi-process/NCCL explicitly OUT OF SCOPE** (test + ledger agree). `ParameterServer::barrier` delegates to the fixed ctx barrier automatically | test_all subsystem-5 + P54/P58 honest flags in `test_agi_safety.cpp` |
