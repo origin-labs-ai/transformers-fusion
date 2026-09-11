@@ -1,12 +1,20 @@
-# InNova Architecture
+# Transcender Architecture
 
 > **Understanding the Design Philosophy and System Structure**
+>
+> **Production-hardening sync (2026-09-11):** version one-truth **1.1.0 / R0001.01**
+> (`CMakeLists.txt:3`, `include/quant/version.h:6` — "0.2.0" in older banners is
+> STALE); format one-truth **105 formats,
+> `FORMAT_COUNT=105`** (`include/quant/types.h:67`, no TWI by design); index one-truth
+> **TranscenderIDX** magic (`src/codec/quant_format.cpp:546,585-588`); tests **72 ctest
+> cases** (`tests/CMakeLists.txt`; `ctest -N` = 72), **72/72 green 2026-09-11**; Cender is **future/planned** (deferred Phase 19-23,
+> proof-frozen in `docs/THEOREM_CENDER.md` — no `Cender/` dir, no `.txn` IR in tree).
 
 ---
 
 ## 🎯 Overview
 
-InNova is designed as a **complete, self-contained AI engine** with the following core principles:
+Transcender is designed as a **complete, self-contained AI engine** with the following core principles:
 
 1. **Zero Dependencies** - Pure C++20, no external libraries required
 2. **Single Format Truth** - The `.quant` format is the single source of truth for models
@@ -20,7 +28,7 @@ InNova is designed as a **complete, self-contained AI engine** with the followin
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          InNova                                    │
+│                          Transcender                                    │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
@@ -36,10 +44,10 @@ InNova is designed as a **complete, self-contained AI engine** with the followin
 │                           │                                              │
 │                           ▼                                              │
 │  ┌───────────────────────────────────────────────────────────────┐  │
-│  │                        QUANT FORMAT                              │  │
+│  │                        QUANT FORMAT (v3: 105 formats)                  │  │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐         │  │
-│  │  │  QUANT8    │ │  QUANT4    │ │ Ternary  │ │ Binary   │         │  │
-│  │  │ 8-bit    │ │ 4-bit    │ │ 2-bit    │ │ 1-bit    │         │  │
+│  │  │  Q-series  │ │  K-variants│ │  GRP (QG*) │ │ Mix (Q_MX*/ │         │  │
+│  │  │  base 10   │ │  L/M/H ×27 │ │  exact +K_G │ │ QG_MX* ×14) │         │  │
 │  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘         │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                         │
@@ -54,6 +62,19 @@ InNova is designed as a **complete, self-contained AI engine** with the followin
 ```
 
 ---
+
+## 📁 Source Layout Truth (Phase 24)
+
+> Flat `src/*.cpp` paths elsewhere in this file are **STALE**. Measured layout:
+> `src/{adapters,agi,backend,codec,core,gle,inference,kernel,math,model,multimodal,server,tokenizer,trainer}/`.
+> Mapping for the files named below: `tensor.cpp`→`src/core/`; `math*.cpp`→`src/core/`+`src/math/`;
+> `memory.cpp`,`random.cpp`→`src/core/`; `autograd*.cpp`→`src/model/`;
+> `transformer.cpp`,`model.cpp`,`moe_*.cpp`,`kv_cache*.cpp`→`src/model/`;
+> `backend.cpp`,`gpu_compute*.cpp`→`src/backend/`; `tokenizer`/`bpe`→`src/tokenizer/`;
+> `sampler.cpp`,`generator.cpp`,`inference_*.cpp`→`src/inference/`;
+> `trainer*.cpp`,`optimizer.cpp`,`finetune`→`src/trainer/`; `dataloader`→`src/core/dataset.cpp`;
+> `block_codec.cpp`,`codebook.cpp`,`format_planner.cpp`,`format_registry.cpp`,`quant_format.cpp`,`ste_quantizer.cpp`,`quant_engines_*.cpp`→`src/codec/`;
+> `kernel_*.cpp`,`int8_quant.cpp`,`flash_attention.cpp`→`src/kernel/`.
 
 ## 📦 Component Hierarchy
 
@@ -209,7 +230,7 @@ Specialized kernels for different quantization formats.
 │  │                        FORMATS                                │  │
 │  │                                                                 │  │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │  │
-│  │  │   QUANT8       │  │   QUANT4       │  │  Ternary     │      │  │
+│  │  │   QUANT8       │  │   QUANT4       │  │  QG (GRP)    │      │  │
 │  │  │              │  │              │  │              │      │  │
 │  │  │ • 8-bit INT  │  │ • 4-bit INT  │  │ • 2-bit      │      │  │
 │  │  │ • FP32 quality│  │ • FP16 quality│  │ • {-1,0,+1} │      │  │
@@ -217,7 +238,7 @@ Specialized kernels for different quantization formats.
 │  │  └──────────────┘  └──────────────┘  └──────────────┘      │  │
 │  │                                                                 │  │
 │  │  ┌──────────────┐  ┌──────────────┐                          │  │
-│  │  │   Binary     │  │   Mixed      │                          │  │
+│  │  │   QG Mix       │  │   Mixed      │                          │  │
 │  │  │              │  │              │                          │  │
 │  │  │ • 1-bit      │  │ • Per-block │                          │  │
 │  │  │ • {-1,+1}    │  │ • Format     │                          │  │
@@ -227,7 +248,7 @@ Specialized kernels for different quantization formats.
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │                    KERNELS                                    │  │
-│  │  • kernel_quant8.cpp    • kernel_tl.cpp (Ternary Lookup)       │  │
+│  │  • kernel_quant8.cpp    • kernel_q*.cpp (Q1/Q3/Q6/Q12/Q24 Tier-Lookup) │  │
 │  │  • kernel_quant4.cpp    • int8_quant.cpp                       │  │
 │  │  • ste_quantizer.cpp  • format_planner.cpp • codebook.cpp    │  │
 │  └─────────────────────────────────────────────────────────────┘  │
@@ -237,19 +258,20 @@ Specialized kernels for different quantization formats.
 
 **Purpose:** Efficient computation with various quantization formats.
 
-**Key Files:**
+**Key Files (new `src/` layout — flat `src/*.cpp` paths below are STALE):**
 - `include/quant/kernel.h` - Kernel interface
-- `src/kernel_quant8.cpp` - QUANT8 kernel implementation
-- `src/kernel_quant4.cpp` - QUANT4 kernel implementation
-- `src/kernel_tl.cpp` - Ternary Lookup kernel
+- `src/kernel/kernel_quant8.cpp` - Q8 kernel implementation
+- `src/kernel/kernel_quant4.cpp` - Q4 kernel implementation
+- `src/kernel/kernel_q3.cpp`, `kernel_q6.cpp`, `kernel_q12.cpp`, `kernel_q24.cpp` - Q-series kernels
+- `src/kernel/kernel_tl.cpp` - TL (Tier-Lookup) kernel for low-BPW tiers
 - `include/quant/int8_quant.h` - INT8 quantization
-- `src/int8_quant.cpp` - INT8 implementation
+- `src/kernel/int8_quant.cpp` - INT8 implementation
 - `include/quant/ste_quantizer.h` - Straight-Through Estimator
-- `src/ste_quantizer.cpp` - STE implementation
+- `src/codec/ste_quantizer.cpp` - STE implementation
 - `include/quant/format_planner.h` - Format allocation planner
-- `src/format_planner.cpp` - Planner implementation
+- `src/codec/format_planner.cpp` - Planner implementation
 - `include/quant/codebook.h` - Vector quantization codebooks
-- `src/codebook.cpp` - Codebook implementation
+- `src/codec/codebook.cpp` - Codebook implementation
 
 ---
 
@@ -295,7 +317,10 @@ Implementation of Mixture of Experts architectures.
 
 ### 6. GPU Layer (Hardware Acceleration)
 
-GPU compute acceleration using Vulkan.
+GPU compute acceleration. REAL-ONLY status (Phase 17 audit 2026-09-07,
+evidence: `tests/test_gpu_capability.cpp`): no Q4/Q8 quantized GPU kernels
+exist on any backend yet; every unavailable path fails loud (returns false /
+nullptr / CPU fallback with `[WARN] ... perf-invalid`, never fake-available).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -308,21 +333,20 @@ GPU compute acceleration using Vulkan.
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │  │
 │  │  │  Vulkan     │  │  GLSL/SPIRV  │  │   Buffers    │      │  │
 │  │  │              │  │   Shaders    │  │              │      │  │
-│  │  │ • Device    │  │ • GEMM       │  │ • Upload     │      │  │
-│  │  │ • Pipeline  │  │ • GEMV       │  │ • Readback   │      │  │
-│  │  │ • Command   │  │ • ReLU       │  │ • Storage    │      │  │
-│  │  │   Lists     │  │ • GELU       │  │              │      │  │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘      │  │
-│  │                                                                 │  │
-│  │  ┌─────────────────────────────────────────────────────────┐  │  │
-│  │  │                    Shaders (Embedded)                        │  │  │
-│  │  │  • SPIRV_GEMM     - Matrix multiplication                     │  │  │
-│  │  │  • SPIRV_GEMV     - Matrix-vector multiplication              │  │  │
-│  │  │  • SPIRV_RELU     - ReLU activation                           │  │  │
-│  │  │  • SPIRV_GELU     - GELU activation                           │  │  │
-│  │  │  • SPIRV_SOFTMAX  - Softmax activation                         │  │  │
-│  │  │  • ...                                                      │  │  │
-│  │  └─────────────────────────────────────────────────────────┘  │  │
+ │  │  │ • Device    │  │ • ReLU/elem  │  │ • Upload     │      │  │
+ │  │  │ • Pipeline  │  │   (GEMM/GEMV │  │ • Readback   │      │  │
+ │  │  │ • Command   │  │   = CPU fb)  │  │ • Storage    │      │  │
+ │  │  │   Lists     │  │ • GELU       │  │              │      │  │
+ │  │  └──────────────┘  └──────────────┘  └──────────────┘      │  │
+ │  │                                                                 │  │
+ │  │  ┌─────────────────────────────────────────────────────────┐  │  │
+ │  │  │              Shaders / Kernels (audited 2026-09-07)            │  │  │
+ │  │  │  REAL: SPIRV_RELU/GELU/SILU/ADD/MUL (Vulkan elementwise)       │  │  │
+ │  │  │  REAL: FP32 PTX gemm/act/norm/attn (CUDA, needs HW to verify)  │  │  │
+ │  │  │  FALLBACK (CPU + WARN, perf-invalid): Vulkan GEMM/GEMV/softmax │  │  │
+ │  │  │    norm/MoE/attention; Metal rope/attention/reduce are EMPTY   │  │  │
+ │  │  │  ABSENT everywhere: Q4/Q8 quantized GEMV/GEMM (L080 retired)   │  │  │
+ │  │  └─────────────────────────────────────────────────────────┘  │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────┘
@@ -332,8 +356,24 @@ GPU compute acceleration using Vulkan.
 
 **Key Files:**
 - `include/quant/gpu_compute.h` - GPU compute interface
-- `src/gpu_compute.cpp` - GPU implementation (DirectX 12)
-- `src/gpu_compute_vulkan.cpp` - Vulkan GPU backend
+- `src/backend/gpu_compute.cpp` - GPU implementation (DirectX 12)
+- `src/backend/gpu_compute_vulkan.cpp` - Vulkan GPU backend
+- `src/backend/gpu_compute_cuda.cpp` - CUDA backend (dynamic driver load, FP32 PTX)
+- `src/backend/gpu_compute_metal.cpp` - Metal backend (Apple-only, FP32 MSL)
+- `tests/test_gpu_capability.cpp` - REAL-ONLY capability probe (L080-L085 evidence)
+
+**Capability table (this machine, 2026-09-07 — REAL ONLY, no fake):**
+
+| Backend | Available here | FP32 kernels | Q4/Q8 quant kernels | Fallback honesty |
+|---|---|---|---|---|
+| CUDA | NO (nvcuda.dll absent, no nvidia-smi/nvcc) | PTX present, unverifiable here | ABSENT (L080 retired) | fail-loud: init=false, alloc=nullptr, pin=false |
+| Metal | NO (non-Apple, by construction) | MSL FP32-only; rope/attn/reduce EMPTY | ABSENT (L082 retired) | fail-loud: init=false, alloc=nullptr |
+| Vulkan | LOADER present, device unprobed w/o build | SPIR-V relu/gelu/silu/add/mul REAL | ABSENT | CPU fallback + WARN, `is_initialized()==false` (L083 partial) |
+| DirectX12 | Probable (Windows) — out of Phase 17 scope | existing path untouched | ABSENT | `is_directx_available()` DLL probe |
+
+> L081 (pinned/prefetch): API REAL (`register_host_memory`, streams,
+> `async_upload`, `ExpertPrefetcher`), overlap-timing evidence BLOCKED (no GPU).
+> L085 (GPU bench charts): BLOCKED — no device, no measured numbers claimed.
 
 ---
 
@@ -392,7 +432,7 @@ The single binary format for all model data.
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │                    QUANT Format Spec                            │  │
 │  │                                                                 │  │
-│  │  Header (Magic: "QUANT\0", Version, Flags)                      │  │
+│  │  Header (Magic: "TranscenderIDX", Version, Flags)                     │  │
 │  │  ┌─────────────────────────────────────────────────────────┐  │  │
 │  │  │  Metadata: Model type, dimensions, formats, etc.          │  │  │
 │  │  └─────────────────────────────────────────────────────────┘  │  │
@@ -400,7 +440,7 @@ The single binary format for all model data.
 │  │  ┌─────────────────────────────────────────────────────────┐  │  │
 │  │  │  Weight Blocks (Mixed formats)                            │  │  │
 │  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                 │  │  │
-│  │  │  │ QUANT8     │ │ QUANT4     │ │ Ternary  │ ...             │  │  │
+│  │  │  │ QUANT8     │ │ QUANT4     │ │ Q-series │ ...             │  │  │
 │  │  │  │          │ │          │ │          │                 │  │  │
 │  │  │  └──────────┘ └──────────┘ └──────────┘                 │  │  │
 │  │  └─────────────────────────────────────────────────────────┘  │  │
@@ -418,8 +458,8 @@ The single binary format for all model data.
 **Purpose:** Single binary format for model storage and exchange.
 
 **Key Files:**
-- `include/quant/quant_format.h` - QUANT format specification
-- `src/quant_format.cpp` - QUANT format implementation
+- `include/quant/quant_format.h` - QUANT format specification (TranscenderIDX magic header)
+- `src/codec/quant_format.cpp` - QUANT format implementation
 
 ---
 
@@ -434,12 +474,14 @@ Command-line tools for various operations.
 │                                                                     │
 │  Available Tools:                                                   │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  • quant-convert    - Convert models to/from QUANT format         │  │
-│  │  • quant-train      - Train a model from scratch                │  │
-│  │  • quant-infer      - Run inference with a model                 │  │
-│  │  • quant-finetune   - Fine-tune an existing model                │  │
-│  │  • quant-info       - Display model information                  │  │
-│  │  • quant-bench      - Run performance benchmarks                 │  │
+│  │  • quant_infer (tools/infer.cpp)      - Run inference with a model         │  │
+│  │  • quant_train (tools/train.cpp)      - Train a model from scratch          │  │
+│  │  • quant_finetune (tools/finetune.cpp)- Fine-tune an existing model         │  │
+│  │  • quant_convert (tools/convert.cpp)  - Convert models to/from QUANT format │  │
+│  │  • quant_info (tools/info.cpp)        - Display model information           │  │
+│  │  • quant_bench (tools/bench.cpp)      - Run performance benchmarks          │  │
+│  │  • + quant_quantize, quant_serve, quant_server, quant_evaluate,             │  │
+│  │    quant_format_list, generate_comparison_visuals (CMakeLists.txt:344-393) │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 │  Each tool:                                                         │
@@ -577,7 +619,7 @@ Command-line tools for various operations.
 
 ## 🚀 Scalability
 
-InNova is designed to scale from:
+Transcender is designed to scale from:
 
 - **Tiny models** (Millions of parameters) - Runs on CPU, great for testing
 - **Medium models** (Billions of parameters) - Runs on consumer GPUs
@@ -636,7 +678,7 @@ ctest --test-dir build --output-on-failure -j$(nproc)
 
 ## 🎓 Learning Resources
 
-To understand InNova better, study these topics:
+To understand Transcender better, study these topics:
 
 1. **C++20 Features**
    - Concepts
@@ -677,6 +719,17 @@ To understand InNova better, study these topics:
 
 ---
 
+## 🔮 Cender — Future Architecture Core (NOT in tree)
+
+> **Phase 24 truth:** there is **no `Cender/` directory, no `.txn` IR implementation, no
+> Cender code** in this repo. Cender (Transformer replacement: constant-memory
+> `state_{t+1} = decay·state_t + k_t ⊗ err_t`, solving Context Rot / Lost-In-The-Middle
+> by construction) is **deferred to Phase 19-23 behind an owner gate** and its proof is
+> frozen in `docs/THEOREM_CENDER.md` (DRAFT, Gauntlet bar: DeepSeek-V4 MLA + DeltaNet +
+> Titans). Current engine remains Transformer-based (`src/model/transformer.cpp:300`
+> `softmax(Q·K^T/√d)·V`, KV-cache `src/model/kv_cache.cpp`). Any Cender progress claim
+> without new code+bench is **UNVERIFIED**.
+
 ## 📞 Need More Information?
 
 - See **[MODULES/](MODULES/)** for detailed module documentation
@@ -688,4 +741,4 @@ To understand InNova better, study these topics:
 
 ---
 
-*Last updated: July 26, 2026*
+*Last updated: September 7, 2026 (Phase 24 docs-only sync; no build, no code touched)*

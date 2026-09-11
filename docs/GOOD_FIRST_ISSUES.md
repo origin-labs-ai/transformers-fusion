@@ -3,6 +3,9 @@
 > Live list of **open work**, tiered by difficulty. Pick one, comment on the
 > GitHub issue (or open one referencing the ID), and go.
 >
+> **Production-hardening sync (2026-09-11):** v1.1.0 / R0001.01 / 105 formats / TranscenderIDX /
+> 72 ctest cases (72/72 green 2026-09-11). Path truth: `src/codec/` (not `src/` flat) for codec files.
+>
 > Already done / in progress (do NOT pick these): bench encode/decode timing
 > split, warmup+median stats, repo cleanup, `.gitignore` hardening, CSV
 > regression tracker, GLE telemetry module, Q3_G 3-bit affine fix,
@@ -17,8 +20,8 @@
 | GF-01 | Finalize the exceptions policy: either set `-fno-exceptions` and remove/replace the remaining `try/catch` blocks, or update the README coding standard to match reality | README.md, CMakeLists.txt, ~66 try blocks | Docs-vs-reality consistency; great way to learn the codebase |
 | GF-02 | HTTP server pass-1 hardening: unify timeout handling (single style), add request-line size cap (~8KB) and header cap (~64KB) with `413` responses | tools/quant_server.cpp | First step toward production server |
 | GF-03 | Add module smoke tests: world_model, multi_agent, ocr/video/audio currently have ZERO tests | tests/ (new files) | Coverage gap; simple asserts welcome |
-| GF-04 | Investigate `test_quant_mix` failures (4 sub-asserts: adaptive allocation vs magnitude-sorted at same BPW) — root-cause report or fix | tests/test_quant_mix.cpp, src/block_codec.cpp (mix paths) | Pre-existing failure; needs a detective |
-| GF-05 | Add runtime asserts: QUAD_MIX must have EXACTLY 4 components, TWI_MIX exactly 2, weights sum to 1.0 ±1e-6 | include/quant/format_registry.h, src/format_planner.cpp | Guards a core design rule |
+| GF-04 | Investigate `test_quant_mix` (was failing in a stale run per ledger C-07; **72/72 green on 2026-09-11** — pick only if a fresh `ctest -R test_quant_mix` fails) | tests/test_quant_mix.cpp, src/codec/block_codec.cpp (mix paths) | Pre-existing failure; needs a detective |
+| GF-05 | SUPERSEDED (Phase 24): TWI_MIX was removed by design (ledger C-01; `src/codec/format_registry.cpp:73-76` stub-empty) — QUAD_MIX no longer exists either (v3 has only 4-variant `Q_MX_*`/`QG_MX_*`). Replacement task: add runtime asserts that `format_bpw()` true-wire values match the names' budgets per `include/quant/types.h:97-129` | include/quant/format_registry.h, src/codec/format_planner.cpp | Guards a core design rule |
 
 ## 🟡 Intermediate
 
@@ -34,7 +37,7 @@
 | INT-08 | Auto-generate benchmark tables/plots from CSV only (no hand-copied numbers anywhere) | scripts/plot_comparison_charts.py | Generated file should embed source-CSV hash |
 | INT-09 | Reasoning-budget hooks: low/high/max sampling-depth parameter plumbed through sampler/generator | sampler.h, generator.h | GLM-5.3-style serving flexibility |
 | INT-10 | MXFP4 weight-format study → feasibility doc for a `.quant` bridge | docs/ (new doc) | Research + writing; no kernel work needed |
-| INT-11 | Split god-files: `block_codec.cpp` (1900+ lines) → codec modules under 800 lines each | src/block_codec.cpp | Refactor with zero behavior change; tests must stay green |
+| INT-11 | Split god-files: `src/codec/block_codec.cpp` (1900+ lines — UNVERIFIED line count, recount before scoping) → codec modules under 800 lines each | src/codec/block_codec.cpp | Refactor with zero behavior change; tests must stay green |
 
 ## 🔴 Advanced (high impact)
 
@@ -42,16 +45,16 @@
 |---|---|---|---|
 | ADV-01 | Multi-arch safetensors loader: LLaMA-family dense first (llama/mistral/qwen-dense) → convert → generate | src/adapters/, converters | Llama-3.2-1B end-to-end demo is the exit test |
 | ADV-02 | MoE arch loader (Mixtral-style, DeepSeek-style routing configs) | same | Builds on ADV-01 |
-| ADV-03 | MLA (multi-head latent attention) KV compression — target ≥90% cache reduction vs MHA at parity quality | NEW mla_attention.*, kv_cache.h | DeepSeek V4 Flash papers |
+| ADV-03 | compressed (multi-head latent attention) KV compression — target ≥90% cache reduction vs MHA at parity quality | NEW compressed_attention.*, kv_cache.h | DeepSeek V4 Flash papers |
 | ADV-04 | FP8 E4M3/E5M2 dtype + conversion kernels + block-FP8 checkpoint loader | types.h, adapters/ | Qwen3.8 block-FP8 expert checkpoints |
 | ADV-05 | GatedDeltaNet linear attention layer (gated delta-rule, O(n) sequence cost) | transformer stack | Qwen3.8 hybrid attention |
-| ADV-06 | KDA-style delta-rule linear attention variant + hybrid attention scheduler (configurable full:linear ratio, e.g. K3's 3:1) | transformer stack | Shares math with ADV-05 |
+| ADV-06 | linear-style delta-rule linear attention variant + hybrid attention scheduler (configurable full:linear ratio, e.g. 3:1) | transformer stack | Shares math with ADV-05 |
 | ADV-07 | YARN/NTK context scaling: 256K native → 1M expandable mode; needle-in-haystack mini-benchmark | rope utils | Qwen3.8/GLM-5.3 long-context |
 | ADV-08 | MTP (multi-token prediction) head + training loss (+ optional speculative-decode tie-in) | trainer, generator | Qwen3.8 training method |
 | ADV-09 | CUDA quantized kernels: Q4/Q8 GEMV/GEMM decode path; exit test = ≥5x CPU tok/s on a consumer GPU | gpu_compute_cuda | Parity vs CPU reference mandatory |
 | ADV-10 | Metal quantized kernels for M-series | gpu_compute_metal | Same bar as ADV-09 |
 | ADV-11 | Async RL rollout worker skeleton (single-node producer/consumer, deterministic replay flag) | trainer_rl_ops | vLLM/slime-inspired pattern |
-| ADV-12 | GRPO verification + completion in the native RLL loop | src/trainer_rl.cpp | Claim-ledger item C-10 |
+| ADV-12 | GRPO verification + completion in the native RLL loop | src/trainer/trainer_rl.cpp (was `src/trainer_rl.cpp` — STALE flat path) | Claim-ledger item C-10 |
 
 ---
 

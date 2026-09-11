@@ -1,6 +1,13 @@
 # Usage Guide
 
-> **How to Use InNova for Inference and Training**
+> **How to Use Transcender for Inference and Training**
+>
+> **Production-hardening sync (2026-09-11):** version **1.1.0 / R0001.01**, **105 Q-series formats**
+> (`FORMAT_COUNT=105`, `include/quant/types.h:67`, no TWI), index magic **TranscenderIDX**
+> (`src/codec/quant_format.cpp:546`). Tool binaries use underscores
+> (`quant_infer`, `quant_train`, … — `CMakeLists.txt:344-393`), not dashes. Example
+> numbers below (dimensions, parameter counts, MB sizes, BPW splits) are **UNVERIFIED**
+> illustrative outputs unless they trace to `bench_format_comparison.csv`.
 
 ---
 
@@ -78,7 +85,7 @@
 
 ### quant-infer - Run Inference
 
-**Description:** Run inference with a trained InNova model.
+**Description:** Run inference with a trained Transcender model.
 
 **Usage:**
 ```bash
@@ -273,7 +280,7 @@ quant-convert -i model.gguf -o model.quant --format gguf
 
 ### quant-info - Display Model Information
 
-**Description:** Display information about a InNova model.
+**Description:** Display information about a Transcender model.
 
 **Usage:**
 ```bash
@@ -320,12 +327,12 @@ Heads: 8
 Vocab Size: 50257
 Parameters: 12,345,678
 
-Format: QUANT (Mixed)
-Average BPW: 1.50
-Formats:
-  - QUANT8: 1% of weights (salient)
-  - QUANT4: 4% of weights (moderately important)
-  - Ternary: 95% of weights (least important)
+Format: QUANT (Mixed, v3 Q-series — e.g. QG8/Q8 for salient, Q4 for mid, Q1/Q2 for bulk; NO Ternary/Binary — removed per pure-Q policy, ledger C-01)
+Average BPW: 1.50 (UNVERIFIED example value — illustrative only)
+Formats (UNVERIFIED example split — illustrative only):
+  - Q8/QG8: salient weights
+  - Q4: moderately important weights
+  - Q1/Q2: bulk weights
 
 Codebook:
   - QUANT8: 256 entries (FP32)
@@ -397,7 +404,7 @@ quant-bench -m model.quant -p prompts.txt -n 100 --gpu
 
 ## 📖 Using the C++ API
 
-For programmatic access to InNova functionality, you can use the C++ API directly.
+For programmatic access to Transcender functionality, you can use the C++ API directly.
 
 ### Basic Setup
 
@@ -549,7 +556,7 @@ int main() {
 
 ## 🔧 Configuration Files
 
-InNova uses JSON files for configuration.
+Transcender uses JSON files for configuration.
 
 ### Model Configuration
 
@@ -620,10 +627,10 @@ InNova uses JSON files for configuration.
 
 | Use Case | Target BPW | Formats Used |
 |----------|-----------|--------------|
-| Maximum Quality | 3.0+ | Mostly QUANT8 |
-| Balanced | 1.50-2.0 | QUANT8 + QUANT4 + Ternary |
-| Compact | 1.0-1.5 | QUANT4 + Ternary + Binary |
-| Minimum Size | < 1.0 | Binary + Ternary |
+| Maximum Quality | 3.0+ | Mostly Q8/QG8 (UNVERIFIED guidance — no end-task bench source) |
+| Balanced | 1.50-2.0 | Q8 + Q4 + Q1/Q2 mix (UNVERIFIED guidance) |
+| Compact | 1.0-1.5 | Q4 + Q1/Q2 (UNVERIFIED guidance) |
+| Minimum Size | < 1.0 | Q1 family (UNVERIFIED guidance — sub-1.0 has no registered format; minimum is Q1=1.0) |
 
 ### 3. Training Tips
 

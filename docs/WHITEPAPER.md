@@ -1,6 +1,6 @@
 # Native Mixed-Precision Training via Quantization Barriers: A Learning Algorithm with Stronger Implicit Regularization than FP32
 
-**InNova Research Lab**
+**Transcender Research Lab**
 
 *Version 1.0 — July 2026*
 
@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We present **QUANT** (Quantized Adaptive Neural Tensors), a native mixed-precision training framework that reframes quantization not as a post-hoc compression technique, but as a fundamentally different optimization algorithm. QUANT trains neural networks directly in a mixed-precision codebook space comprising QUANT8 (8-bit index, 256-entry codebook), QUANT4 (4-bit index, 16-entry codebook), QUANT_Q0 (sign-bit quantized with per-block FP16 scale), and QUANT1 (block mean) formats, achieving effective rates of **1.92–2.08 bits per weight** in its adaptive low-bit band. A low-bit format cannot reach FP32-level MSE — the rate-distortion floor is far above FP32's zero-error baseline (Table 10, tests/test_quant_mix.cpp); the honest, tested strengths are beating every uniform format in the same bit-budget band, a column-granular (32-w) quality lift, and a measurable rate-distortion ceiling (the exact column-knapsack floor bounds Q0 near ~4.3e-4 MSE).
+We present **QUANT** (Quantized Adaptive Neural Tensors), a native mixed-precision training framework that reframes quantization not as a post-hoc compression technique, but as a fundamentally different optimization algorithm. QUANT trains neural networks directly in a mixed-precision codebook space comprising QUANT8 (8-bit index, 256-entry codebook), QUANT4 (4-bit index, 16-entry codebook), Q1_5 (sign-bit quantized with per-block FP16 scale), and QUANT1 (block mean) formats, achieving effective rates of **1.92–2.08 bits per weight** in its adaptive low-bit band. A low-bit format cannot reach FP32-level MSE — the rate-distortion floor is far above FP32's zero-error baseline (Table 10, tests/test_quant_mix.cpp); the honest, tested strengths are beating every uniform format in the same bit-budget band, a column-granular (32-w) quality lift, and a measurable rate-distortion ceiling (the exact column-knapsack floor bounds Q0 near ~4.3e-4 MSE).
 
 The central theoretical contribution is the **quantization barrier mechanism**: when the gradient magnitude falls below the codebook gap divided by the learning rate, the parameter update is identically zero. This creates a discrete-continuous hybrid dynamical system whose fixed points are provably stable (Theorem 5d.3, exponential convergence), and whose dead zones act as automatic noise filters that suppress low-magnitude gradient noise while preserving high-sensitivity directions. We prove that this mechanism yields **5–10× tighter algorithmic stability bounds** than FP32 SGD (Corollary 5e.2), with the Hardt-Recht-Singer uniform stability ratio satisfying ε\_QUANT/ε\_FP32 ≤ t\_avg/T ≈ 0.10–0.20.
 
@@ -18,7 +18,7 @@ Under the **Critical Importance Distribution** (CID) assumption — that weight 
 
 The confidence interval contains zero, meaning the theory bounds the gap but does not prove a sign. Empirically, across 40/40 random seeds at four model scales (d = 10, 50, 100, 200), native QUANT training **strictly outperforms FP32**, with mean test loss reductions of 15–29% depending on scale.
 
-At the systems level, QUANT achieves **21× storage reduction** (188 MB vs 4 GB for a 10⁹-parameter model) with a single-binary C++20 deployment requiring zero external dependencies. The InNova engine implements the complete pipeline — from tokenization through training with Straight-Through Estimator (STE) quantization and codebook updates, to inference with hand-written SIMD kernels (I2\_S MAD, TL1/TL2 LUT, QUANT8/QUANT4 gather-accumulate) — all in approximately 97,500 lines of C++20 code.
+At the systems level, QUANT achieves **21× storage reduction** (188 MB vs 4 GB for a 10⁹-parameter model) with a single-binary C++20 deployment requiring zero external dependencies. The Transcender engine implements the complete pipeline — from tokenization through training with Straight-Through Estimator (STE) quantization and codebook updates, to inference with hand-written SIMD kernels (I2\_S MAD, TL1/TL2 LUT, QUANT8/QUANT4 gather-accumulate) — all in approximately 97,500 lines of C++20 code.
 
 **Keywords:** Mixed-precision training, quantization barriers, PAC-Bayes bounds, algorithmic stability, codebook learning, implicit regularization, SIMD inference, native C++ deep learning.
 
@@ -64,13 +64,13 @@ This distinction is critical: post-training quantization takes an FP32-optimal s
 
 4. **Diagonal dominance theorem.** We prove that for wide neural networks (width m ≥ 10³), the empirical Hessian is diagonally dominant with high probability (Theorem 4a), bounding the cross-term contribution to the approximation error as O(d^{−½}).
 
-5. **Complete C++ implementation.** InNova is a zero-dependency C++20 engine implementing the full pipeline: QUANT8/QUANT4/QUANT_Q0/QUANT1 formats, FormatPlanner with in-house importance scoring, STE training with codebook updates, and SIMD-accelerated inference kernels.
+5. **Complete C++ implementation.** Transcender is a zero-dependency C++20 engine implementing the full pipeline: QUANT8/QUANT4/Q1_5/QUANT1 formats, FormatPlanner with in-house importance scoring, STE training with codebook updates, and SIMD-accelerated inference kernels.
 
 6. **Empirical validation.** We demonstrate that native QUANT outperforms FP32 in 40/40 random seeds across four model scales, with the advantage largest at lower d/n ratios (29% reduction at d=50) and remaining significant at high overparameterization (16% at d=200).
 
 ### 1.5 Paper Organization
 
-Section 2 reviews related work. Section 3 establishes notation and preliminary results. Section 4 describes the QUANT framework and format specifications. Section 5 presents the core theoretical analysis including the quantization barrier, PAC-Bayes bounds, and algorithmic stability. Section 6 formalizes the CID assumption and proves its connection to data covariance structure. Section 7 presents experimental results. Section 8 describes the InNova engine architecture. Section 9 compares with industrial quantization methods. Section 10 discusses production deployment. Section 11 addresses safety and alignment. Section 12 presents limitations and future work. Section 13 concludes.
+Section 2 reviews related work. Section 3 establishes notation and preliminary results. Section 4 describes the QUANT framework and format specifications. Section 5 presents the core theoretical analysis including the quantization barrier, PAC-Bayes bounds, and algorithmic stability. Section 6 formalizes the CID assumption and proves its connection to data covariance structure. Section 7 presents experimental results. Section 8 describes the Transcender engine architecture. Section 9 compares with industrial quantization methods. Section 10 discusses production deployment. Section 11 addresses safety and alignment. Section 12 presents limitations and future work. Section 13 concludes.
 
 ---
 
@@ -88,11 +88,11 @@ Section 2 reviews related work. Section 3 establishes notation and preliminary r
 
 ### 2.2 Training-Aware Quantization
 
-**QUANT-Q0 Style Quantization.** Prior work on sign-magnitude quantization with per-block scaling demonstrates that weights can be compressed to 1.5 bits per weight with minimal quality loss. The forward pass for QUANT_Q0 requires only gather-add operations with a per-block FP16 scale factor. Training uses the Straight-Through Estimator (STE) — gradients pass through the quantization step as if it were the identity function. This is the foundational result that QUANT builds upon: the proof that models trained natively in a compressed format do not suffer the quality loss of post-training quantization.
+**QUANT-Q0 Style Quantization.** Prior work on sign-magnitude quantization with per-block scaling demonstrates that weights can be compressed to 1.5 bits per weight with minimal quality loss. The forward pass for Q1_5 requires only gather-add operations with a per-block FP16 scale factor. Training uses the Straight-Through Estimator (STE) — gradients pass through the quantization step as if it were the identity function. This is the foundational result that QUANT builds upon: the proof that models trained natively in a compressed format do not suffer the quality loss of post-training quantization.
 
-**QUANT Inference Kernels.** Efficient CPU inference kernels for QUANT_Q0 use 2-bit sign-magnitude packing with per-block FP16 scales. QUANT_Q1 extends this with sparse storage of significant weights, achieving variable BPW. QUANT adopts both approaches and extends them to QUANT8 and QUANT4 codebook lookups, enabling mixed-precision allocation with higher precision for salient weights.
+**QUANT Inference Kernels.** Efficient CPU inference kernels for Q1_5 use 2-bit sign-magnitude packing with per-block FP16 scales. QUANT_Q1 extends this with sparse storage of significant weights, achieving variable BPW. QUANT adopts both approaches and extends them to QUANT8 and QUANT4 codebook lookups, enabling mixed-precision allocation with higher precision for salient weights.
 
-**1-bit Weight Foundations.** Early work on 1-bit neural network training ([Wang et al., 2023](arXiv:2310.11453)) demonstrated that transformer language models could be trained with binary weights while maintaining competitive performance. Mixed-precision allocation (QUANT8 + QUANT_Q0) extends this by routing salient weights to high-resolution codebooks while compressing the remainder via QUANT_Q0.
+**1-bit Weight Foundations.** Early work on 1-bit neural network training ([Wang et al., 2023](arXiv:2310.11453)) demonstrated that transformer language models could be trained with binary weights while maintaining competitive performance. Mixed-precision allocation (QUANT8 + Q1_5) extends this by routing salient weights to high-resolution codebooks while compressing the remainder via Q1_5.
 
 ### 2.3 Mixed-Precision Training
 
@@ -204,7 +204,13 @@ connects PAC-Bayes complexity to information-theoretic generalization. The effec
 
 ### 4.1 Format Definitions
 
-QUANT defines a complete family of weight formats spanning 1.0–32.0 BPW, enabling optimal quality-size tradeoffs via single-precision, twi-mix, and four-mix allocations:
+QUANT defines a complete family of weight formats spanning 1.0–32.0 BPW. **Phase 24 note:**
+the tables below are a **stale v1/v2 snapshot** (QUANT*/TWI_MIX/QUAD naming). One-truth is
+the v3 Q-series: **105 formats, `FORMAT_COUNT=105`** (`include/quant/types.h:22-67`:
+base10 + K×27 + GRP×9 + K_G×27 + half×9 + half-GRP×9 + 14 mixes `Q_MX_*`/`QG_MX_*`;
+**no TWI by design**, ledger C-01). Canonical BPW table: `format_bpw()`
+(`include/quant/types.h:97-129`, true wire BPW). Full table rewrite owed — until then,
+`types.h` + `bench_format_comparison.csv` govern. Allocations below were single-precision, twi-mix, and four-mix in v1/v2 terms:
 
 **Table 1: QUANT Single-Precision Formats (Approved)**
 
@@ -233,13 +239,13 @@ QUANT defines a complete family of weight formats spanning 1.0–32.0 BPW, enabl
 | QUANT8+QUANT4 5/95 | 4.20 | QUANT8 (5%) + QUANT4 (95%) | CID-weighted allocation |
 | QUANT4+QUANT2 10/90 | 2.30 | QUANT4 (10%) + QUANT2 (90%) | CID-weighted allocation |
 | QUANT8+QUANT2 10/90 | 2.60 | QUANT8 (10%) + QUANT2 (90%) | High-sensitivity → QUANT8 |
-| QUANT+QUANT8 5/95 | 7.62 | QUANT_Q0 (5%) + QUANT8 (95%) | Mixed sparsity |
+| QUANT+QUANT8 5/95 | 7.62 | Q1_5 (5%) + QUANT8 (95%) | Mixed sparsity |
 | QUANT16+QUANT4 1/99 | 4.16 | QUANT16 (1%) + QUANT4 (99%) | Top-K high precision |
 | QUANT16+QUANT8 5/95 | 8.40 | QUANT16 (5%) + QUANT8 (95%) | CID spectrum |
 | QUANT32+QUANT8 1/99 | 8.24 | QUANT32 (1%) + QUANT8 (99%) | Critical weight protection |
 | 4-mix QUAD | 2.92-5.84 | Multiple QUANT formats | Full CID spectrum |
 
-**Key innovation: Sub-block grouping (GRP) improves quantization quality.** QUANT2_G, QUANT4_G, and QUANT8_G store REAL per-64-weight group state (FP16 zero-point + FP16 scale) applied on decode, at a cost of 0.5 BPW included in the honest claim: QUANT2_G (2.5), QUANT4_G (4.5), QUANT8_G (8.5). QUANT_Q0_G (1.5) and QUANT1_G (1.0) store a single block-level FP16 scale, and QUANT_Q1_G (2.0) stores two per-half-block FP16 scales, all inside their claimed BPW. QUANT16_G is FP16-native storage, identical to QUANT16 (16.0 BPW; grouping adds nothing at full precision). The per-group normalization lets the fixed lattice levels track each group's local mean/scale, so grouped variants achieve lower MSE than their ungrouped twins at the same index rate.
+**Key innovation: Sub-block grouping (GRP) improves quantization quality (v1/v2 names below; v3: `QG2` etc.). Phase 24 correction:** the old "+0.5 BPW included in the honest claim" framing is WITHDRAWN — `format_bpw()` now reports **true wire BPW** (audit 2026-08-26 option-c, ledger A-01: 31 name-vs-wire violations found; e.g. QG2=2.625, QG8=8.5 per `include/quant/types.h:97-129`). Original v1/v2 text preserved for history: QG2, QUANT4_G, and QUANT8_G store REAL per-64-weight group state (FP16 zero-point + FP16 scale) applied on decode, at a cost of 0.5 BPW included in the honest claim: QG2 (2.5), QUANT4_G (4.5), QUANT8_G (8.5). QG_1_5 (1.5) and QG1 (1.0) store a single block-level FP16 scale, and QUANT_Q1_G (2.0) stores two per-half-block FP16 scales, all inside their claimed BPW. QUANT16_G is FP16-native storage, identical to QUANT16 (16.0 BPW; grouping adds nothing at full precision). The per-group normalization lets the fixed lattice levels track each group's local mean/scale, so grouped variants achieve lower MSE than their ungrouped twins at the same index rate.
 
 **QUANT8** uses an 8-bit index into a 256-entry codebook of FP32 centroids. During inference, each weight is dequantized by gathering the FP32 centroid value from the codebook, then performing a standard fused multiply-add (FMA) with the activation. The 256-entry codebook provides sufficient granularity to match FP32 quality for most weight distributions, with quantization variance σ²\_Q₈ = (6/256)²/12 = 4.58×10⁻⁵.
 
@@ -284,10 +290,10 @@ where x\_i are activations from a calibration dataset and w\_k is the mean weigh
 ```
 Top 1% (highest score) → QUANT8   (8.0 BPW)
 Next 4%               → QUANT4   (4.0 BPW)
-Remaining 95%         → QUANT_Q0 (1.5 BPW) or QUANT1 (1.0 BPW)
+Remaining 95%         → Q1_5 (1.5 BPW) or QUANT1 (1.0 BPW)
 ```
 
-**Step 3: BPW Tuning.** If the average BPW exceeds the target (e.g., 1.50), shift the boundary: convert some QUANT_Q0 blocks to QUANT1, or some QUANT1 to QUANT_Q0, to hit the target exactly.
+**Step 3: BPW Tuning.** If the average BPW exceeds the target (e.g., 1.50), shift the boundary: convert some Q1_5 blocks to QUANT1, or some QUANT1 to Q1_5, to hit the target exactly.
 
 **Step 4: Export.** Produce a FormatTable mapping each weight block to its assigned format, codebook, and index data.
 
@@ -331,7 +337,7 @@ The core theoretical insight of QUANT is the **quantization barrier**: the index
 |η · g_j| < s_j · min_{k≠k'} |c(k) − c(k')| / 2
 ```
 
-For QUANT_Q0 weights with min gap = 0.5 (the gap between quantized levels):
+For Q1_5 weights with min gap = 0.5 (the gap between quantized levels):
 
 > |η · g\_j| < s\_j / 4
 
@@ -377,7 +383,7 @@ The QUANT binary format (.quant) stores model weights, format metadata, and conf
 QUANT8:    [codebook: 256×f32 bytes] [indices: 1 byte per weight]
 QUANT4:    [codebook: 16×f16 bytes]  [indices: nibble-packed, 2 per byte]
 QUANT1:    [centroid: f32 bytes]     [scale: 4 bytes per block]
-QUANT_Q0: [codebook: 4×f16 bytes]  [indices: 2-bit packed, 4 per byte]
+Q1_5: [codebook: 4×f16 bytes]  [indices: 2-bit packed, 4 per byte]
 ```
 
 For a 10⁹-parameter model at 1.5 BPW, the total storage is:
@@ -415,7 +421,7 @@ Equation (1) is **exact** — the difference in generalization gaps, not the dif
 
 #### 5.2.1 KL Divergence: Mixed Format
 
-**Prior P\_m:** Each weight w\_j is represented by a codebook index i\_j ∈ {0,…,K\_{t\_j}−1} where the type t\_j and the shared codebooks are fixed (trained once via k-means, not updated during task learning). For QUANT_Q0/QUANT1, the per-weight scale s\_j ∈ ℝ⁺ is part of the hypothesis. K\_QUANT8 = 256, K\_QUANT4 = 16, K\_QUANT\_Q0 = 4, K\_QUANT1 = 1.
+**Prior P\_m:** Each weight w\_j is represented by a codebook index i\_j ∈ {0,…,K\_{t\_j}−1} where the type t\_j and the shared codebooks are fixed (trained once via k-means, not updated during task learning). For Q1_5/QUANT1, the per-weight scale s\_j ∈ ℝ⁺ is part of the hypothesis. K\_QUANT8 = 256, K\_QUANT4 = 16, K\_QUANT\_Q0 = 4, K\_QUANT1 = 1.
 
 Uniform prior over index assignments. For scales, we use a truncated log-normal prior (proper):
 
@@ -598,7 +604,7 @@ Standard projected SGD convergence theorems require a convex projection set. The
 where ε\_discrete is the residual from discrete index assignment, bounded by the codebook resolution:
 
 ```
-ε_discrete ≤ max(Δ_QUANT8, Δ_QUANT_Q0, Δ_QUANT1)² / 2
+ε_discrete ≤ max(Δ_QUANT8, Δ_Q1_5, Δ_QUANT1)² / 2
 ```
 
 For QUANT8 (K=256, resolution 0.0078σ\_w): ε\_discrete ≤ 3×10⁻⁵·σ\_w².
@@ -641,14 +647,14 @@ The critical differences:
 
 3. **Effective learning rate asymmetry.** Scale updates are continuous but index updates are discrete, favoring directions where scale adjustments suffice (radial) over those requiring index changes (tangential). This aligns with CID: important weights receive QUANT8 with 256 fine-grained indices.
 
-*Proof.* For a single QUANT_Q0 weight θ = (i, s) with dequantized value ŵ = s · c(i):
+*Proof.* For a single Q1_5 weight θ = (i, s) with dequantized value ŵ = s · c(i):
 
 ```
 ∂L/∂s = c(i) · ∂L/∂ŵ
 ∂L/∂i = s · c'(i) · ∂L/∂ŵ
 ```
 
-The quantization barrier claim: if |η · ∂L/∂i| < s\_t / 2, then i\_{t+1} = i\_t. The dead zone radius is s\_t/2 for QUANT_Q0 and s\_t · σ\_w / 64 for QUANT8. □
+The quantization barrier claim: if |η · ∂L/∂i| < s\_t / 2, then i\_{t+1} = i\_t. The dead zone radius is s\_t/2 for Q1_5 and s\_t · σ\_w / 64 for QUANT8. □
 
 ### 5.7 Dynamical Systems Analysis of the Quantization Barrier
 
@@ -700,7 +706,7 @@ For small η, this probability → 0 after t ≥ t\_0, explaining the empirical 
 
 ### 5.8 Gradient Dead Zone → Algorithmic Stability
 
-**Theorem 5e (Gradient dead zone → noise filtering).** For any QUANT_Q0 weight w\_j = s\_j · c(i\_j), when |g\_j| < s\_j/η, the index does not change: i\_j^{t+1} = i\_j^t. This is a contraction with coefficient 0 (zero update).
+**Theorem 5e (Gradient dead zone → noise filtering).** For any Q1_5 weight w\_j = s\_j · c(i\_j), when |g\_j| < s\_j/η, the index does not change: i\_j^{t+1} = i\_j^t. This is a contraction with coefficient 0 (zero update).
 
 **Corollary 5e.2 (Algorithmic stability via non-expansive updates).** Under the HRS framework, the QUANT SGD update for a frozen-index weight is an isometry (zero growth). For the full algorithm:
 
@@ -795,7 +801,7 @@ Plugging values (d=10⁹, n=10¹², δ=0.05):
 
 #### 5.10.1 Expressivity of the QUANT Hypothesis Class
 
-**Framework expressivity (configurable, B=1 — theoretical only).** For per-weight scale (B = 1), any w ∈ ℝ can be represented exactly by QUANT_Q0: set s = |w|, index = sign(w) + 1.
+**Framework expressivity (configurable, B=1 — theoretical only).** For per-weight scale (B = 1), any w ∈ ℝ can be represented exactly by Q1_5: set s = |w|, index = sign(w) + 1.
 
 **Theorem 7a (Framework Ô ⊇ ℝ^d — configurable framework only).** The QUANT framework with configurable per-weight scaling (B = 1) can represent ANY FP32 weight vector exactly:
 
@@ -803,7 +809,7 @@ Plugging values (d=10⁹, n=10¹², δ=0.05):
 ∀W ∈ ℝ^d, ∃θ : dequantize_QUANT(θ) = W
 ```
 
-*Proof.* For each weight w\_j, assign QUANT_Q0 with B = 1. Set θ\_j = (s\_j = |w\_j|, i\_j = sign(w\_j) + 1). The dequantized value is s\_j · code(i\_j) = |w\_j| · sign(w\_j) = w\_j. □
+*Proof.* For each weight w\_j, assign Q1_5 with B = 1. Set θ\_j = (s\_j = |w\_j|, i\_j = sign(w\_j) + 1). The dequantized value is s\_j · code(i\_j) = |w\_j| · sign(w\_j) = w\_j. □
 
 **Default configuration (block\_size = 128).** In the practical default, 128 weights share one scale. Here ℋ\_m(Default) ⊂ ℝ^d strictly. The PAC-Bayes CI already accounts for this.
 
@@ -828,7 +834,7 @@ s_{(i)} ≤ C · i^{-p}    for some p > 0, C > 0
 | Kurtz et al. (2020) | Mixed-precision sensitivity | ResNet, MobileNet | 0.9–1.2 | 35–50% |
 | Dettmers et al. (2022) | Outlier-aware quantization | OPT, BLOOM (176B) | 1.0–1.3 | 30–45% |
 
-**Theorem 7b (Sensitivity Preservation).** Under H7 with allocation rule (QUANT8 to top-k, QUANT_Q0 to middle, QUANT1 to lowest-k), the relative functional quantization error:
+**Theorem 7b (Sensitivity Preservation).** Under H7 with allocation rule (QUANT8 to top-k, Q1_5 to middle, QUANT1 to lowest-k), the relative functional quantization error:
 
 ```
 ε_rel = (Σ_i s_i · σ²_Q(i)) / (Σ_i s_i) ≤ σ²_Q_low · (1 − (k/d)^{1−p}) + σ²_Q₈ · (k/d)^{1−p}
@@ -971,7 +977,7 @@ The last row confirms: CID fails only for isotropic random noise — exactly the
 
 ### 7.1 Proof-of-Concept: Multi-Scale Linear Regression
 
-**Setup.** Linear regression with power-law CID weights (top 1% carry ~50% signal variance, matching real LLM weight distributions). Noise σ\_ξ = 0.5, n\_test = 2000, 30 epochs SGD, 10 random seeds per scale. QUANT Mixed: 1% QUANT8 (256-entry shared codebook, 8-bit indices), 95% QUANT_Q0 (4-level sign+scale, per-block FP16 scale), 4% QUANT1 (block mean). Effective rate = 1.5 bits/weight.
+**Setup.** Linear regression with power-law CID weights (top 1% carry ~50% signal variance, matching real LLM weight distributions). Noise σ\_ξ = 0.5, n\_test = 2000, 30 epochs SGD, 10 random seeds per scale. QUANT Mixed: 1% QUANT8 (256-entry shared codebook, 8-bit indices), 95% Q1_5 (4-level sign+scale, per-block FP16 scale), 4% QUANT1 (block mean). Effective rate = 1.5 bits/weight.
 
 **Table 5: Multi-Scale Benchmark Results**
 
@@ -1001,11 +1007,11 @@ We apply the FormatPlanner to 8 weight matrices from a GPT-2 architecture, measu
 | ffn\_up.weight | [3072, 768] | QUANT4 | 4.3×10⁻⁴ | 0.05% |
 | ffn\_down.weight | [768, 3072] | QUANT4 | 3.9×10⁻⁴ | 0.04% |
 | ffn\_gate.weight | [3072, 768] | QUANT4 | 4.1×10⁻⁴ | 0.05% |
-| embed.weight | [50257, 768] | QUANT_Q0 | 2.8×10⁻³ | 0.3% |
+| embed.weight | [50257, 768] | Q1_5 | 2.8×10⁻³ | 0.3% |
 | ln\_1.weight | [768] | QUANT8 | 5.2×10⁻⁷ | 0.001% |
 | ln\_2.weight | [768] | QUANT8 | 4.8×10⁻⁷ | 0.001% |
 
-The attention projection matrices (most sensitive) receive QUANT8 with near-FP32 quality. The FFN matrices receive QUANT4 with modest quality loss. The embedding matrix (least sensitive per CID) receives QUANT_Q0 format.
+The attention projection matrices (most sensitive) receive QUANT8 with near-FP32 quality. The FFN matrices receive QUANT4 with modest quality loss. The embedding matrix (least sensitive per CID) receives Q1_5 format.
 
 ### 7.3 Cross-BPW Wins: QUANT X Beating Industry 2X
 
@@ -1020,7 +1026,7 @@ A key advantage of mixed-precision allocation is that QUANT at X BPW can outperf
 | 1.5 | Mixed (CID-weighted) | 2.0×10⁻³ | INT4 (4 BPW) | 4.5×10⁻³ | **QUANT** |
 | 2.0 | QUANT8+QUANT\_Q0 | 1.5×10⁻³ | INT4 (4 BPW) | 4.5×10⁻³ | **QUANT** |
 
-At 2.0 BPW, QUANT8+QUANT_Q0 (critical weights in QUANT8, rest in QUANT_Q0) beats INT4 uniform by 3× in MSE while using half the bits. The advantage comes from CID-weighted allocation: high-sensitivity weights get 256-entry codebooks while low-sensitivity weights use 4-level QUANT_Q0.
+At 2.0 BPW, QUANT8+Q1_5 (critical weights in QUANT8, rest in Q1_5) beats INT4 uniform by 3× in MSE while using half the bits. The advantage comes from CID-weighted allocation: high-sensitivity weights get 256-entry codebooks while low-sensitivity weights use 4-level Q1_5.
 
 ### 7.4 Per-Layer Analysis Across 24 Transformer Layers
 
@@ -1042,7 +1048,7 @@ Deeper layers require slightly more QUANT8 capacity (attention patterns are more
 
 ### 7.5 Why Native Quantized Training
 
-**Design principle.** InNova trains directly in the quantized space. Quantization lives in the forward pass (STE), so gradients flow straight through the quantizer and every learnable component — weights, per-block scales, codebook centroids — adapts during training:
+**Design principle.** Transcender trains directly in the quantized space. Quantization lives in the forward pass (STE), so gradients flow straight through the quantizer and every learnable component — weights, per-block scales, codebook centroids — adapts during training:
 
 | Aspect | Post-training quantization | In-house native training |
 |--------|---------------------------|--------------------------|
@@ -1073,19 +1079,19 @@ At 48T parameters (projected maximum), QUANT 1.5 BPW requires approximately 9 TB
 
 ---
 
-## 8. The InNova Engine
+## 8. The Transcender Engine
 
 ### 8.1 Architecture Overview
 
-InNova is a zero-dependency C++20 AI engine implementing the complete QUANT pipeline. The architecture is organized into four layers:
+Transcender is a zero-dependency C++20 AI engine implementing the complete QUANT pipeline. The architecture is organized into four layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        InNova                               │
+│                        Transcender                               │
 ├─────────────────────────────────────────────────────────────────┤
 │  CORE LAYER: Types, Memory, Tensor, Random                      │
 │  MATH LAYER: BLAS (gemm/gemv/dot/axpy), Pointwise, SIMD        │
-│  FORMAT LAYER: Codebook (QUANT8/QUANT4/QUANT_Q0/QUANT1), Planner     │
+│  FORMAT LAYER: Codebook (QUANT8/QUANT4/Q1_5/QUANT1), Planner     │
 │  MODEL LAYER: Transformer, Dense/MoE/MultiModal                  │
 │  INFERENCE: KV Cache, Sampler, Generator, Streaming              │
 │  TRAINING: Autograd (10 ops, DFS backward), AdamW, STE          │
@@ -1103,13 +1109,13 @@ The .quant binary format (§4.6) stores model weights, format metadata, and conf
 - **Version field** for backward compatibility
 - **Per-block format table** enabling mixed-precision allocation
 - **Named tensor table** mapping semantic names (e.g., "attn.qkv.weight") to block ranges
-- **Packed indices** minimizing storage overhead (nibble-packed QUANT4, 2-bit packed QUANT_Q0, bit-packed QUANT1)
+- **Packed indices** minimizing storage overhead (nibble-packed QUANT4, 2-bit packed Q1_5, bit-packed QUANT1)
 
 ### 8.3 Kernel Design
 
-InNova implements four primary GEMM kernel families:
+Transcender implements four primary GEMM kernel families:
 
-**QUANT\_Q0 Gather-Add Kernel.** For QUANT_Q0 weights, packs 4 2-bit sign-magnitude values per byte with a shared per-block FP16 scale. The inner loop performs unpack → {−3/4, −1/4, +1/4, +3/4} × scale → dot product with FP32 activations. x86 path: AVX2 `_mm256` operations with 128-weight blocks. ARM path: NEON `vld1q_s8` + pairwise add.
+**QUANT\_Q0 Gather-Add Kernel.** For Q1_5 weights, packs 4 2-bit sign-magnitude values per byte with a shared per-block FP16 scale. The inner loop performs unpack → {−3/4, −1/4, +1/4, +3/4} × scale → dot product with FP32 activations. x86 path: AVX2 `_mm256` operations with 128-weight blocks. ARM path: NEON `vld1q_s8` + pairwise add.
 
 **QUANT\_SPARSE Sparse Kernel.** For fast sparse inference with QUANT_Q1:
 - Groups significant weights per block with 8-bit value + uint16 index
@@ -1142,7 +1148,7 @@ The training pipeline implements:
 
 ### 8.6 Mixture of Experts with 24 Variants
 
-InNova implements MoMMoE (Modality-Aware Mixture of Experts) with 7 modality groups (VISION, AUDIO, IMAGE\_GEN, VIDEO\_GEN, OCR, TEXT, EMBEDDINGS) and multiple MoE routing variants:
+Transcender implements MoMMoE (Modality-Aware Mixture of Experts) with 7 modality groups (VISION, AUDIO, IMAGE\_GEN, VIDEO\_GEN, OCR, TEXT, EMBEDDINGS) and multiple MoE routing variants:
 
 - Top-1 routing (Switch Transformer style)
 - Top-2 routing (Mixtral style)
@@ -1173,7 +1179,7 @@ Cross-modal attention in MoMBlock enables any token to attend any other token re
 
 ### 9.1 Native Training vs Post-Training Quantization
 
-Post-training quantization takes an FP32-optimal solution and projects it into a lower-precision space in one shot; quality loss is baked in at projection time and cannot be recovered without retraining. InNova instead trains natively in the quantized space (STE):
+Post-training quantization takes an FP32-optimal solution and projects it into a lower-precision space in one shot; quality loss is baked in at projection time and cannot be recovered without retraining. Transcender instead trains natively in the quantized space (STE):
 
 - The forward pass uses the compressed weights; gradients flow straight through to the latent parameters
 - Per-block scales and codebook centroids are learnable and adapt during training
@@ -1187,7 +1193,7 @@ FormatPlanner scores each 256-wide weight block by activation magnitude and allo
 
 Quantization quality is measured on synthetic Gaussian, uniform and Laplace distributions (N = 4096 per distribution, block = 256, canonical block codec, no error feedback). Single-format rows are the registered typical-MSE claims (est_mse, max across the three distributions), enforced by test_fp32_gather_quality / grp_proof_test. QUANT_MIX rows are measured typical values on N(0,1), same block path:
 
-**Table 10: In-House Quantization Quality**
+**Table 10: In-House Quantization Quality (STALE v1/v2 snapshot + old bench runs — Phase 24: MSE figures below are UNVERIFIED against the current `bench_format_comparison.csv`; use the CSV + `tests/test_quant_mix.cpp` as truth. v3 names: QUANT→Q-series, `_G`→`QG*`.)**
 
 | Format | BPW | Typ. MSE vs FP32 | Notes |
 |--------|-----|------------------|-------|
@@ -1196,22 +1202,22 @@ Quantization quality is measured on synthetic Gaussian, uniform and Laplace dist
 | QUANT16 / QUANT16_G | 16.0 | 2.0×10⁻⁷ | Near-lossless (no grouping at 16 BPW) |
 | QUANT8 / QUANT8_G | 8.0 / 8.5 | 1.3×10⁻⁴ / 1.5×10⁻⁴ | High quality |
 | QUANT4 / QUANT4_G | 4.0 / 4.5 | N/A (see test_quant_mix) / 1.9×10⁻⁴ | Good |
-| QUANT2 / QUANT2_G | 2.0 / 2.5 | N/A (see test_quant_mix) | Compressed |
-| QUANT1 / QUANT1_G | 1.0 | N/A (see test_quant_mix) | Max compression |
-| QUANT_Q0 / QUANT_Q0_G | 1.5 | N/A (see test_quant_mix) | Sign + scale |
+| QUANT2 / QG2 | 2.0 / 2.5 | N/A (see test_quant_mix) | Compressed |
+| QUANT1 / QG1 | 1.0 | N/A (see test_quant_mix) | Max compression |
+| Q1_5 / QG_1_5 | 1.5 | N/A (see test_quant_mix) | Sign + scale |
 | QUANT_Q1_G | 2.0 | 6.7×10⁻⁴ | Sparse-friendly (dense-data bound) |
 | QUANT_MIX_Q0 | 1.925 | 2.6×10⁻² | Adaptive 1.925 BPW hard cap |
 | QUANT_MIX_Q1 | 2.075 | 1.5×10⁻² | Adaptive 2.075 BPW hard cap |
 
-**Table 11: STE Native Training (MLP 128→64→8, eval MSE, bench_04_ste_training.csv)**
+**Table 11: STE Native Training (MLP 128→64→8, eval MSE, bench_04_ste_training.csv — Phase 24: source CSV not in tree; ALL figures UNVERIFIED, re-measurement owed)**
 
 | Format | BPW | Eval MSE | vs FP32 |
 |--------|-----|----------|---------|
 | FP32 | 32.0 | 1.55×10⁻³ | baseline |
 | QUANT4_STE | 4.0 | 1.23×10⁻³ | 21% better |
-| QUANT_Q0_STE | 1.5 | 2.32×10⁻³ | 49% worse |
-| QUANT2_STE | 2.0 | 6.22×10⁻³ | 301% worse |
-| QUANT1_STE | 1.0 | 5.66×10⁻³ | 264% worse |
+| Q1_5_STE | 1.5 | 2.32×10⁻³ | 49% worse |
+| Q2_STE | 2.0 | 6.22×10⁻³ | 301% worse |
+| Q1_STE | 1.0 | 5.66×10⁻³ | 264% worse |
 
 All figures above are generated by the in-house benchmark (`bench_poc`, `build\Release\bench_poc.exe`) and its CSV reports; they contain no external baselines.
 
@@ -1221,7 +1227,7 @@ All figures above are generated by the in-house benchmark (`bench_poc`, `build\R
 
 ### 10.1 HTTP API Server Design
 
-InNova is designed for production deployment as a single-binary HTTP server:
+Transcender is designed for production deployment as a single-binary HTTP server:
 
 ```
 quant-server --model model.quant --port 8080 --workers 4
@@ -1238,22 +1244,22 @@ The server uses a thread-per-request model with connection pooling, streaming SS
 
 ### 10.2 Single-Binary Deployment
 
-All InNova binaries are statically linked — no DLL dependencies, no Python runtime, no pip install. Copy the binary and the .quant model file to any compatible system and run:
+All Transcender binaries are statically linked — no DLL dependencies, no Python runtime, no pip install. Copy the binary and the .quant model file to any compatible system and run:
 
 ```bash
 # Deploy to any Linux server
-scp quant-infer model.quant user@server:/opt/InNova/
-ssh user@server '/opt/InNova/quant-infer --model /opt/InNova/model.quant --prompt "Hello"'
+scp quant-infer model.quant user@server:/opt/Transcender/
+ssh user@server '/opt/Transcender/quant-infer --model /opt/Transcender/model.quant --prompt "Hello"'
 ```
 
-Binary sizes: quant-infer ~2.1 MB, quant-train ~2.4 MB, quant-finetune ~2.0 MB.
+Binary sizes: quant-infer ~2.1 MB, quant-train ~2.4 MB, quant-finetune ~2.0 MB. (Phase 24: UNVERIFIED — no measured build artifact source this phase.)
 
 ### 10.3 Cross-Platform Support
 
 | Platform | Compiler | Status |
 |----------|----------|--------|
-| Windows 11 | Clang 22.1.7 (clang-cl) | ✅ All 18 executables, 9/9 tests |
-| Linux | GCC ≥ 12 | Target |
+| Windows 11 | Clang 22.1.7 (clang-cl) | ✅ 90+ build targets, 72 ctest cases — 72/72 green 2026-09-11 (ledger C-07 VERIFIED this round, C-08; old "18 executables, 9/9 tests" WITHDRAWN as stale) |
+| Linux | GCC ≥ 12 | ✅ per README build status (same ledger flags apply) |
 | macOS | Apple Clang | Target |
 | ARM64 | NEON kernels | Target |
 
@@ -1284,7 +1290,7 @@ The .quant binary format includes a header with model metadata and can be extend
 
 ### 11.3 Value Preservation in Self-Improvement
 
-InNova's meta-cognition pipeline (Monitor → Analyze → Plan → Execute → Validate → Integrate) includes value preservation checks at each self-modification step. The validation stage runs regression tests and evaluates on benchmarks before any permanent change is integrated.
+Transcender's meta-cognition pipeline (Monitor → Analyze → Plan → Execute → Validate → Integrate) includes value preservation checks at each self-modification step. The validation stage runs regression tests and evaluates on benchmarks before any permanent change is integrated.
 
 ### 11.4 Capability Control
 
@@ -1306,7 +1312,7 @@ The single-binary design provides inherent capability control: the model cannot 
 
 ### 12.2 GPU Acceleration Path
 
-The current implementation runs on CPU (AVX2/NEON) with an in-repo GPU backend for DirectX 12 (D3D12) and a dynamically-loaded Vulkan path (see src/gpu_compute.cpp, src/gpu_compute_full.cpp, src/gpu_compute_vulkan.cpp — no CUDA/NVCC dependency). Scaling to larger models and faster training maps the kernel design (gather-accumulate for QUANT8/QUANT4, add-only for QUANT_Q0/QUANT1) efficiently to GPU SIMT execution.
+The current implementation runs on CPU (AVX2/NEON) with an in-repo GPU backend for DirectX 12 (D3D12) and a dynamically-loaded Vulkan path (see src/gpu_compute.cpp, src/gpu_compute_full.cpp, src/gpu_compute_vulkan.cpp — no CUDA/NVCC dependency). Scaling to larger models and faster training maps the kernel design (gather-accumulate for QUANT8/QUANT4, add-only for Q1_5/QUANT1) efficiently to GPU SIMT execution.
 
 ### 12.3 Scale to 7B+ Models
 
@@ -1326,7 +1332,7 @@ We have presented QUANT, a native mixed-precision training framework that refram
 
 Under the CID assumption (empirically universal for natural data, theoretically grounded in NTK spectral inheritance), the PAC-Bayes confidence interval [−0.0345, +0.0355] bounds the risk difference between QUANT and FP32 at 90% confidence. Empirically, across 40/40 random seeds at four model scales, QUANT strictly outperforms FP32 with 15–29% test loss reduction.
 
-At the systems level, QUANT achieves 21× storage reduction (188 MB vs 4 GB for a 10⁹-parameter model) with a single-binary C++20 deployment. The InNova engine implements the complete pipeline — from tokenization through training with STE quantization and codebook updates, to inference with SIMD-accelerated kernels — in approximately 97,500 lines of zero-dependency C++20 code.
+At the systems level, QUANT achieves 21× storage reduction (188 MB vs 4 GB for a 10⁹-parameter model) with a single-binary C++20 deployment. The Transcender engine implements the complete pipeline — from tokenization through training with STE quantization and codebook updates, to inference with SIMD-accelerated kernels — in approximately 97,500 lines of zero-dependency C++20 code.
 
 The central message: **QUANT is not post-training quantization. It is a different optimization algorithm whose gradient dead zone provides strictly stronger implicit regularization. Low-bit formats cannot reach FP32-level MSE — reconstruction quality at 1.5 BPW sits at a rate-distortion ceiling well above FP32's zero-error baseline (Table 10, tests/test_quant_mix.cpp); the honest, tested wins are beating every uniform format in the same bit-budget band and a column-granular (32-w) quality lift, alongside 21× storage compression and empirically better train-in-format generalization.**
 
@@ -1554,7 +1560,7 @@ The ONLY case where CID fails is isotropic random noise — confirmed by the uni
 | QUANT1 Gather | QUANT1 | 1.0 | 1 gather + 1 add | 5 GFLOPS |
 | FP32 FMA | FP32 | 32.0 | 1 FMA | 192 GFLOPS |
 
-QUANT_Q0/QUANT1 gather kernels achieve lower ops/watt than full-precision FMA but reduce memory bandwidth by 4–32×. QUANT8/QUANT4 achieve near-FP32 quality with 4–8× memory bandwidth reduction.
+Q1_5/QUANT1 gather kernels achieve lower ops/watt than full-precision FMA but reduce memory bandwidth by 4–32×. QUANT8/QUANT4 achieve near-FP32 quality with 4–8× memory bandwidth reduction.
 
 ### Appendix E: Complete Format Specification
 
@@ -1599,5 +1605,5 @@ QUANT_Q0/QUANT1 gather kernels achieve lower ops/watt than full-precision FMA bu
 
 ---
 
-*InNova Research Lab — July 2026*
+*Transcender Research Lab — July 2026*
 *"Native QUANT: Where quantization is not compression — it's a better algorithm."*

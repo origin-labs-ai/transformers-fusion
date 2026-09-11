@@ -1,6 +1,16 @@
 # Build & Installation Guide
 
-> **Compiling InNova from Source**
+> **Compiling Transcender from Source**
+>
+> **Production-hardening sync (2026-09-11):** version one-truth **1.1.0 / R0001.01**
+> (`CMakeLists.txt:3` `project(Transcender VERSION 1.1.0)`,
+> `include/quant/version.h:6` `Transcender_VERSION_STRING "R0001.01"` — the "0.2.0"
+> in older Phase 24 banners is STALE). Build graph one-truth: **26 libs +
+> 14 tools + 12 benches + SOPS/GLE + 72 ctest cases ≈ 111 materialized targets**
+> (ledger C-08 VERIFIED). Test count "42"/"62" anywhere is STALE — truth is 72 ctest cases
+> from 73 test files (`ctest -N` = 72; 71× `add_quant_test_full` + `test_gpu`);
+> **72/72 green on 2026-09-11** (Release, `ctest --test-dir build -C Release),
+> evidence `build/Testing/Temporary/LastTest.log` (ledger C-07 VERIFIED this round).
 
 ---
 
@@ -9,8 +19,8 @@
 ### Windows (Clang-cl)
 ```powershell
 # Clone the repository
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/Transcender
+cd Transcender
 
 # Configure (requires CMake >= 3.24, Ninja recommended)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -25,8 +35,8 @@ ctest --test-dir build --output-on-failure
 ### Linux (GCC/Clang)
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/Transcender
+cd Transcender
 
 # Install dependencies (CMake, Ninja, compiler)
 # Ubuntu/Debian:
@@ -45,8 +55,8 @@ ctest --test-dir build --output-on-failure -j$(nproc)
 ### macOS (Apple Clang)
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/Transcender
+cd Transcender
 
 # Install CMake and Ninja
 brew install cmake ninja
@@ -94,7 +104,7 @@ ctest --test-dir build --output-on-failure -j$(sysctl -n hw.ncpu)
 
 ## 🛠️ Build Options
 
-InNova uses CMake options to configure the build. You can enable/disable features using `-D` flags.
+Transcender uses CMake options to configure the build. You can enable/disable features using `-D` flags.
 
 ### Standard Options
 
@@ -324,7 +334,7 @@ cmake --build build --parallel
 
 ## ⚡ Parallel Build
 
-InNova supports parallel builds for faster compilation:
+Transcender supports parallel builds for faster compilation:
 
 ```bash
 # Use all available cores
@@ -494,7 +504,7 @@ Once your build completes successfully, you're ready to:
 1. **[Run tests](TESTING.md)** - Verify everything works
 2. **[Use the tools](USAGE.md)** - Start working with models
 3. **[Explore the API](API_REFERENCE.md)** - Build your own applications
-4. **[Contribute](CONTRIBUTING.md)** - Help improve InNova
+4. **[Contribute](CONTRIBUTING.md)** - Help improve Transcender
 
 ---
 

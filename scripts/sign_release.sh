@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# sign_release.sh — InNova v0.1.02 Release Signing Script
+# sign_release.sh — Transcender v1.1.0 (R0001.01) Release Signing Script
 #
 # Steps:
 #   1. Generate SHA-256 and MD5 checksums for all build artifacts
@@ -14,7 +14,7 @@
 #
 # Defaults:
 #   build_dir  = build/Release
-#   output_dir = release/v0.1.02
+#   output_dir = release/v1.1.0
 
 set -euo pipefail
 
@@ -22,15 +22,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 BUILD_DIR="${1:-${PROJECT_ROOT}/build/Release}"
-OUTPUT_DIR="${2:-${PROJECT_ROOT}/release/v0.1.02}"
-VERSION="0.1.02"
+OUTPUT_DIR="${2:-${PROJECT_ROOT}/release/v1.1.0}"
+VERSION="1.1.0"
 
 # Authenticode signing certificate (ORIGIN LABS)
 AUTHENTICODE_CERT="${AUTHENTICODE_CERT:-dist/signing_cert.pfx}"
 AUTHENTICODE_PASSWORD="${AUTHENTICODE_PASSWORD:-ORIGINLABS2026}"
 
 # GPG key ID for signing
-GPG_KEY_ID="${GPG_KEY_ID:-0xINNOVA2026KEY}"
+GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSCENDER2026KEY}"
 GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
 
 RED='\033[0;31m'
@@ -98,7 +98,7 @@ log "Step 3: Generating checksums..."
 
 CHECKSUMS_FILE="${OUTPUT_DIR}/checksums_${VERSION}.txt"
 
-echo "# InNova v${VERSION} Release Checksums" > "$CHECKSUMS_FILE"
+echo "# Transcender v${VERSION} Release Checksums" > "$CHECKSUMS_FILE"
 echo "# Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$CHECKSUMS_FILE"
 echo "# " >> "$CHECKSUMS_FILE"
 echo "# SHA-256 checksums:" >> "$CHECKSUMS_FILE"
@@ -161,7 +161,7 @@ log "  Checksums file verified: $(wc -l < "$CHECKSUMS_FILE") lines"
 
 log "Step 6: Creating release archive..."
 
-ARCHIVE_NAME="InNova-v${VERSION}-release"
+ARCHIVE_NAME="Transcender-v${VERSION}-release"
 ARCHIVE_DIR="${OUTPUT_DIR}"
 
 cp "$CHECKSUMS_FILE" "$ARCHIVE_DIR/" 2>/dev/null || true
@@ -182,5 +182,5 @@ fi
 
 echo ""
 log "============================================"
-log "  InNova v${VERSION} Release Signing Complete"
+log "  Transcender v${VERSION} Release Signing Complete"
 log "============================================"

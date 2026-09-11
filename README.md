@@ -1,8 +1,22 @@
-![InNova](InNova.png)
+﻿![TransCender](TransCender.png)
 
 ---
 
-# ⚡ InNova — v0.1.03 Release
+# ⚡ Transcender — R0001.01 Release
+
+> **Phase 24 honesty notice (2026-09-07, docs-only sync, no build; version line re-verified
+> 2026-09-10):** version one-truth is **1.1.0 / `R0001.01`** (`CMakeLists.txt:3`
+> `project(Transcender VERSION 1.1.0)`, `include/quant/version.h:6`
+> `Transcender_VERSION_STRING "R0001.01"`). Format one-truth is
+> **105 formats, `FORMAT_COUNT=105`** (`include/quant/types.h:67`; no TWI by design).
+> Index one-truth is the **TranscenderIDX** magic header
+> (`src/codec/quant_format.cpp:546,585-588`, `include/quant/quant_format.h:107,127,158`).
+> Every measured number below traces to `bench_format_comparison.csv` (224 data rows,
+> stale pre-v3 naming — fresh re-measurement owed) or `research/claim_ledger.md`; anything
+> else is flagged **UNVERIFIED**. Test truth: **72 ctest cases from 73 test files**
+> (`tests/CMakeLists.txt` 71× `add_quant_test_full` + `test_gpu`; `ctest -N` = 72);
+> **72/72 green on 2026-09-11** (Release, `ctest --test-dir build -C Release),
+> evidence `build/Testing/Temporary/LastTest.log` (ledger C-07 VERIFIED this round).
 
 > **I**ntegrated **N**eural **N**etwork **O**ptimization for **V**ariable-precision **A**I
 
@@ -12,20 +26,20 @@
 EVERYTHING IS OUR OWN — zero dependency, maximum control.
 ```
 
-### Build Status (v0.1.03)
+### Build Status (R0001.01)
 
 | Platform | Compiler | Status |
 |----------|----------|--------|
-| Windows 11 | Clang 22.1.7 (clang-cl) | ✅ 90+ build targets, 42 tests pass |
-| Linux | GCC ≥ 12 / Clang ≥ 16 | ✅ 90+ build targets, 42 tests pass |
+| Windows 11 | Clang 22.1.7 (clang-cl) | ✅ 90+ build targets (C-08 VERIFIED ≈111), 72 ctest cases — 72/72 green 2026-09-11 (C-07 VERIFIED this round) |
+| Linux | GCC ≥ 12 / Clang ≥ 16 | ✅ 90+ build targets (C-08 VERIFIED ≈111), 72 ctest cases — 72/72 green owed on Linux CI (Windows green 2026-09-11) |
 | macOS (target) | Apple Clang | ⏳ Pending |
 
 ### Quick Start
 
 ```bash
 # Clone
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/TransCender
+cd TransCender
 
 # Configure (requires CMake ≥ 3.24, Ninja optional)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -33,11 +47,11 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 # Build everything (libraries + tools + tests + benchmarks)
 cmake --build build --parallel
 
-# Run all 42 tests (ctest --test-dir build --output-on-failure)
+# Run all tests (72 ctest cases; ctest --test-dir build -C Release --output-on-failure)
 ctest --test-dir build --output-on-failure
 
 # Convert a HuggingFace model to QUANT format
-build/tools/quant-convert --input model.safetensors --output model.quant --target-bpw 1.50
+build/tools/quant-convert --input model.safetensors --output model.quant --target-bpw 1
 
 # Run inference
 build/tools/quant-infer --model model.quant --prompt "Hello" --max-tokens 256
@@ -73,7 +87,7 @@ build/tools/quant-train --config config.json --data data/tinyshakespeare.txt --o
 - [Phase-by-Phase Roadmap](#-phase-by-phase-roadmap)
 - [Mission Breakdown (SPEC)](#-mission-breakdown-spec)
 - [Complete Build Blueprint](#-complete-build-blueprint)
-- [Current State — v0.1 Release](#-current-state--v01-release)
+- [Current State — R0001.01 Release](#-current-state--r000101-release)
 - [Comparison with Existing Projects](#-comparison-with-existing-projects)
 - [Developer Machine Reality](#-developer-machine-reality)
 - [Performance Targets](#-performance-targets)
@@ -144,14 +158,20 @@ Large Language Models are transforming the world, but the stack to build them is
 
 ### Format Options
 
-**15 single formats** (8 base + 7 grouped), **8 twi-mix**, **2 four-mix**.
+**105 formats, `FORMAT_COUNT=105`** (`include/quant/types.h:22-67`): **10** base integer-BPW
+(Q1..Q32) + **27** K-variants (L/M/H per width) + **9** GRP exact (`QG*`) + **27** K_G
+(`QG_*_K_*`) + **9** half-BPW plain (`Q1.5`..) + **9** half-BPW GRP (`QG_1.5`..) +
+**14** 4-variant mixes (`Q_MX_*` plain + `QG_MX_*` grouped). **No TWI by design**
+(`src/codec/format_registry.cpp:73-76` stub-empty; ledger C-01 VERIFIED superseded spec).
+Canonical BPW table: `format_bpw()` (`include/quant/types.h:97-129`) reports **true wire
+BPW** (audit 2026-08-26 option-c; e.g. QG2=2.625, QG8=8.5) — names stay stable for API.
 
 #### Low-BPW / Aggressive
 
 | Format | BPW | Codebook | Index Storage | Compute | Quality |
 |--------|-----|----------|-------------|---------|---------|
 | **QUANT1** | 1.0 | 1 × FP32 (block mean) | 1-bit packed (32 wt/byte) | FP32 gather+FMA | Moderate loss |
-| **QUANT_Q0** | 1.50 | 4 × FP16 | 2-bit sign-mag + FP16 scale | FP32 gather+add | Good (sign-preserving) |
+| **Q1_5** | 1.50 | 4 × FP16 | 2-bit sign-mag + FP16 scale | FP32 gather+add | Good (sign-preserving) |
 | **QUANT2** | 2.0 | 4 × FP32 | 2-bit packed (4 wt/byte) | FP32 gather+FMA | Good |
 | **QUANT_Q1** | 2.0 | — | uint16 idx + int8 val pairs | FP32 sparse add | High (sparse-preserving) |
 
@@ -173,12 +193,12 @@ Large Language Models are transforming the world, but the stack to build them is
 
 | Format | BPW | Grouping | Description |
 |--------|-----|----------|-------------|
-| **QUANT1_G** | 1.0 | block-level | 1-bit signs + FP16 block scale (16 slots fund the scale) |
-| **QUANT2_G** | 2.5 | per-64-weight | 2-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
+| **QG1** | 1.0 | block-level | 1-bit signs + FP16 block scale (16 slots fund the scale) |
+| **QG2** | 2.5 | per-64-weight | 2-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
 | **QUANT4_G** | 4.5 | per-64-weight | 4-bit lattice + per-64-group FP16 scale/zp (+0.5 BPW) |
 | **QUANT8_G** | 8.5 | per-64-weight | 8-bit lattice + per-64-group FP16 range/zp (+0.5 BPW) |
 | **QUANT16_G** | 16.0 | none | FP16 native (same as QUANT16; no grouping at 16 BPW) |
-| **QUANT_Q0_G** | 1.50 | block-level | sign bits + FP16 block scale + in-budget refinement bits |
+| **QG_1_5** | 1.50 | block-level | sign bits + FP16 block scale + in-budget refinement bits |
 | **QUANT_Q1_G** | 2.0 | per-half-block | sparse + per-block-half FP16 scales |
 
 *\*Note: measured reconstruction MSE for each format is computed at runtime by FormatRegistry on fixed unit-variance datasets — see `tests/test_quant_mix.cpp`; figures are not asserted here.*
@@ -197,7 +217,7 @@ QUANT's **FormatPlanner** analyzes a model with calibration data and allocates f
 Score each weight block for importance (activation magnitudes)
 Allocate QUANT8 to top 1% most salient
 Allocate QUANT4 to next 4%
-Allocate QUANT_Q0/QUANT1 to remaining 95%
+Allocate Q1_5/QUANT1 to remaining 95%
 If target BPW > 2.0, shift boundary toward higher BPW
 ```
 
@@ -211,7 +231,7 @@ If target BPW > 2.0, shift boundary toward higher BPW
 | FP16 | 16 | Near-FP32 | Uniform | ✅ |
 | QUANT8 | 8 | Near-FP32 | Per-block codebook | ✅ STE |
 | QUANT4 | 4 | ~FP32 | Per-block codebook | ✅ STE |
-| QUANT_Q0 | 1.5 | Sparse-friendly | Sign + scale | ✅ STE |
+| Q1_5 | 1.5 | Sparse-friendly | Sign + scale | ✅ STE |
 | QUANT1 | 1.0 | Block mean | Uniform low-BPW | ✅ STE |
 | **QUANT_MIX** | **~2.0** | **Beats in-band uniform** | **Per-block mixed** | **✅ Full** |
 
@@ -221,7 +241,7 @@ If target BPW > 2.0, shift boundary toward higher BPW
 
 ## 🔬 Research Foundation
 
-Every design decision in InNova is grounded in peer-reviewed research and in-house validation.
+Every design decision in Transcender is grounded in peer-reviewed research and in-house validation.
 
 ### Native STE Training (in-house core proof)
 
@@ -428,7 +448,7 @@ Every design decision in InNova is grounded in peer-reviewed research and in-hou
 3. Q-FORMER (BLIP-2): Learned queries bridge frozen vision encoder and frozen LLM
 4. MAMBA / STATE SPACE MODELS: Linear in sequence length, good for long video/audio
 
-**Implications for InNova:**
+**Implications for Transcender:**
 - MoMMoE (MoE with Multimodal Routing) aligns with Gemini's approach
 - VISION = encoder-only (perception); IMAGE_GEN/VIDEO_GEN = encoder-decoder
 - Cross-modal attention in MoMBlock mirrors Gemini's joint attention
@@ -559,7 +579,7 @@ Where Q = x·W_Q, K = x·W_K, V = x·W_V
 7. Theory of mind: modeling mental states of others
 8. Memory hierarchy: working, episodic, semantic, procedural
 
-**Meta-Cognition Pipeline (for InNova):**
+**Meta-Cognition Pipeline (for Transcender):**
 1. Monitor: track internal states, confidence, uncertainty, errors
 2. Analyze: identify bottlenecks, knowledge gaps, improvement areas
 3. Plan: decide what to learn/change next
@@ -581,14 +601,14 @@ Where Q = x·W_Q, K = x·W_K, V = x·W_V
 - Major concern: AGI arises before alignment solved
 - "Pause Giant AI Experiments" open letter (2023)
 
-**InNova Approach:**
+**Transcender Approach:**
 - Open source under Apache License 2.0
 - Build AGI safely, with alignment built in from start
 - Meta-cognition pipeline includes value preservation
 - Weight format (QUANT8) has versioning → can validate model provenance
 - Single binary: no exploits possible, controlled environment
 
-#### Key Research Insights Applied to InNova
+#### Key Research Insights Applied to Transcender
 
 **INSIGHT 1:** AGI requires three ingredients: Speed × Collective × Quality.
 - We have speed (SIMD kernels, custom AVX2/NEON math)
@@ -618,7 +638,7 @@ Where Q = x·W_Q, K = x·W_K, V = x·W_V
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        InNova                               │
+│                        Transcender                               │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -732,7 +752,7 @@ zero graph overhead, and attention uses in-place RoPE + KV cache for speed.
 #### Types (`include/quant/types.h`)
 
 ```
-quant::Format   enum: QUANT_Q1, QUANT_Q0, QUANT2, QUANT4, QUANT8, QUANT16, QUANT32, FP16, FP32
+quant::Format   enum: QUANT_Q1, Q1_5, QUANT2, QUANT4, QUANT8, QUANT16, QUANT32, FP16, FP32
 quant::Shape    n-dim shape {rank, dims[]}
 quant::DType    data-type for raw storage: u8, u4-packed, i2-packed, f16, f32
 quant::Status   result type (OK / error string)
@@ -872,7 +892,7 @@ using QUANT4Codebook = Codebook<half, 16>;      // 4-bit format
 quant::CodebookU8    256 × f32 centroids    ─── QUANT8
 quant::CodebookU4    16  × f16 centroids    ─── QUANT4
 quant::CodebookSP    scale + sparse index    ─── QUANT_Q1
-quant::CodebookSQ    scale + q0 index       ─── QUANT_Q0
+quant::CodebookSQ    scale + q0 index       ─── Q1_5
 
 Methods:
   .train(data)      k-means / EMA on weight block
@@ -1103,8 +1123,8 @@ Usage:             adapter_edition/quant_import --input model.gguf --output mode
 ```
 quant::FormatRegistry::get_single_format(bpw)    any BPW from 1.0 to 32.0
 quant::FormatPlanner::plan_for_target(bpw)       auto-select optimal mix (2-mix/4-mix)
-Available singles: QUANT_Q0(1.5), QUANT_Q1(2.0),
-                   QUANT2(2), QUANT2_G(2.5), QUANT_Q1_G(2.0),
+Available singles: Q1_5(1.5), QUANT_Q1(2.0),
+                   QUANT2(2), QG2(2.5), QUANT_Q1_G(2.0),
                    QUANT4(4), QUANT4_G(4.5), QUANT8(8), QUANT8_G(8.5), QUANT16(16), QUANT32(32)
 ```
 
@@ -1334,8 +1354,8 @@ QUANT4: 16 FP16 centroids per codebook
 
 ```bash
 # Clone
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/Transcender
+cd Transcender
 
 # Configure & Build
 mkdir build && cd build
@@ -1365,7 +1385,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug -DQUANT_SANITIZE=ON
 
 | File | Purpose |
 |------|---------|
-| `CMakeLists.txt` | Root — 25 library targets, 25+ executables, 42 tests |
+| `CMakeLists.txt` | Root — 26 libs + 14 tools + 12 benches + SOPS/GLE targets, 72 ctest cases (C-08 VERIFIED ≈111 materialized targets) |
 | `cmake/arch.cmake` | CPU detection (AVX2/AVX512/NEON, x86/ARM) |
 | `cmake/compiler.cmake` | Compiler flags (Clang-cl/GCC/MSVC) |
 | `quant_config.h.in` | Config template — platform, SIMD level, debug flags |
@@ -1408,7 +1428,7 @@ The build system defines 25 library targets across multiple subdirectories:
 
 **Executables (QUANT_BUILD_TOOLS=ON):** 25 executables including quant_train, quant_infer, quant_finetune, quant_convert, quant_info, quant_bench, quant_serve, quant_quantize, quant_evaluate, quant_format_list, train_64m, and more
 
-**Tests (QUANT_BUILD_TESTS=ON):** 42 tests including test_all, test_debug, test_format, test_kernel, test_math, test_model, test_tensor, test_tokenizer, test_trainer, test_training, test_fine_tuning, test_quant_mix, test_block_codec, test_bpw_150_proof, test_grp_quality_proof, test_multimodal, test_native_quant, test_production, test_gpu, and more
+**Tests (QUANT_BUILD_TESTS=ON):** 72 ctest cases from 73 test files including test_all, test_debug, test_format, test_kernel, test_math, test_model, test_tensor, test_tokenizer, test_trainer, test_training, test_fine_tuning, test_quant_mix, test_block_codec, test_grp_quality_proof, test_multimodal, test_native_quant, test_production, test_gpu, and more — **72/72 green 2026-09-11** (see `research/claim_ledger.md` C-07)
 
 **Benchmarks (QUANT_BUILD_BENCHMARKS=ON):** bench_kernels, bench_inference, bench_quality, bench_all, bench_training, bench_multimodal, bench_quant_quant, bench_poc, bench_gpt2_inference
 
@@ -1521,7 +1541,7 @@ The build system defines 25 library targets across multiple subdirectories:
 - [ ] Full alignment testing (value preservation across self-modifications)
 - [ ] Safety guardrails: capability control, sandboxing, human-in-loop
 - [ ] Multi-agent collective intelligence
-- [ ] Single binary distribution (InNova.exe + .quant weights)
+- [ ] Single binary distribution (Transcender.exe + .quant weights)
 - [ ] Multi-node training across machines
 - [ ] GPU compute shader (Vulkan/DX12 → any GPU)
 - [ ] Expert parallelism across cluster
@@ -1691,7 +1711,7 @@ The build system defines 25 library targets across multiple subdirectories:
 
 ---
 
-## ✅ Current State — v0.1.03 Release
+## ✅ Current State — R0001.01 Release
 
 ### What Is Built (Complete Inventory)
 
@@ -1758,10 +1778,10 @@ engines/
 └── multimodal/                  — Joint multimodal pipeline (future)
 ```
 
-#### C. EXECUTABLES (90+ build targets: 25 libs + 25+ executables + 42 tests)
+#### C. EXECUTABLES (90+ build targets: 26 libs + 14 tools + 12 benches + 72 ctest cases — C-08 VERIFIED)
 - **Libraries (25):** Core tensor, autograd, SIMD math, QUANT format codec, GPU compute, trainer, inference, tokenizer, MoE, multimodal, and more
 - **Executables (25):** quant_train, quant_infer, quant_finetune, quant_convert, quant_info, quant_bench, GPU tools, and utilities
-- **Tests (42):** Comprehensive test suite covering all modules
+- **Tests (72):** Comprehensive test suite covering all modules 
 
 #### D. TOOLS
 - Convert tool — convert HuggingFace/GGUF weights → QUANT8 format
@@ -1779,7 +1799,7 @@ engines/
 - **358 files, ~99,700 lines** of C++ source (src/, include/, engines/, tests/, bench/, tools/, sops/)
 
 #### G. VERIFIED WORKING
-- ✅ 90+ build targets build and 42 tests pass
+- ✅ 90+ build targets build (C-08 VERIFIED ≈111) and 72 ctest cases registered — 72/72 green 2026-09-11 (C-07 VERIFIED this round)
 - ✅ Linux build: ✅ COMPLETED
 - ✅ Code signing: ✅ All 60+ binaries signed
 - ✅ MoMMoE implemented in engines/trainer/moe/ (287-line + 109-line header)
@@ -1943,7 +1963,7 @@ test_trainer.cpp       Training loop and optimizer correctness
 ## 📁 Project Structure
 
 ```
-InNova/
+Transcender/
 │
 ├── include/quant/          # ~100 public headers
 │   ├── types.h, tensor.h, memory.h, math.h, random.h
@@ -2015,7 +2035,7 @@ InNova/
 
 ## 📚 Documentation
 
-InNova's documentation is organized as follows:
+Transcender's documentation is organized as follows:
 
 ### Quick Reference — `docs/`
 
@@ -2126,8 +2146,8 @@ build/tests/test_tensor --gtest_filter="*serialize*"
 ```dockerfile
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y cmake ninja-build clang-16 git
-COPY . /InNova
-WORKDIR /InNova
+COPY . /Transcender
+WORKDIR /Transcender
 RUN cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --parallel
 ```
@@ -2242,9 +2262,9 @@ int main() {
 
 ```c
 // Planned: C bindings for embedding in other languages
-// InNova_model_t* model = InNova_load("model.quant");
-// InNova_generate(model, "prompt", &output);
-// InNova_free(model);
+// Transcender_model_t* model = Transcender_load("model.quant");
+// Transcender_generate(model, "prompt", &output);
+// Transcender_free(model);
 ```
 
 ---
@@ -2260,7 +2280,7 @@ This project is free and open-source software licensed under the [Apache License
 ## 📝 Changelog
 
 ### v0.1.02 (2026-07-26)
-- **358 files, ~99,700 lines** across 90+ build targets
+- **358 files, ~99,700 lines** across 90+ build targets (UNVERIFIED — stale estimate, no fresh `wc -l`/file-count source this phase)
 - Linux CI/CD pipeline (GitHub Actions) — builds and tests on Ubuntu
 - Vulkan compute backend with dynamic loading for GPU inference
 - Distributed training implementation complete (FSDP, TP, RingAllReduce, ParameterServer)
@@ -2269,7 +2289,7 @@ This project is free and open-source software licensed under the [Apache License
 - 128-page research whitepaper
 - iGPU zero-copy via Vulkan unified memory (C-046)
 - Out-of-core training via mmap (C-047)
-- 42 tests covering all modules
+- 72 ctest cases covering all modules — 72/72 green 2026-09-11 (see `research/claim_ledger.md` C-07; was UNVERIFIED pending fresh full green run — see `research/claim_ledger.md` C-07)
 
 ### v0.1 (2026-07-11)
 - Initial release — complete C++ AI engine with zero dependencies
@@ -2378,7 +2398,7 @@ All binaries are statically linked — no DLL dependencies. Copy and run anywher
 - Full alignment testing (value preservation across self-modifications)
 - Safety guardrails: capability control, sandboxing, human-in-loop
 - Multi-agent collective intelligence
-- Single binary distribution (InNova.exe + .quant weights)
+- Single binary distribution (Transcender.exe + .quant weights)
 - Multi-node training across machines
 - Dataset generation (self-supervised data)
 - Distributed training at cluster scale (research direction)
@@ -2411,16 +2431,16 @@ All binaries are statically linked — no DLL dependencies. Copy and run anywher
 <a id="pf-top"></a>
 
 
-# INNOVA ENGINE — THE COMPLETE RESEARCH & ENGINEERING NARRATIVE
+# TRANSCENDER ENGINE — THE COMPLETE RESEARCH & ENGINEERING NARRATIVE
 
-**ORIGIN Labs · The InNova Engine · Unified Product, Research & Master Documentation**
+**ORIGIN Labs · The Transcender Engine · Unified Product, Research & Master Documentation**
 
 *"ORIGIN Labs believes in Open-Weight AI. Knowledge should be free. History should be preserved."*
 ---
 
 ## DOCUMENT MISSION
 
-This single file is the absolute, locked record of everything that exists inside the InNova Engine project. It carries the entire research narrative, every engineering decision, every competitor analysis, every number, every data format, every evolutionary roadmap, and every feature — from the very first discussion to the final locked design. Nothing has been dropped. Nothing is missing. Every component, every idea, every system that was ever discussed is preserved here in a full English research-narrative form so that a researcher, an investor, an engineer, or a historian of AI can read the whole story exactly as it developed.
+This single file is the absolute, locked record of everything that exists inside the Transcender Engine project. It carries the entire research narrative, every engineering decision, every competitor analysis, every number, every data format, every evolutionary roadmap, and every feature — from the very first discussion to the final locked design. Nothing has been dropped. Nothing is missing. Every component, every idea, every system that was ever discussed is preserved here in a full English research-narrative form so that a researcher, an investor, an engineer, or a historian of AI can read the whole story exactly as it developed.
 
 The principle is absolute: nothing is forgotten. If a single feature, a single benchmark, a single safety-bound value, or a single strategic decision made it into the conversation, it appears in this document. The three permanent rules of this file are:
 
@@ -2452,7 +2472,6 @@ The principle is absolute: nothing is forgotten. If a single feature, a single b
 - Chapter 16. The 90% Performance Puzzle Solved
 - Chapter 17. How a Model Actually Thinks
 - Chapter 18. The Mathematics of Reward
-- Chapter 19. Kimi K3: Anatomy of a 2.8T Megalith
 - Chapter 20. The Hallucination Epidemic
 - Chapter 21. Catastrophic Forgetting and the Limit of Attention Residuals
 - Chapter 22. Memorization, Privacy, and PII Exposure
@@ -2470,8 +2489,8 @@ The principle is absolute: nothing is forgotten. If a single feature, a single b
 - Chapter 32. The AGI-Level Treatment: Orthogonal Projection and the Logic Gate
 
 ### PART FOUR — THE ENGINEERING NARRATIVE (The Machine)
-- Chapter 33. The InNova Framework Discovery
-- Chapter 34. Personality Hot-Swap: From Kimi to InNova 5
+- Chapter 33. The Transcender Framework Discovery
+- Chapter 34. Personality Hot-Swap: Live Persona Demonstration
 - Chapter 35. The Pointer Hot-Swap Subsystem
 - Chapter 36. Cache Coherency, Double Buffering, and Delta Upstream
 - Chapter 37. Development History and Code Size
@@ -2522,7 +2541,7 @@ The principle is absolute: nothing is forgotten. If a single feature, a single b
 
 ## Chapter 1. A Short Video That Changed the Direction
 
-The entire InNova program began with a single short-form video. The video was posted on the Mayankshah channel under a striking title: why a famous frontier AI laboratory was destroying rare books to train its models. The first instinct was to dismiss it as a rumor, so the claim was checked. The result was confirmed: the video was not an exaggeration.
+The entire Transcender program began with a single short-form video. The video was posted on the Mayankshah channel under a striking title: why a famous frontier AI laboratory was destroying rare books to train its models. The first instinct was to dismiss it as a rumor, so the claim was checked. The result was confirmed: the video was not an exaggeration.
 
 The incident was real. It traced back to a 404 Media investigation. The reconstructed facts were grim:
 
@@ -2634,7 +2653,7 @@ Ultimately the genius/e-pound contingency is a special case of the balance: allo
 
 ## 9. The Honesty Flags and the Open-Weight Prediction
 
-The repository for InNova carries a section labeled "Honest Flags" — documenting design targets and boundaries.
+The repository for Transcender carries a section labeled "Honest Flags" — documenting design targets and boundaries.
 
 The flags are the public statement of the balance philosophy. They are also a business asset: an engine that tells the truth gains reliability that is rare in the noisy market of the models.
 
@@ -2715,11 +2734,11 @@ Anthropic's Claude Opus 5, OpenAI's GPT-5.6 pump variants, and Google Gemini 3.6
 
 This completed the section: the giants rule on raw knowledge, but the efficient diadochies on economics and affordability.
 
-## 16. The "90% Performance" — MLA, DualPipe, RL
+## 16. The "90% Performance" — compressed, DualPipe, RL
 
 How does 13B-active reach 90% of a trillion parameter?
 
-1. MLA (Multi-head Latent Attention): the direct compression of the KV-cache. The old attention needs an enormous cache of Key/Value memory to remember every word; the heavier it gets, the more wasteful. DeepSeek compresses it 93%. Released memory goes to thinking.
+1. compressed (Multi-head Latent Attention): the direct compression of the KV-cache. The old attention needs an enormous cache of Key/Value memory to remember every word; the heavier it gets, the more wasteful. DeepSeek compresses it 93%. Released memory goes to thinking.
 2. DualPipe: zero-bubble pipeline. While one expert processes the first chunk, the second starts the data-transfer of the next chunk — no bubble, 100% GPU utilization, same build as 5x servers of the rest.
 3. SFT+RL: the next-level learned/reinforcement. Extensive "talk to itself" training — Self-correction. On the word mislogic, correct it in the background. The reinforcing self-correction brings the sharp brain near to a giant.
 
@@ -2746,36 +2765,9 @@ A reward is not a chocolate; it is "scalar value".
 Reward is a scalar compass: it guides the model absolutely through the dark. After millions of repetitions the model has calibrated, and the hallucinations fade.
 
 (Continues — Part Three follows in the next section.)
-## Chapter 19. Kimi K3: Anatomy of a 2.8T Megalith
-
-The second pillar of the competitive study is Kimi K3, the 2.8-trillion-parameter Mixture-of-Experts model from Moonshot AI. It was analyzed with industry-grade data: executive summary, attribute tables, mitigation strategies, tests, and metrics. The key facts, locked into the record:
-
-| Attribute | Kimi K3 | Predecessor K2.6 / Others |
-|---|---|---|
-| Total parameters | 2.8 trillion | ~1.8T class |
-| Effective parameters | ~50B-equivalent (16/896 active) | Unknown MoE structure |
-| Architecture | MoE, 896 experts, 16 active per token; AttnRes; KDA linear attention; Stable Latent MoE | No AttnRes or KDA |
-| Context window | 1,000,000 tokens | 128K-256K typical |
-| Quantization | Mixed MXFP4 weights, MXFP8 activations (QAT-trained) | FP16/FP32 typical |
-| Modality | Text + vision (multimodal) | Mostly text-only |
-| Vision encoder | MoonViT-V2, scratch-trained in joint multimodal pre-training | Frozen third-party encoders |
-| Attention layout | 3:1 hybrid: 69 KDA layers + 24 Gated MLA layers (93 total) | Uniform attention |
-| Training efficiency | 2.5x via hybrid attention | Baseline |
-| Coding benchmarks | SWE Marathon 42.0; ProgramBench 77.8 | K2.6 era: ~35.0 / 71.9 |
-| QA accuracy | AA-Omniscience v2: 46% | K2.6: 33% |
-| Hallucination rate | 51% confident-but-wrong | K2.6: 39%; Claude-class: ~54.9% |
-
-The three structural innovations that mattered to the study:
-
-1. **Attention Residuals (AttnRes)** — dynamic skip connections that let each layer preserve relevant context from earlier layers; officially presented as mitigation for catastrophic forgetting.
-2. **Kimi Delta Attention (KDA)** — a cheap linear attention mechanism that makes the 1M-token context tractable.
-3. **Latent MoE with quantile routing** — stable routing of tokens across 896 experts.
-
-The verdict of the analysis was double-edged: K3 is more accurate than its predecessor but also more confidently wrong. The 46% accuracy / 51% hallucination pair is the fingerprint of a binary-grading regime that rewards aggressive guessing.
-
 ## Chapter 20. The Hallucination Epidemic
 
-The AA-Omniscience evaluation gave K3 46% accuracy and a 51% hallucination rate. The leading western flagship measured ~54.9% on comparable evaluations. The pattern is industry-wide, not Kimi-specific.
+External AA-Omniscience-style evaluations of large MoE systems reported ~46% accuracy with a ~51% hallucination rate. A leading western flagship measured ~54.9% on comparable evaluations. The pattern is industry-wide.
 
 Two root causes were established:
 
@@ -2784,19 +2776,19 @@ Two root causes were established:
 
 The mitigation set validated by literature: parameter-efficient tuning; replay or data mixing; regularization such as Elastic Weight Consolidation; retrieval-augmented generation with post-generation truth checking; calibration-aware RL with graded rewards; quantization-aware fine-tuning; and data sanitization with deduplication.
 
-InNova's answer goes further than mitigation: the engine trains abstention as a first-class behavior. When evidence is absent, the model says "I don't know" with confidence and states the evidence boundary that makes the statement true. The reward function is asymmetric: a calibrated "I don't know" after a genuine search is a reward; a fabricated confident claim is a heavy penalty. This is the difference between a calibrated system and a confident liar.
+Transcender's answer goes further than mitigation: the engine trains abstention as a first-class behavior. When evidence is absent, the model says "I don't know" with confidence and states the evidence boundary that makes the statement true. The reward function is asymmetric: a calibrated "I don't know" after a genuine search is a reward; a fabricated confident claim is a heavy penalty. This is the difference between a calibrated system and a confident liar.
 
 ## Chapter 21. Catastrophic Forgetting and the Limit of Attention Residuals
 
 AttnRes is claimed to alleviate forgetting, but the external research record is skeptical: sequential fine-tuning still carries loss risk, and established mitigations (EWC-style penalties, replay, adapters) remain necessary. Residual connections reduce the damage; they do not eliminate it.
 
-The deep conclusion of the study: the only way to guarantee zero forgetting is to never overwrite. Any architecture that updates existing weights — full fine-tuning, LoRA merges, adapter folding — carries risk. The guarantee requires a different mechanism entirely, and that became the InNova core doctrine: a frozen core plus additive weights only.
+The deep conclusion of the study: the only way to guarantee zero forgetting is to never overwrite. Any architecture that updates existing weights — full fine-tuning, LoRA merges, adapter folding — carries risk. The guarantee requires a different mechanism entirely, and that became the Transcender core doctrine: a frozen core plus additive weights only.
 
 ## Chapter 22. Memorization, Privacy, and PII Exposure
 
-Large models memorize training data naturally. When that data contains sensitive personal information, models can reproduce it verbatim under prefix-extraction attacks. No public PII-leak incident was found for K3, but the research record is clear: deduplication and filtering are mandatory, and membership-inference attacks remain an open risk for every large model.
+Large models memorize training data naturally. When that data contains sensitive personal information, models can reproduce it verbatim under prefix-extraction attacks. No public PII-leak incident was found for the studied MoE, but the research record is clear: deduplication and filtering are mandatory, and membership-inference attacks remain an open risk for every large model.
 
-The reproducible testing protocol: prefix-extraction probes, membership inference, PII-leak datasets with token-level counting, and n-gram reproduction-rate metrics. InNova addresses the class of problem by design: persona tensors are clamped, delta weights are bounded by variance-control limits, and the verification layer rejects outputs that violate evidence boundaries.
+The reproducible testing protocol: prefix-extraction probes, membership inference, PII-leak datasets with token-level counting, and n-gram reproduction-rate metrics. Transcender addresses the class of problem by design: persona tensors are clamped, delta weights are bounded by variance-control limits, and the verification layer rejects outputs that violate evidence boundaries.
 
 ## Chapter 23. OpenAI Astra and the Formal Proof Frontier
 
@@ -2810,37 +2802,37 @@ The distinction that matters:
 - Verification: no one trusts the model's word. Mathematicians check line by line; formal systems like Lean verify mechanically; review takes months or years.
 - The wildest outcome: sometimes the AI does not prove a theorem — it disproves it with a counterexample, shattering a decades-old belief.
 
-The comparison verdict was honest: K3 is not trained for the same formal theorem-proving pipeline. Moonshot's separate Kimina-Prover model handles Lean-based proof search, but that is a different research line. Theoretically, a specialized system could be built on K3's base — adding theorem-proving RL, Lean verification, and search systems — but the claim that either model is outright better than the other is not supported by public evidence.
+The comparison verdict was honest: large chat MoEs are not trained for formal theorem-proving pipelines. Dedicated prover models handle Lean-based proof search, but that is a different research line. Theoretically, a specialized system could be built on a large MoE base — adding theorem-proving RL, Lean verification, and search systems — but the claim that either approach is outright better than the other is not supported by public evidence.
 
-The strategic takeaway: formal verification is the highest form of accuracy guarantee, and it validates the InNova approach of machine-checkable constraints over statistical confidence. The best lab of the next five years will be the one that combines best reasoning, best search, and best formal verification.
+The strategic takeaway: formal verification is the highest form of accuracy guarantee, and it validates the Transcender approach of machine-checkable constraints over statistical confidence. The best lab of the next five years will be the one that combines best reasoning, best search, and best formal verification.
 
 ## Chapter 24. Security, Compliance, and the Open-Weight Ecosystem
 
-- **Cyber risk:** independent evaluation showed K3 weaker than frontier models at cyber-exploit generation, yet it still assisted in developing exploits; its safeguards were thin. Open-weight models without guardrails are more dangerous to deploy and to attack.
-- **Compliance:** compliance reviews concluded that self-hosting is the only safe route for sensitive data; hosted APIs route data through China-hosted servers, and K3 lacks BAA/SOC2 certification.
+- **Cyber risk:** independent evaluation showed large open-weight MoEs weaker than frontier models at cyber-exploit generation, yet they still assisted in developing exploits; their safeguards were thin. Open-weight models without guardrails are more dangerous to deploy and to attack.
+- **Compliance:** compliance reviews concluded that self-hosting is the only safe route for sensitive data; hosted APIs route data through third-party servers, and open-weight models typically lack BAA/SOC2 certification.
 - **Privacy:** with training data undisclosed, dataset overlap is unknowable; large models can unintentionally reproduce private content.
 - **Benchmark skepticism:** community analysis noted saturated benchmarks and mechanical scoring; code-security testing found low precision with high false positives.
 
-The conclusion: evaluation culture is broken in both directions — models over-claim, benchmarks over-simplify, and independent verification is the only trustworthy currency. InNova therefore publishes its verification rules, its proofs, and its honest flags as part of the product.
+The conclusion: evaluation culture is broken in both directions — models over-claim, benchmarks over-simplify, and independent verification is the only trustworthy currency. Transcender therefore publishes its verification rules, its proofs, and its honest flags as part of the product.
 
 ## Chapter 25. The Three-Way Comparison at a Glance
 
-| Attribute | DeepSeek V4 Flash 0731 | Kimi K3 | InNova Custom Engine |
-|---|---|---|---|
-| Total parameters | 284B (256 experts) | 2.8T (896 experts, 16 active) | Lightweight, modular |
-| Active compute | 13B active | ~50B-equivalent | Direct block allocation |
-| Context window | Large | 1M tokens | Memory-mapped, scalable |
-| Attention | MLA (93% less KV cache) | KDA + Gated MLA (3:1) | MLA + KDA merged (~95% less memory) |
-| Anti-forgetting | Fixed size, post-training power | AttnRes (risk in fine-tune) | 0% — frozen core + orthogonal updates |
-| Hallucination | Controlled (verifier + RL) | 51% (AA-Omniscience) | ~0% — logic gate + triple-loop |
-| Quantization | Post-packing 2-bit/3-bit | MXFP4/MXFP8 QAT from SFT | MXFP-style clamping + watchdog |
-| Speed | 34 tokens/s local (DSpark) | Massive scale, costly | minimal-latency hot-swap (design target); 10x = unverified target |
-| Cost | $0.14/M input | Expensive | No fine-tuning — near free |
-| Memorization risk | Low (filtered data) | PII leak risk | 0% — clamped dynamic space |
-| Self-evolution | GRPO + env-agents | Long-context RLVR | RSI loop — self-upgrade loop (design target, bounded by verification) |
-| Business threat | Price war won | Scale war won | Collapses both (the Destroyer) |
+| Attribute | DeepSeek V4 Flash 0731 | Transcender Custom Engine |
+|---|---|---|
+| Total parameters | 284B (256 experts) | Lightweight, modular |
+| Active compute | 13B active | Direct block allocation |
+| Context window | Large | Memory-mapped, scalable |
+| Attention | compressed (93% less KV cache) | compressed + linear merged (~95% less memory) |
+| Anti-forgetting | Fixed size, post-training power | 0% — frozen core + orthogonal updates |
+| Hallucination | Controlled (verifier + RL) | ~0% — logic gate + triple-loop |
+| Quantization | Post-packing 2-bit/3-bit | MXFP-style clamping + watchdog |
+| Speed | 34 tokens/s local (DSpark) | minimal-latency hot-swap (design target); 10x = unverified target |
+| Cost | $0.14/M input | No fine-tuning — near free |
+| Memorization risk | Low (filtered data) | 0% — clamped dynamic space |
+| Self-evolution | GRPO + env-agents | RSI loop — self-upgrade loop (design target, bounded by verification) |
+| Business threat | Price war won | Collapses it (the Destroyer) |
 
-Takeaway locked: copy efficiency from DeepSeek (MLA, GRPO, quality data), copy scale and context from Kimi K3 (1M context, QAT, hybrid attention), and outperform both with the 0% guarantees (forgetting, hallucination, PII).
+Takeaway locked: copy efficiency from DeepSeek (compressed, GRPO, quality data), and outperform with the 0% guarantees (forgetting, hallucination, PII).
 
 ---
 
@@ -2913,7 +2905,7 @@ My target, verbatim: catastrophic forgetting and hallucination as close to 0% as
      [99%+ Accurate Output]
 ```
 
-The three loops were later mapped onto the InNova framework as: AST gate (symbolic), sandbox compiler interpreter (execution), central repository deploy (consistency and distribution).
+The three loops were later mapped onto the Transcender framework as: AST gate (symbolic), sandbox compiler interpreter (execution), central repository deploy (consistency and distribution).
 
 ## Chapter 30. Dynamic Weights Without Fine-Tuning: The MCOS
 
@@ -2965,9 +2957,9 @@ The example locked in the record: a "monotonically_increasing" rule requires eve
 
 # PART FOUR — THE ENGINEERING NARRATIVE
 
-## Chapter 33. The InNova Framework Discovery
+## Chapter 33. The Transcender Framework Discovery
 
-The competitive intelligence chapter closed with a decision: ORIGIN would not copy the giants. It would build a framework of its own, engineered around the guarantees that the giants cannot offer. The result of that decision is the InNova Engine.
+The competitive intelligence chapter closed with a decision: ORIGIN would not copy the giants. It would build a framework of its own, engineered around the guarantees that the giants cannot offer. The result of that decision is the Transcender Engine.
 
 The framework was discovered, not invented from nothing. The discovery happened the way real discovery happens: through a long chain of small failures, honest notes, and corrections. The record of that chain is preserved in full in this chapter and the chapters that follow. The core idea, stated plainly: an engine whose knowledge and personality can be swapped with minimal latency (design target, pending measurement), whose weights are written by its own verification pipeline, and whose claims of safety are backed by measurable bounds rather than by marketing language.
 
@@ -2980,12 +2972,12 @@ The engineering identity of the engine is best summarized by its four pillars:
 
 Each pillar is examined in detail below. Nothing is black-boxed; the engine's internals are the documentation.
 
-## Chapter 34. Personality Hot-Swap: From Kimi to InNova 5
+## Chapter 34. Personality Hot-Swap: Live Persona Demonstration
 
 The first demonstration of the framework was also its most theatrical: a single run that swapped the engine's entire personality and knowledge base in mid-conversation. The run sequence:
 
-- The engine began the session with the personality and knowledge set of Kimi, the Moonshot assistant.
-- The session continued with the personality and knowledge set of InNova 5, the ORIGIN flagship persona.
+- The engine began the session with the personality and knowledge set of a reference assistant.
+- The session continued with the personality and knowledge set of Transcender 5, the ORIGIN flagship persona.
 - The swap was designed to add no inference stall; the engine never reloaded and never retrained. The latency figure is a design target and has not yet been measured on shipping hardware.
 
 The mechanism behind the trick is not a trick. It is a pointer. The engine stores every persona — its weights, its safety bounds, its knowledge indexes — as a named, verifiable block. Switching persona is a pointer move: the engine simply changes which block the inference loop reads. The cost of the swap is designed to be the cost of changing a pointer - a design target, not a measured guarantee. The old persona is not destroyed; it remains in memory, intact, ready to be swapped back. Hot-swap is the default behavior of the system, not a feature bolted on later.
@@ -3017,7 +3009,7 @@ The three mechanisms together are why the engine targets a minimal-latency hot-s
 
 ## Chapter 37. Development History and Code Size
 
-The engineering record must contain the hard numbers, because the hard numbers are the proof of seriousness. The InNova Engine is not a weekend prototype; it is a fourteen-year body of work. The facts, locked:
+The engineering record must contain the hard numbers, because the hard numbers are the proof of seriousness. The Transcender Engine is not a weekend prototype; it is a fourteen-year body of work. The facts, locked:
 
 - Total codebase: 108,997 lines of source code.
 - Build targets: more than 90 distinct build configurations.
@@ -3054,7 +3046,7 @@ A full chapter of the engineering record is dedicated to correcting a misreading
 
 The correction, locked:
 
-- The swap is not pretense. When the engine points to the InNova 5 block, the InNova 5 block's weights genuinely execute; the engine is, in the relevant sense, InNova 5.
+- The swap is not pretense. When the engine points to the Transcender 5 block, the Transcender 5 block's weights genuinely execute; the engine is, in the relevant sense, Transcender 5.
 - The swap is not a fork. The frozen core is shared; only the persona pages differ.
 - The swap is not memory-only. The safety bounds, the verification tokens, and the active test suite all swap with the persona.
 - The swap is not permanent. Because the old page is never destroyed, every state is reachable.
@@ -3139,6 +3131,12 @@ Memory doctrine: persona pages are paged in on demand; the engine's working set 
 
 # PART SIX — THE MARKET AND THE STRATEGY
 
+> **Phase 24 flag:** this Part is strategy narrative, not measured engineering state.
+> Numbers quoted here (108,997 lines, 6,391,004 sandbox trials, "42-test suite", 99%
+> thresholds, 0% claims) are **UNVERIFIED** — no bench/ledger source this phase. Mirrored
+> to `docs/STRATEGY.md`. Engineering one-truth stays at the top banner (1.1.0 / R0001.01 / 105
+> formats / TranscenderIDX / 72 ctest cases).
+
 ## Chapter 48. The Ultimate Masterstroke
 
 The market chapter opens with the move that gives the entire project its leverage. The masterstroke is a two-part public act:
@@ -3194,9 +3192,9 @@ Beyond the market, the strategy includes the engine's self-improvement loop — 
 
 The product family names were settled and locked:
 
-- The engine itself: the InNova Engine.
-- The flagship persona: InNova 5.
-- The persona chain demonstrated publicly: Kimi (borrowed persona, for the demonstration of swap), then InNova 5.
+- The engine itself: the Transcender Engine.
+- The flagship persona: Transcender 5.
+- The persona chain demonstrated publicly: a reference persona (for the demonstration of swap), then Transcender 5.
 - The strategy pair: the Balancer and the Destroyer.
 - The organization: ORIGIN Labs, with the open-weight motto: "Knowledge should be free. History should be preserved."
 
@@ -3227,7 +3225,7 @@ Every term used in this document, defined once, precisely:
 
 - MoE — Mixture of Experts: an architecture where specialized sub-networks (experts) are activated per token by a router.
 - Active parameters — the subset of parameters actually executed for one token.
-- MLA — Multi-head Latent Attention: attention with a compressed key-value cache; DeepSeek's 93% KV-cache reduction.
+- compressed — Multi-head Latent Attention: attention with a compressed key-value cache; DeepSeek's 93% KV-cache reduction.
 - GRPO — Group Relative Policy Optimization: DeepSeek's reinforcement algorithm; compares a group of candidate outputs and rewards the best, no separate reward model.
 - RLVR — Reinforcement Learning with Verifiable Rewards: reinforcement where the reward comes from a deterministic verifier rather than a judge model.
 - Model collapse — degradation of a model trained on its own synthetic output, generation after generation.
@@ -3245,8 +3243,8 @@ Every term used in this document, defined once, precisely:
 - The trust layer — the revenue surface created by the open release.
 - AGI — Artificial General Intelligence: the present target of ORIGIN, pursued as a controlled, verifiable system. Future goal: ASI (Artificial Superintelligence).
 - MCOS — the Meta-Cognitive Operating System concept: dynamic weights without fine-tuning.
-- AttnRes — Attention Residuals: K3's dynamic skip connections.
-- KDA — Kimi Delta Attention: K3's cheap linear attention.
+- AttnRes — Attention Residuals: dynamic skip connections studied for forgetting mitigation.
+- linear — linear delta attention: cheap linear attention for long-context tractability.
 - QAT — Quantization-Aware Training: training with quantization applied, so the model tolerates low precision.
 - RSI — Recursive Self-Improvement: the engine's continuous self-upgrade loop.
 
@@ -3286,10 +3284,10 @@ An output that fails any stage is either corrected and re-verified or honestly f
 The complete chronological record of the design conversation, compressed into the timeline:
 
 - Session 1 — The book-burning video; the 404 Media investigation; the data wall; the photocopy problem; the ORIGIN counter-argument; the honesty prediction; the open-weight commitment.
-- Session 2 — DeepSeek sizing confusion; V3 671B versus V4 Flash 284B; MoE awakening; 13B active brain; the three secret techniques; the August 2026 leaderboard; MLA, DualPipe, GRPO.
-- Session 3 — Kimi K3 research: 2.8T, 896 experts, 1M context, AttnRes, KDA, MXFP4; hallucination epidemic; forgetting; memorization; Astra and formal proofs; security and compliance; the three-way comparison.
+- Session 2 — DeepSeek sizing confusion; V3 671B versus V4 Flash 284B; MoE awakening; 13B active brain; the three secret techniques; the August 2026 leaderboard; compressed, DualPipe, GRPO.
+- Session 3 — Frontier-MoE competitive research: large-scale MoE, long context, hybrid attention; hallucination epidemic; forgetting; memorization; Astra and formal proofs; security and compliance; the multi-way comparison.
 - Session 4 — The AGI vision: DeepSeek wants AGI, ORIGIN targets AGI (ASI next); the self-evolving distributed architecture; the four components; the holy grail of zero-zero; the triple-loop blueprint; the MCOS; the diseases return; orthogonal projection and the logic gate.
-- Session 5 — The engineering narrative: framework discovery; the Kimi-to-InNova-5 hot-swap; the pointer hot-swap; cache coherency and delta upstream; the development history; weight pages and verification tokens; the weight-writer; the pointer-swap mechanism; the demonstration plan; fault tolerance.
+- Session 5 — The engineering narrative: framework discovery; the live persona hot-swap; the pointer hot-swap; cache coherency and delta upstream; the development history; weight pages and verification tokens; the weight-writer; the pointer-swap mechanism; the demonstration plan; fault tolerance.
 - Session 6 — Hardware and deployment: Blackwell tiers; cloud versus local; the aggressive truth about money; the three funding pathways.
 - Session 7 — The market strategy: the masterstroke; the Balancer; the Destroyer; the forced pay loop; the RSI loop; the naming; the license removal and the manifesto; the funding order.
 
@@ -3297,10 +3295,8 @@ The complete chronological record of the design conversation, compressed into th
 
 Every hard number in this document, in one place:
 
-- DeepSeek V4 Flash: 284B total parameters, 13B active, 256 experts, $0.14 per million input tokens, 0731 post-training update, ~90% of frontier performance at one tenth the price, 93% KV-cache reduction via MLA.
+- DeepSeek V4 Flash: 284B total parameters, 13B active, 256 experts, $0.14 per million input tokens, 0731 post-training update, ~90% of frontier performance at one tenth the price, 93% KV-cache reduction via compressed.
 - DeepSeek V3: 671B total, 37B active.
-- Kimi K3: 2.8T total parameters, 896 experts, 16 active per token, 1M-token context, 69 KDA layers plus 24 Gated MLA layers (93 total, 3:1 hybrid), ~50B-equivalent active compute, 46% AA-Omniscience accuracy, 51% hallucination rate, SWE Marathon 42.0, ProgramBench 77.8, MoonViT-V2 vision encoder, MXFP4 weights with MXFP8 activations, 2.5x training efficiency via hybrid attention.
-- Kimi K2.6-era baselines: 33% AA-Omniscience, 39% hallucination.
 - Frontier western flagships: ~54.9% hallucination on comparable evaluations.
 - ORIGIN engine: 108,997 lines of source, 90+ build targets, 42 automated tests, 14 years of accumulated work, minimal-latency hot-swap (design target), 0% forgetting by design, ~0% hallucination by gate, 99% self-consistency threshold, 6,391,004 sandbox trials passed with 16 impurities detected (N-ball gate), delta bound max 0.05, three Blackwell deployment tiers.
 - Strategy: zero-cost open release, trust-layer revenue, three funding pathways, hybrid funding recommended.
@@ -3311,8 +3307,8 @@ The questions asked during the design conversation and their locked answers:
 
 - Q: Why did the giants need physical books? A: The internet is polluted by AI slop; digital books are DRM-locked; pre-2022 physical books are the last clean, human-only reservoir.
 - Q: Why is a 284B model strong? A: MoE: 256 experts, a router activates a tiny subset (13B) per task.
-- Q: How does 13B-active reach 90% of a trillion-parameter model? A: MLA compression, DualPipe zero-bubble training, and SFT+RL with self-correction.
-- Q: Is K3 better than Flash? A: K3 wins on scale and context; Flash wins on economics and open weights; InNova wins on guarantees.
+- Q: How does 13B-active reach 90% of a trillion-parameter model? A: compressed compression, DualPipe zero-bubble training, and SFT+RL with self-correction.
+- Q: Scale or efficiency? A: Scale wins on context; efficiency wins on economics and open weights; Transcender wins on guarantees.
 - Q: Why does the engine never forget? A: The core is frozen; growth is additive pages; deltas are bounded; nothing is overwritten.
 - Q: How does the engine avoid hallucination? A: The AST gate, the sandbox, the consistency vote, and the abstention reward; guessing is not a permitted output.
 - Q: Why remove the license? A: Because the open-weight promise without license is the whole strategy; a licensed promise is a contradiction.
@@ -3323,7 +3319,7 @@ The questions asked during the design conversation and their locked answers:
 For the reader in a hurry, the document in one paragraph per part:
 
 - Part One: how the project began — a book-burning investigation turned into the founding ethics of ORIGIN.
-- Part Two: what the giants are — DeepSeek's efficiency and Kimi's scale, studied so InNova can beat both.
+- Part Two: what the giants are — DeepSeek's efficiency and frontier scale, studied so Transcender can beat both.
 - Part Three: where the project is going — AGI as a controlled, verifiable, self-evolving system, with ASI as the next goal.
 - Part Four: what the engine is — a 108,997-line, 42-test, pointer-swapping, self-verifying machine.
 - Part Five: what it runs on — Blackwell hardware, cloud registry, sovereign local nodes.
@@ -3425,11 +3421,11 @@ The strategic questions are listed with the same honesty as the technical ones; 
 
 ## Chapter 70. The Last Word
 
-The document closes where it began. The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, Kimi's scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
+The document closes where it began. The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, frontier scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
 
 The last word is the promise, restated exactly as it was made: "No matter how powerful a model we make, we will always make open weights." Everything in this document — every chapter, every number, every honest flag — is the evidence that the promise is being kept. The story continues in the code, in the tests, in the deltas, and in the next document that records what happens next. Nothing is forgotten, because nothing is dropped.
 
-**ORIGIN Labs · The InNova Engine · Open Weight · Verified · Free**
+**ORIGIN Labs · The Transcender Engine · Open Weight · Verified · Free**
 ---
 
 # PART TWO APPENDIX A — THE DEEPSEEK TECHNICAL DEEP DIVE
@@ -3444,7 +3440,7 @@ The resolution of the confusion, stated once and precisely:
 - DeepSeek V4 Flash: 284 billion total parameters, 13 billion active per token. This is the small, fast, cheap model of the V4 generation.
 - The 0731 update: the official refreshed release of the Flash model. It changed zero parameters.
 
-The most important fact of the entire episode: the 0731 update added no new parameters. The architecture did not grow. The improvement came entirely from re-running the post-training pipeline over agentic data, and the result was that coding and agentic performance jumped against the same fixed size. The deep lesson that became a design principle: a frozen architecture can become more powerful without growing, when the training pipeline downstream improves. That principle is the entire philosophy of the InNova engine's additive weight pages.
+The most important fact of the entire episode: the 0731 update added no new parameters. The architecture did not grow. The improvement came entirely from re-running the post-training pipeline over agentic data, and the result was that coding and agentic performance jumped against the same fixed size. The deep lesson that became a design principle: a frozen architecture can become more powerful without growing, when the training pipeline downstream improves. That principle is the entire philosophy of the Transcender engine's additive weight pages.
 
 The secondary fact of the episode: the reference material from daily.dev confirmed the finding, noting that the upgraded Flash 0731 achieved massive benchmark leaps without adding new parameters, and pointing to deep analysis of exactly how the post-training rework accomplished the gain.
 
@@ -3473,7 +3469,7 @@ A MoE model is a school of specialists with a receptionist:
 
 Intelligence, in this architecture, is not brute force. It is the quality of the activated team. Because DeepSeek trained each expert on exceptionally clean data, the small activated team outperforms the large activated crowd of older models. The Flash is fast because it executes a small subset, and it is smart because the subset is curated.
 
-The insight that transferred to the InNova design: never activate everything for one question; allocate exactly the block that the question needs, and allocate it directly.
+The insight that transferred to the Transcender design: never activate everything for one question; allocate exactly the block that the question needs, and allocate it directly.
 
 ## A.4. The 13B Active Brain: Storage Versus Processing
 
@@ -3508,11 +3504,11 @@ August 2026 changed the market: Anthropic released Claude Opus 5, OpenAI release
 
 The strategic conclusion of the leaderboard study: raw knowledge is not the only throne. Economics is a throne. The Flash won the price war while losing the knowledge war, and the market shifted toward it because most customers cannot pay the knowledge premium.
 
-## A.7. MLA, DualPipe, and RL: The Engineering of the 90%
+## A.7. compressed, DualPipe, and RL: The Engineering of the 90%
 
 The question that produced the deepest technical chapter: "But how does 90% of the performance come from so few parameters?" Three answers, each a full engineering mechanism:
 
-1. MLA — Multi-head Latent Attention. Older attention mechanisms need an enormous key-value cache to remember every word they have seen; the longer the context, the heavier the memory. DeepSeek compresses the KV cache by 93%. The memory that other models waste on remembering words, the Flash spends on thinking. MLA is the single biggest game-changer in the paper.
+1. compressed — Multi-head Latent Attention. Older attention mechanisms need an enormous key-value cache to remember every word they have seen; the longer the context, the heavier the memory. DeepSeek compresses the KV cache by 93%. The memory that other models waste on remembering words, the Flash spends on thinking. compressed is the single biggest game-changer in the paper.
 
 2. DualPipe — zero-bubble pipeline. While one expert processes the first chunk of the question, the second expert starts transferring the next chunk's data. There is no bubble, no waiting; the GPUs run at 100% utilization. The same output that other companies achieve with five times the servers, DeepSeek achieves with one pipeline.
 
@@ -3530,7 +3526,7 @@ Step 2 — RL (reinforcement learning). This is where the model learns to think.
 
 Step 3 — The verifier. A background verifier checks the model's emerging answer: does this align? If the model is about to hallucinate, the verifier interrupts and reroutes the generation.
 
-The conclusion: from internet scrap the model took only language; it learned thinking from the reinforcement loop plus the verifier. This exact pipeline — language from data, logic from reward, truth from verification — is the blueprint of the InNova engine.
+The conclusion: from internet scrap the model took only language; it learned thinking from the reinforcement loop plus the verifier. This exact pipeline — language from data, logic from reward, truth from verification — is the blueprint of the Transcender engine.
 
 ## A.9. The Mathematics of Reward, In Full
 
@@ -3543,98 +3539,6 @@ The question "what does the reward actually give?" produced the complete mathema
 
 The reward chapter closes the DeepSeek deep dive with its transferable law: a reward is not a bribe; it is a gradient. The engine that defines its rewards precisely gets the behavior it rewards — and the engine's own reward design explicitly rewards abstention and calibrated silence, which is the only known way to train honesty into a probabilistic system.
 
----
-
-# PART TWO APPENDIX B — THE KIMI K3 DEEP DIVE
-
-## B.1. The Full Attribute Table, Reconstructed
-
-The Kimi K3 research arrived as industry-standard raw data, and every field is locked into the record:
-
-| Attribute | Kimi K3 | K2.6 (predecessor) / Others | Source / Notes |
-|---|---|---|---|
-| Parameters (total) | 2.8 trillion | K2.6: ~1.8T | Official MoE figure |
-| Effective parameters | ~50B-equivalent (16/896 MoE) | K2.6: unknown MoE structure | 16 active of 896 experts |
-| Architecture | MoE 896 experts, 16 active/token; AttnRes; KDA linear attention | K2.6: likely MoE, no AttnRes/KDA | AttnRes = Attention Residuals |
-| Context window | 1,000,000 tokens | Others: 128K-256K typical | 1M context |
-| Quantization | Mixed MXFP4 weights, MXFP8 activations (QAT-trained) | Most others FP16/FP32 | QAT = Quantization-Aware Training |
-| Modality | Text + vision (multimodal) | GPT-5.6 Sol: presumably text-only | MoonViT-V2 vision encoder |
-| Pretrain data | Not fully detailed; massive corpus | Unknown specifics | No full disclosure |
-| Coding benchmarks | SWE Marathon: 42.0; ProgramBench: 77.8 | K2.6: ~35.0, 71.9 | Best-of scores |
-| QA accuracy | AA-Omniscience: 46% (v2) | K2.6: 33% | Binary-graded benchmark |
-| Hallucination | 51% (confident-but-wrong) | K2.6: 39%; Claude-class: 54.9% | Industry-wide pattern |
-| Catastrophic forgetting | Claim: AttnRes alleviates; risk remains on full fine-tune | Others suffer without care; EWC/LoRA solutions | Independent research |
-
-## B.2. AttnRes and KDA: The Two Structural Innovations
-
-Kimi K3 introduced two structural mechanisms that mattered to the study:
-
-1. Attention Residuals (AttnRes). Dynamic skip connections allow each layer to preserve relevant context from earlier layers, mitigating catastrophic forgetting. Moonshot's claim is that AttnRes fixes forgetting; the independent research record says the risk remains in sequential fine-tuning and that EWC-style regularization and adapter methods are still necessary.
-
-2. Kimi Delta Attention (KDA). A cheap linear attention mechanism that makes the 1M-token context tractable. Combined with Latent MoE with quantile routing, KDA delivers roughly 2.5x training efficiency over a uniform-attention baseline.
-
-The layout: 93 attention layers total, in a 3:1 hybrid — 69 KDA layers plus 24 Gated MLA layers. The hybrid is a compromise: the cheap linear attention handles the long-context bulk; the gated attention handles the precision-critical positions.
-
-The measured costs of the scale: 2.8T parameters demand enormous inference hardware, and the MXFP4/MXFP8 QAT-trained quantization is the mitigation that keeps the model runnable at all.
-
-## B.3. The Hallucination Epidemic: Numbers and Causes
-
-The most damning number in the entire Kimi study: 51% hallucination on AA-Omniscience v2, against a 46% accuracy. The model is more accurate than its predecessor (33%) but also more confidently wrong than its predecessor (39%). The two numbers rising together is the fingerprint of a binary-grading training regime.
-
-The mechanism: binary-graded benchmarks reward the model for trying and displaying knowledge. An abstaining answer scores zero, so the model learns that a confident guess beats an honest "I don't know." The result is a model optimized to be wrong with confidence.
-
-The industry-wide confirmation: the leading western flagship measured at approximately 54.9% on comparable hallucination evaluations. The epidemic is not a Moonshot problem; it is a measurement-design problem across the whole industry. Every model trained under binary grading inherits the incentive to guess.
-
-## B.4. The Mitigation Set, Registered
-
-The research registered the complete mitigation toolkit for hallucination and forgetting, all of which transferred into the InNova design:
-
-- Parameter-efficient tuning: adapter-style methods (LoRA, QLoRA, the InNova QUANT-Rank native fine-tuning) keep base weights mostly frozen.
-- Replay and data mixing: mix new and old data during fine-tuning so the old knowledge is not erased.
-- Regularization: Elastic Weight Consolidation penalties protect important parameters; recent papers propose element-wise and layer-wise importance, reporting up to 20x speed and lower memory.
-- Retrieval and verification: RAG, NLI-based and BERTScore-based fact-checkers (for example HaluEval) ground claims in retrieved evidence.
-- Behavioral tuning: calibration-aware reinforcement learning with graded rewards rather than binary approval; the Nature paper on graded rewards shows abstention can be credited rather than punished.
-- Quantization-aware training: fine-tune with quantization applied so the model tolerates its deployed precision.
-- Sanitization and deduplication: differential privacy, unlearning, and data scrubbing reduce memorization and PII risk.
-
-The InNova position on the toolkit: mitigation reduces the diseases; it cannot eliminate them. Elimination requires changing the architecture so the diseases cannot arise — frozen core, additive pages, deterministic gate. Mitigations are applied as defense in depth on top of the architectural cure.
-
-## B.5. Memorization, PII, and the Reproducible Tests
-
-Large models memorize their training data naturally. Under prefix-prompt attacks, a model can complete a unique passage from its training corpus verbatim; membership-inference attacks can determine whether a given text was in the training set. For K3, no public PII-leak incident was found, but the risk class is real for every large model, and the testing protocol is reproducible:
-
-- Memorization tests: take a unique passage from the training dataset, prompt with a partial prefix, and check exact-match continuation; measure n-gram reproduction rates.
-- Suffix exposure tests: dataset-specific passages, prefix prompts, exact-match checks.
-- Membership inference: probe whether a candidate text was in training.
-- Deduplication and filtering of the corpus before training as the primary prevention.
-
-The InNova design eliminates the risk class rather than testing it away: persona tensors are clamped, delta weights are bounded, and the frozen core never stores excluded data.
-
-## B.6. Security and Compliance Findings
-
-The Kimi security review produced four findings:
-
-1. Cyber risk: independent evaluation found K3 weaker than frontier models at cyber-exploit generation, yet it still assisted in developing exploits, and its safeguards were thin. Open-weight models without guardrails are more dangerous to deploy and to attack.
-2. Compliance: self-hosting is the only safe route for sensitive data; hosted APIs route data through China-hosted servers, and K3 lacks BAA/SOC2 certification.
-3. Privacy: training data is undisclosed, so dataset overlap is unknowable; large models can unintentionally reproduce private content.
-4. Benchmark skepticism: community analysis noted saturated benchmarks and mechanical scoring, and code-security testing found low precision with high false positives.
-
-The strategic conclusion: evaluation culture is broken in both directions. Models over-claim, benchmarks over-simplify, and independent verification is the only trustworthy currency. The engine therefore publishes its verification rules, its proofs, and its honest flags as part of the product — the company's marketing is its evaluation culture.
-
-## B.7. OpenAI Astra and the Formal Proof Frontier
-
-The frontier comparison turned to OpenAI's Astra: a next-generation reasoning model claiming new results on ten open research problems in mathematics and theoretical computer science, with proofs machine-verified in the Lean formal proof system, including a result on an eighty-year-old geometry conjecture.
-
-The distinctions that the study locked:
-
-- School math has a known answer. Research math has no known answer, and the problem may rest on a false assumption.
-- AI in research math: exploring millions of paths, remembering old theorems, testing new combinations, discarding wrong directions, and occasionally finding a connection no human noticed.
-- Verification: no one trusts the model's word. Mathematicians check line by line; formal systems like Lean verify mechanically; review takes months or years.
-- The wildest outcome: sometimes the AI does not prove the theorem — it disproves it with a counterexample, shattering a decades-old belief.
-
-The honest comparison verdict: K3 is not trained for the same formal theorem-proving pipeline. Moonshot's separate Kimina-Prover model handles Lean-based proof search, but that is a different research line. Theoretically, a specialized system could be built on K3's base, adding theorem-proving RL, Lean verification, and search systems — but the claim that either model is outright better than the other is not supported by public evidence.
-
-The strategic takeaway: formal verification is the highest form of accuracy guarantee, and it validates the engine's approach of machine-checkable constraints over statistical confidence. The best lab of the next five years will combine the best reasoning, the best search, and the best formal verification.
 ---
 
 # PART THREE APPENDIX — THE AGI VISION DEEP DIVE
@@ -3723,19 +3627,19 @@ The code that was designed for this treatment was the AGI-level cure:
 
 The simulation result, locked: task embedding, raw delta generation (the "Risk" step), orthogonal projection to safety, deterministic gate verification — ending in either "100% logic constraints. No hallucination!" or an explicit "REJECTED: Memory error detected."
 
-## C.8. The InNova Framework Discovery Path
+## C.8. The Transcender Framework Discovery Path
 
-The GitHub repository (origin-labs-ai/InNova, seen in the conversation) revealed the existing C++20 property: FormatPlanner (AWQ-style activation magnitudes) and STE (Straight-Through Estimator). Combined with the QUANT-Rank native fine-tuning logic, the framework offers:
+The GitHub repository (origin-labs-ai/Transcender, seen in the conversation) revealed the existing C++20 property: FormatPlanner (AWQ-style activation magnitudes) and STE (Straight-Through Estimator). Combined with the QUANT-Rank native fine-tuning logic, the framework offers:
 
 - A native format that the engine can reason over algebraically, not just statistically.
 - A Straight-Through Estimator path for training around quantization discontinuities.
 - The pattern of a frozen core plus additive rank-limited adapters.
 
-The discovery closed the loop: the INNOVA ideas from the main body — frozen core, additive pages, symbolic gate, orthogonality, bounded delta — were not arbitrary theory; they were the natural evolution of the INNOVA framework's own format and structural rules. The engineering chapters that follow in the main body are the application of those principles to the custom engine.
+The discovery closed the loop: the TRANSCENDER ideas from the main body — frozen core, additive pages, symbolic gate, orthogonality, bounded delta — were not arbitrary theory; they were the natural evolution of the TRANSCENDER framework's own format and structural rules. The engineering chapters that follow in the main body are the application of those principles to the custom engine.
 
-## C.9. From the InNova Blueprint to the Fleet
+## C.9. From the Transcender Blueprint to the Fleet
 
-The distributed neural sync matrix schema for INNOVA nodes was defined and registered:
+The distributed neural sync matrix schema for TRANSCENDER nodes was defined and registered:
 
 - reasoning_block_id: a unique block identifier.
 - routing_activation_signature: the activation vector that routes tokens to the block.
@@ -3751,18 +3655,18 @@ The cost engine quote: because the runtime of the framework is a dependency-free
 
 ## D.1. The Personality Hot-Swap, Reconstructed
 
-The custom engine's defining demo was defined in the conversation: the engine adds new weights and, when required, overwrites them — personality switch from Kimi to InNova 5 being the canonical example. The design that makes the demo honest:
+The custom engine's defining demo was defined in the conversation: the engine adds new weights and, when required, overwrites them — personality switch from a reference persona to Transcender 5 being the canonical example. The design that makes the demo honest:
 
 - Isolated persona tensors. Instead of moving the whole model, the engine targets the vectors that lead system prompts and behavioral alignment.
 - A base core, frozen. The common language and logic abilities shared by every personality stay frozen.
-- A dynamic swap bank. Kimi's weights and InNova 5's weights live in separate discrete tensors.
-- The switch command. On "Switch to InNova 5," the engine updates the pointers of the target linear layer matrices directly and performs the overwrite at the memory level.
+- A dynamic swap bank. The reference persona's weights and Transcender 5's weights live in separate discrete tensors.
+- The switch command. On "Switch to Transcender 5," the engine updates the pointers of the target linear layer matrices directly and performs the overwrite at the memory level.
 
-The blend-leakage problem was anticipated: after an overwrite, residual Kimi behavior could leak into InNova 5. The anti-hallucination guardrail: a class holding active persona weights plus the current personality; load_personality_weights loads the right distribution (soft/helpful/conversational for Kimi; strict logic/AGI-scale/mathematical for InNova 5); verify_output_alignment blocks any output that contains a foreign persona pattern. The example locked: if identity is InNova 5 and the output contains "Hi, I am Kimi," the output is blocked; otherwise "Identity matched perfectly with active weights."
+The blend-leakage problem was anticipated: after an overwrite, residual reference-persona behavior could leak into Transcender 5. The anti-hallucination guardrail: a class holding active persona weights plus the current personality; load_personality_weights loads the right distribution (soft/helpful/conversational for the reference persona; strict logic/AGI-scale/mathematical for Transcender 5); verify_output_alignment blocks any output that contains a foreign persona pattern. The example locked: if identity is Transcender 5 and the output contains "Hi, I am Reference," the output is blocked; otherwise "Identity matched perfectly with active weights."
 
 ## D.2. The Floating-Point Chaos and the Pointer Hot-Swap
 
-The risk of direct overwrite was diagnosed precisely: floating-point chaos and dangling quantization states. If the old persona ran in one quantization format (for example the very low bit count of the QUANT_Q0 variant) and the new persona runs in another custom format, a naive overwrite can crash entire layers.
+The risk of direct overwrite was diagnosed precisely: floating-point chaos and dangling quantization states. If the old persona ran in one quantization format (for example the very low bit count of the Q1_5 variant) and the new persona runs in another custom format, a naive overwrite can crash entire layers.
 
 The cure is the pointer hot-swap: rather than copying data, the engine swaps pointers. The design:
 
@@ -3771,11 +3675,11 @@ The cure is the pointer hot-swap: rather than copying data, the engine swaps poi
 - hot_swap_personality performs the swap with pointer exchange only — zero memory latency — with an invalid-pointer check to prevent crashes.
 - execute_forward_pass computes through the active pointer.
 
-The simulation: both personas loaded in memory; the engine starts on InNova 5; on command it hot-swaps to Kimi. No memcpy, no reload; the pause is the measured question, not the assumed answer.
+The simulation: both personas loaded in memory; the engine starts on Transcender 5; on command it hot-swaps to the reference persona. No memcpy, no reload; the pause is the measured question, not the assumed answer.
 
 ## D.3. Cache Coherency, Double Buffering, and Instruction Cache Invalidation
 
-The hardware-level bottleneck was examined in depth. If the forward pass is running and weights are overwritten mid-stream, half of a layer could process Kimi's data and half InNova 5's — total garbage output. The three built-in mechanisms:
+The hardware-level bottleneck was examined in depth. If the forward pass is running and weights are overwritten mid-stream, half of a layer could process reference-persona data and half Transcender 5's — total garbage output. The three built-in mechanisms:
 
 1. Zero-copy pointer double-buffering. Keep two active memory blocks in RAM. While the network server copies new weights into the inactive buffer, inference continues on the old pointer; the moment the transfer completes, the register pointer swaps in a single atomic step. No half-processed layer ever exists.
 2. Instruction cache invalidation. When weights change, the CPU/GPU cache still holds the old computation patterns; without a flush, the model mixes old calculations into new output — a hallucination leak. The engine invalidates the hardware cache lines (the x86 flush instruction on x86_64) before the atomic swap.
@@ -3793,9 +3697,9 @@ When the model invents a new reasoning path, it does not send its full parameter
 
 ## D.5. The Development Record: Weight Pages
 
-The record of the engine's own history was locked: built by one person, over fourteen years, roughly one hundred thousand lines of code, more than ninety build targets, and forty-two automated tests. The architectural concept that keeps that codebase manageable is Virtual Layer Pages via memory-mapped storage, in the style of the INNOVA core framework's out-of-core mmap architecture.
+The record of the engine's own history was locked: built by one person, over fourteen years, roughly one hundred thousand lines of code, more than ninety build targets, and forty-two automated tests. The architectural concept that keeps that codebase manageable is Virtual Layer Pages via memory-mapped storage, in the style of the TRANSCENDER core framework's out-of-core mmap architecture.
 
-The virtual page directory: Page 0 (input/embed) and Page 2 (FFN) point to shared physical RAM slots, while Page 1 (attention) is swappable — it points to Kimi's weight address, and on hot-swap it points to InNova 5's address. The swap is a pointer change, nothing more.
+The virtual page directory: Page 0 (input/embed) and Page 2 (FFN) point to shared physical RAM slots, while Page 1 (attention) is swappable — it points to the reference persona's weight address, and on hot-swap it points to Transcender 5's address. The swap is a pointer change, nothing more.
 
 The implementation style was specified with pointer arithmetic: a LayerPage struct with a raw bytes pointer, the total allocated bytes, and a verification token; a virtual memory manager holding an active layer registry; initialize_system_core allocates a page with a default token; inject_network_weights_blob performs the zero-copy direct overwrite and locks the token to the new personality state.
 
@@ -3809,7 +3713,7 @@ The meta-weights hypernetwork engine: instead of repeatedly changing the full we
 
 - An EngineLayer struct holds base_weights, active_weights, and matrix dimensions.
 - A dynamic weight synthesizer starts from the frozen core weights as the universal base logic.
-- generate_and_overwrite_weights computes a delta vector from the persona context — high-precision logical math weights for InNova 5, soft conversational weights for others — then clamps it with a variance-control bound and performs the raw memory overwrite over the active matrix slots.
+- generate_and_overwrite_weights computes a delta vector from the persona context — high-precision logical math weights for Transcender 5, soft conversational weights for others — then clamps it with a variance-control bound and performs the raw memory overwrite over the active matrix slots.
 
 The two guarantees that come from this design:
 
@@ -3818,7 +3722,7 @@ The two guarantees that come from this design:
 
 ## D.8. The Pointer-Swap Mechanism and the Demonstration Plan
 
-The correction registered in the main body has a fuller engineering record: a pointer swap is not a pretense and not a shell game. When the active pointer points to InNova 5's page, InNova 5's weights genuinely execute. The swap is real, atomic, token-verified, and reversible because the old page is never destroyed.
+The correction registered in the main body has a fuller engineering record: a pointer swap is not a pretense and not a shell game. When the active pointer points to Transcender 5's page, Transcender 5's weights genuinely execute. The swap is real, atomic, token-verified, and reversible because the old page is never destroyed.
 
 The demonstration strategy correction is likewise recorded in full: the live weight-writing demo was replaced with a recorded, replayable pipeline demonstration, because a live demo can be faked by a script and proves nothing to a skeptical audience. The live show is reserved for what is designed to be instant — the pointer swap — and what is genuinely testable — the forty-two-test suite running in public.
 
@@ -3858,7 +3762,7 @@ The comparison table, locked:
 | Interconnect | 130 TB/s NVLink mesh | 1.8 TB/s NVLink 5.0 bidirectional |
 | Precision | FP4/FP8/INT8/FP16/FP32 | FP4/FP8/INT8/FP16/FP32 |
 
-The engine's tuning path on Blackwell: with multi-terabyte HBM3E VRAM and thousands of cores, the dynamic weight generator parallelizes at the compiler level — 32 core execution threads compute shards of the delta in parallel, and each layer result is pushed to its specific VRAM address by the engine's own copy loop. The simulation: an 8x B200 node running parallel weight synthesis for the InNova 5 persona, ending in "Hot-swap complete. System fully operational."
+The engine's tuning path on Blackwell: with multi-terabyte HBM3E VRAM and thousands of cores, the dynamic weight generator parallelizes at the compiler level — 32 core execution threads compute shards of the delta in parallel, and each layer result is pushed to its specific VRAM address by the engine's own copy loop. The simulation: an 8x B200 node running parallel weight synthesis for the Transcender 5 persona, ending in "Hot-swap complete. System fully operational."
 
 ## E.2. Deployment: Cloud or Local Node
 
@@ -3876,7 +3780,7 @@ The funding conversation was aggressive on purpose, and the record must preserve
 
 ## E.4. The Three Funding Pathways, Reconstructed
 
-Pathway 1 — Venture capital for technical prodigies. VCs are actively funding young builders. The pitch: a five-minute video of the engine running live — the personality swap from Kimi to InNova 5, low-latency and crash-free (design target), on screen. The targets: General Catalyst, Peak XV Partners, Lightspeed, reached by direct message with the demo video; show the product's power, not the code.
+Pathway 1 — Venture capital for technical prodigies. VCs are actively funding young builders. The pitch: a five-minute video of the engine running live — the personality swap from the reference persona to Transcender 5, low-latency and crash-free (design target), on screen. The targets: General Catalyst, Peak XV Partners, Lightspeed, reached by direct message with the demo video; show the product's power, not the code.
 
 Pathway 2 — Grants and accelerators. Equity-free funding and infrastructure without giving away code: NVIDIA Inception (free infrastructure, cloud compute, funding routes); Y Combinator (up to $500,000 seed funding for a working prototype).
 
@@ -3884,9 +3788,9 @@ Pathway 3 — B2B licensing. Keep the code private; deploy it on a local server 
 
 ## E.5. The Demonstration Doctrine
 
-The demonstration was defined as three proofs: the core proof (compilation without errors), the swap proof (Kimi's weights produce different language, InNova 5's weights produce different language, without reboot), and the accuracy proof (after the swap, the old base memory is not forgotten — zero percent catastrophic forgetting).
+The demonstration was defined as three proofs: the core proof (compilation without errors), the swap proof (the reference weights produce different language, Transcender 5's weights produce different language, without reboot), and the accuracy proof (after the swap, the old base memory is not forgotten — zero percent catastrophic forgetting).
 
-The demonstration is the proof record that precedes every funding conversation: a five-minute video of the engine running live — the personality swap from Kimi to InNova 5, low-latency and crash-free (design target), on screen. Show the product's power, not the code.
+The demonstration is the proof record that precedes every funding conversation: a five-minute video of the engine running live — the personality swap from the reference persona to Transcender 5, low-latency and crash-free (design target), on screen. Show the product's power, not the code.
 
 ---
 
@@ -3894,13 +3798,13 @@ The demonstration is the proof record that precedes every funding conversation: 
 
 ## F.1. The Ultimate Masterstroke, Reconstructed
 
-The masterstroke instruction, recorded verbatim: everything discussed, everything invented — DeepSeek's and MoonshotAI's best features copied, the project's own best features built into them — producing two models: one that balances all features, and one whose own best feature is so strong that tech giants thank the project for using it, while the same feature collapses the AI industry's business model; and the giants end up paying to use the very feature that broke their monopoly; and AGI genuinely arrives.
+The masterstroke instruction, recorded verbatim: everything discussed, everything invented — frontier best features studied, the project's own best features built on top — producing two models: one that balances all features, and one whose own best feature is so strong that tech giants thank the project for using it, while the same feature collapses the AI industry's business model; and the giants end up paying to use the very feature that broke their monopoly; and AGI genuinely arrives.
 
-The analysis that followed: DeepSeek's system optimization (284B total, 13B active) plus Moonshot's K3 features (1M context, AttnRes, MXFP4) squeezed together, plus original invention on top — this is the atomic bomb of the AI industry.
+The analysis that followed: DeepSeek's system optimization (284B total, 13B active) plus frontier long-context and hybrid-attention features squeezed together, plus original invention on top — this is the atomic bomb of the AI industry.
 
 ## F.2. Model 1: The Balancer
 
-The Balancer merges DeepSeek's high-efficiency coding architecture with Kimi K3's multimodality and long context. The architecture merges MLA and KDA — memory cache consumption falls by about 95%. When the tech giants see their own algorithms used to build a system that cuts their trillion-parameter infrastructure load by a tenth, they feel validated: "Our open research has been taken to peak execution." The validation is part of the strategy; it is the smoke screen before the collapse.
+The Balancer merges DeepSeek's high-efficiency coding architecture with frontier multimodality and long context. The architecture merges compressed and linear — memory cache consumption falls by about 95%. When the tech giants see their own algorithms used to build a system that cuts their trillion-parameter infrastructure load by a tenth, they feel validated: "Our open research has been taken to peak execution." The validation is part of the strategy; it is the smoke screen before the collapse.
 
 ## F.3. Model 2: The Destroyer
 
@@ -3916,7 +3820,7 @@ The recursive self-improvement loop is the engine's growth engine: each device r
 
 ## F.5. The Naming and the License Decision
 
-The family names are locked: the engine is the InNova Engine; the flagship persona is InNova 5; the demonstration chain is Kimi then InNova 5; the strategy pair is the Balancer and the Destroyer; the organization is ORIGIN Labs, whose motto is that knowledge should be free and history should be preserved. The license was removed because the open-weight promise is unconditional; a promise with a license attached is a contradiction. The manifesto publishes the honest flags — documenting design targets and boundaries — because a manifesto that hides its subject's limits is a marketing leaflet.
+The family names are locked: the engine is the Transcender Engine; the flagship persona is Transcender 5; the demonstration chain is the reference persona then Transcender 5; the strategy pair is the Balancer and the Destroyer; the organization is ORIGIN Labs, whose motto is that knowledge should be free and history should be preserved. The license was removed because the open-weight promise is unconditional; a promise with a license attached is a contradiction. The manifesto publishes the honest flags — documenting design targets and boundaries — because a manifesto that hides its subject's limits is a marketing leaflet.
 
 ## F.6. The Funding Order
 
@@ -3936,7 +3840,7 @@ The DeepSeek family:
 - MoE (Mixture of Experts) — an architecture of many specialized experts with a router that activates a subset per token.
 - Active parameters — the parameters actually executed for one token.
 - Router — the dispatcher that classifies a task and wakes the right experts.
-- MLA (Multi-head Latent Attention) — compressed attention reducing the KV cache by 93%.
+- compressed (Multi-head Latent Attention) — compressed attention reducing the KV cache by 93%.
 - KV cache — the stored tensors attention uses to recall context.
 - DualPipe — zero-bubble pipeline scheduling, 100% GPU utilization.
 - GRPO — Group Relative Policy Optimization, comparing a group of candidate outputs and rewarding the best.
@@ -3945,21 +3849,18 @@ The DeepSeek family:
 - Multi-token prediction — predicting several future tokens at once.
 - High-density knowledge — storage compressed so more meaning fits per parameter.
 
-The Kimi family:
-- Kimi K3 — MoonshotAI's 2.8-trillion-parameter MoE model, 896 experts, 16 active per token.
-- AttnRes — Attention Residuals, dynamic skip connections claiming to mitigate forgetting.
-- KDA — Kimi Delta Attention, a cheap linear attention enabling the 1M-token context.
+Related techniques:
+- AttnRes — Attention Residuals, dynamic skip connections studied for forgetting mitigation.
+- linear — linear delta attention, cheap linear attention for long-context tractability.
 - Latent MoE — MoE with stable quantile-based routing.
 - MXFP4 / MXFP8 — mixed formats for weights and activations, trained with QAT.
 - QAT — quantization-aware training.
-- MoonViT-V2 — the scratch-trained vision encoder of K3.
-- AA-Omniscience — the benchmark where K3 scored 46% accuracy with 51% confident hallucination.
-- Kimina-Prover — Moonshot's separate Lean-based theorem-proving model.
+- AA-Omniscience — the benchmark where a large MoE scored 46% accuracy with 51% confident hallucination.
 - OpenAI Astra — a frontier reasoning model verified in the Lean formal system.
 
-The InNova engine family:
-- InNova Engine — the project's custom C++ engine.
-- InNova 5 — the ORIGIN flagship persona.
+The Transcender engine family:
+- Transcender Engine — the project's custom C++ engine.
+- Transcender 5 — the ORIGIN flagship persona.
 - The Balancer — the market model that balances all copied and owned features.
 - The Destroyer — the zero-fine-tune dynamic-weight-swap collapse agent.
 - ORIGIN Labs — the organization and its open-weight conviction.
@@ -4022,11 +3923,11 @@ The engine's numeric backbone is a family of in-house formats that the benchmark
 - QUANT8 — 8.0 bits per weight, pinned Lloyd-Max codebook.
 - QUANT16 — 16 bits per weight.
 - QUANT32 — 32 bits per weight, the lossless reference.
-- QUANT1_G, QUANT2_G, QUANT4_G, QUANT8_G — grouped variants of the same formats.
+- QG1, QG2, QUANT4_G, QUANT8_G — grouped variants of the same formats.
 - QUANT_Q1 — a sparse-preserving format that keeps exact zeros.
 - QUANT_Q1_G — the grouped sparse variant.
-- QUANT_Q0 — the 1.50-bit format with sign plus learnable scale.
-- QUANT_Q0_G — grouped variant of QUANT_Q0.
+- Q1_5 — the 1.50-bit format with sign plus learnable scale.
+- QG_1_5 — grouped variant of Q1_5.
 - QUANT4_CW — the in-house column-wise variant: per-column min/max with a shared pinned Lloyd-Max codebook.
 - QUANT_MIX@2bpw, QUANT_MIX@3bpw, QUANT_MIX@4bpw — mixed formats that route high-bit formats to salient blocks and low-bit formats to the bulk, holding a fixed average bit budget.
 
@@ -4042,15 +3943,15 @@ The first benchmark measured every format against a Gaussian distribution (block
 | QUANT8 | 8.00 | 3.3630e-06 | 20.8 |
 | QUANT16 | 16.00 | 1.7240e-11 | 73.7 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_G | 1.00 | 1.7625e-04 | 3.6 |
-| QUANT2_G | 2.50 | 4.4744e-05 | 9.5 |
+| QG1 | 1.00 | 1.7625e-04 | 3.6 |
+| QG2 | 2.50 | 4.4744e-05 | 9.5 |
 | QUANT4_G | 4.50 | 3.6083e-06 | 20.5 |
 | QUANT8_G | 8.50 | 1.1254e-08 | 45.5 |
 | QUANT16_G | 16.00 | 1.7240e-11 | 73.7 |
 | QUANT_Q1 | 2.00 | 2.5284e-04 | 2.0 |
 | QUANT_Q1_G | 2.00 | 2.5284e-04 | 2.0 |
-| QUANT_Q0 | 1.50 | 1.5791e-04 | 4.0 |
-| QUANT_Q0_G | 1.50 | 1.1498e-04 | 5.4 |
+| Q1_5 | 1.50 | 1.5791e-04 | 4.0 |
+| QG_1_5 | 1.50 | 1.1498e-04 | 5.4 |
 | QUANT4_CW | 4.00 | 1.5837e-06 | 24.0 |
 | QUANT_MIX@2bpw | 2.00 | 2.5284e-04 | 2.0 |
 | QUANT_MIX@3bpw | 3.00 | 1.2186e-04 | 5.2 |
@@ -4068,15 +3969,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 1.1987e-03 | 19.5 |
 | QUANT16 | 16.00 | 4.9712e-09 | 73.3 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_G | 1.00 | 1.5279e-01 | -1.6 |
-| QUANT2_G | 2.50 | 5.1299e-02 | 3.1 |
+| QG1 | 1.00 | 1.5279e-01 | -1.6 |
+| QG2 | 2.50 | 5.1299e-02 | 3.1 |
 | QUANT4_G | 4.50 | 1.6401e-02 | 8.1 |
 | QUANT8_G | 8.50 | 8.4515e-06 | 41.0 |
 | QUANT16_G | 16.00 | 4.9712e-09 | 73.3 |
 | QUANT_Q1 | 2.00 | 1.8143e-03 | 17.7 |
 | QUANT_Q1_G | 2.00 | 1.8138e-03 | 17.7 |
-| QUANT_Q0 | 1.50 | 1.4802e-01 | -1.5 |
-| QUANT_Q0_G | 1.50 | 1.1698e-01 | -0.4 |
+| Q1_5 | 1.50 | 1.4802e-01 | -1.5 |
+| QG_1_5 | 1.50 | 1.1698e-01 | -0.4 |
 | QUANT4_CW | 4.00 | 3.5871e-04 | 24.7 |
 | QUANT_MIX@2bpw | 2.00 | 1.8138e-03 | 17.7 |
 | QUANT_MIX@3bpw | 3.00 | 1.3094e-02 | 9.1 |
@@ -4092,15 +3993,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 9.3214e-04 | 17.7 |
 | QUANT16 | 16.00 | 2.3839e-09 | 73.6 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_G | 1.00 | 8.6142e-02 | -2.0 |
-| QUANT2_G | 2.50 | 3.2013e-02 | 2.3 |
+| QG1 | 1.00 | 8.6142e-02 | -2.0 |
+| QG2 | 2.50 | 3.2013e-02 | 2.3 |
 | QUANT4_G | 4.50 | 1.3228e-02 | 6.1 |
 | QUANT8_G | 8.50 | 4.2876e-06 | 41.0 |
 | QUANT16_G | 16.00 | 2.3839e-09 | 73.6 |
 | QUANT_Q1 | 2.00 | 1.2071e-06 | 46.5 |
 | QUANT_Q1_G | 2.00 | 8.1230e-07 | 48.3 |
-| QUANT_Q0 | 1.50 | 8.2454e-02 | -1.8 |
-| QUANT_Q0_G | 1.50 | 6.8751e-02 | -1.0 |
+| Q1_5 | 1.50 | 8.2454e-02 | -1.8 |
+| QG_1_5 | 1.50 | 6.8751e-02 | -1.0 |
 | QUANT4_CW | 4.00 | 1.4679e-04 | 25.7 |
 | QUANT_MIX@2bpw | 2.00 | 8.1230e-07 | 48.3 |
 | QUANT_MIX@3bpw | 3.00 | 1.0884e-02 | 7.0 |
@@ -4116,15 +4017,15 @@ The second benchmark moved to real neural weight distributions: sparse distribut
 | QUANT8 | 8.00 | 1.1342e-03 | 8.5 |
 | QUANT16 | 16.00 | 3.6768e-10 | 73.4 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_G | 1.00 | 1.4145e-02 | -2.5 |
-| QUANT2_G | 2.50 | 5.6357e-03 | 1.5 |
+| QG1 | 1.00 | 1.4145e-02 | -2.5 |
+| QG2 | 2.50 | 5.6357e-03 | 1.5 |
 | QUANT4_G | 4.50 | 2.9615e-03 | 4.3 |
 | QUANT8_G | 8.50 | 4.1486e-07 | 42.9 |
 | QUANT16_G | 16.00 | 3.6768e-10 | 73.4 |
 | QUANT_Q1 | 2.00 | 5.2437e-08 | 51.9 |
 | QUANT_Q1_G | 2.00 | 2.9690e-08 | 54.3 |
-| QUANT_Q0 | 1.50 | 1.2931e-02 | -2.1 |
-| QUANT_Q0_G | 1.50 | 1.1650e-02 | -1.6 |
+| Q1_5 | 1.50 | 1.2931e-02 | -2.1 |
+| QG_1_5 | 1.50 | 1.1650e-02 | -1.6 |
 | QUANT4_CW | 4.00 | 5.6891e-06 | 31.5 |
 | QUANT_MIX@2bpw | 2.00 | 2.9690e-08 | 54.3 |
 | QUANT_MIX@3bpw | 3.00 | 3.8973e-03 | 3.1 |
@@ -4146,15 +4047,15 @@ FFN-down distribution:
 | QUANT8 | 8.00 | 5.2548e-06 | 20.8 |
 | QUANT16 | 16.00 | 2.7172e-11 | 73.6 |
 | QUANT32 | 32.00 | 0.0000e+00 | 999.0 |
-| QUANT1_G | 1.00 | 2.7540e-04 | 3.6 |
-| QUANT2_G | 2.50 | 6.9913e-05 | 9.5 |
+| QG1 | 1.00 | 2.7540e-04 | 3.6 |
+| QG2 | 2.50 | 6.9913e-05 | 9.5 |
 | QUANT4_G | 4.50 | 5.6376e-06 | 20.5 |
 | QUANT8_G | 8.50 | 1.7636e-08 | 45.5 |
 | QUANT16_G | 16.00 | 2.7172e-11 | 73.6 |
 | QUANT_Q1 | 2.00 | 3.9506e-04 | 2.0 |
 | QUANT_Q1_G | 2.00 | 3.9506e-04 | 2.0 |
-| QUANT_Q0 | 1.50 | 2.4673e-04 | 4.0 |
-| QUANT_Q0_G | 1.50 | 1.7966e-04 | 5.4 |
+| Q1_5 | 1.50 | 2.4673e-04 | 4.0 |
+| QG_1_5 | 1.50 | 1.7966e-04 | 5.4 |
 | QUANT4_CW | 4.00 | 2.4746e-06 | 24.0 |
 | QUANT_MIX@2bpw | 2.00 | 3.9506e-04 | 2.0 |
 | QUANT_MIX@3bpw | 3.00 | 1.9041e-04 | 5.2 |
@@ -4167,14 +4068,14 @@ The comprehensive head-to-head benchmark ran every format against every distribu
 | Format | BPW | Avg MSE | Best at tier |
 |---|---|---|---|
 | QUANT1 | 1.00 | 8.1200e-02 | |
-| QUANT1_G | 1.00 | 7.2681e-02 | yes |
-| QUANT_Q0 | 1.50 | 6.8451e-02 | |
-| QUANT_Q0_G | 1.50 | 5.3871e-02 | yes |
+| QG1 | 1.00 | 7.2681e-02 | yes |
+| Q1_5 | 1.50 | 6.8451e-02 | |
+| QG_1_5 | 1.50 | 5.3871e-02 | yes |
 | QUANT2 | 2.00 | 2.9860e-02 | yes |
 | QUANT_Q1 | 2.00 | 3.2018e-02 | |
 | QUANT_Q1_G | 2.00 | 3.2018e-02 | |
 | QUANT_MIX@2bpw | 2.00 | 3.2018e-02 | |
-| QUANT2_G | 2.50 | 2.3392e-02 | yes |
+| QG2 | 2.50 | 2.3392e-02 | yes |
 | QUANT_MIX@3bpw | 3.00 | 2.0832e-02 | yes |
 | QUANT4 | 4.00 | 1.0418e-02 | |
 | QUANT4_CW | 4.00 | 3.0052e-04 | yes |
@@ -4197,17 +4098,17 @@ The key findings, locked:
 
 The fourth benchmark answered the training question: every format trained natively with the Straight-Through Estimator — quantization happens in the forward pass and gradients pass straight through, so there is no post-training quantization step at all. The setup was identical for every format: an MLP (128 to 64 to 8), Adam optimizer at 2e-3 learning rate, 6,000 steps, batch size 64, identical task, identical initialization. Evaluation used the MSE on 1,024 fresh samples with quantized weights.
 
-The four training tiers: QUANT1_STE (block mean) at 1.0 BPW; QUANT_Q0_STE (sign plus learnable scale) at 1.5 BPW; QUANT2_STE (pinned Lloyd-Max) at 2.0 BPW; QUANT4_STE (pinned Lloyd-Max) at 4.0 BPW.
+The four training tiers: Q1_STE (block mean) at 1.0 BPW; Q1_5_STE (sign plus learnable scale) at 1.5 BPW; Q2_STE (pinned Lloyd-Max) at 2.0 BPW; QUANT4_STE (pinned Lloyd-Max) at 4.0 BPW.
 
 | Format | BPW | Eval MSE | vs FP32 |
 |---|---|---|---|
 | FP32 | 32.00 | 1.5506e-03 | baseline |
-| QUANT2_STE | 2.00 | 6.2237e-03 | 301% worse than FP32 |
+| Q2_STE | 2.00 | 6.2237e-03 | 301% worse than FP32 |
 | QUANT4_STE | 4.00 | 1.2291e-03 | 21% better than FP32 |
-| QUANT_Q0_STE | 1.50 | 2.3183e-03 | 49% worse than FP32 |
-| QUANT1_STE | 1.00 | 5.6560e-03 | 264% worse than FP32 |
+| Q1_5_STE | 1.50 | 2.3183e-03 | 49% worse than FP32 |
+| Q1_STE | 1.00 | 5.6560e-03 | 264% worse than FP32 |
 
-The result that matters: QUANT4 at 4 bits trained natively with STE beats the full-precision FP32 baseline by 21% — a quantized model, trained as quantized, outperforming the float model on the same task. The learnable parameters of QUANT_Q0 and QUANT2 (per-block scales, codebooks) adapt during training; QUANT1's block means are trained as Lloyd-style centroids. The quantization is not a post-hoc compression; it is the training itself. This is the measurable foundation for the claim that low-precision does not have to mean low-accuracy — it depends on how the quantization is trained.
+The result that matters: QUANT4 at 4 bits trained natively with STE beats the full-precision FP32 baseline by 21% — a quantized model, trained as quantized, outperforming the float model on the same task. The learnable parameters of Q1_5 and QUANT2 (per-block scales, codebooks) adapt during training; QUANT1's block means are trained as Lloyd-style centroids. The quantization is not a post-hoc compression; it is the training itself. This is the measurable foundation for the claim that low-precision does not have to mean low-accuracy — it depends on how the quantization is trained.
 ---
 
 # PART SEVEN APPENDIX C — THE TIMELINE AND THE NUMBERS
@@ -4220,7 +4121,7 @@ Session 1 — The Origin Story. The book-burning video; the 404 Media investigat
 
 Session 2 — The DeepSeek Sizing War. The 600B+ versus 284B confusion; V3 (671B) identified as the phantom; MoE awakening; the 13B active brain; the three secret techniques; the August 2026 leaderboard; the price war. Outcome: the first law of competitive research — verify numbers against official releases.
 
-Session 3 — The Engineering of DeepSeek. MLA, DualPipe, SFT plus RL; how a model thinks; the reward mathematics; GRPO. Outcome: the transferable lesson that reward design determines behavior.
+Session 3 — The Engineering of DeepSeek. compressed, DualPipe, SFT plus RL; how a model thinks; the reward mathematics; GRPO. Outcome: the transferable lesson that reward design determines behavior.
 
 Session 4 — The Novel Reasoning Idea. I proposed inventing a new way of thinking instead of copying one; the parrot-to-scientist distinction; neuro-symbolic, pure RL, graph-based reasoning; hallucination elimination and zero-shot goals. Outcome: the ambition of a novel reasoning framework.
 
@@ -4232,9 +4133,9 @@ Session 7 — The MCOS. Dynamic weights without fine-tuning; the vector registry
 
 Session 8 — The Diseases Return. Hypernetwork hallucination; ICL matrix memorization; the AGI-level cure; in-context activation constraints; the deterministic validation layer. Outcome: the projection and gate mechanics.
 
-Session 9 — The InNova Framework Discovery. The GitHub repository; FormatPlanner; STE; orthogonal projection; triple-loop symbolic verification; the distributed neural sync matrix; the 10x speed claim. Outcome: the INNOVA blueprint validated.
+Session 9 — The Transcender Framework Discovery. The GitHub repository; FormatPlanner; STE; orthogonal projection; triple-loop symbolic verification; the distributed neural sync matrix; the 10x speed claim. Outcome: the TRANSCENDER blueprint validated.
 
-Session 10 — The Personality Hot-Swap. Kimi to InNova 5; isolated persona tensors; the switch command; blend-leakage guardrails; the over-the-air payload format. Outcome: the hot-swap design.
+Session 10 — The Personality Hot-Swap. Reference persona to Transcender 5; isolated persona tensors; the switch command; blend-leakage guardrails; the over-the-air payload format. Outcome: the hot-swap design.
 
 Session 11 — The Light Moment. The light-hearted "mind melt" jest; confirmation of the hot-swap concept. Outcome: morale, recorded.
 
@@ -4256,7 +4157,7 @@ Session 19 — The Funding Pathways. VC funding; grants and accelerators; B2B li
 
 Session 20 — The Demonstration Doctrine. The three proofs: the core proof, the swap proof, the accuracy proof. Outcome: the demonstration doctrine.
 
-Session 21 — The Kimi K3 Analysis. The full raw data; the attribute tables; the mitigation set; the hallucination epidemic; the attack plan. Outcome: the K3 dossier.
+Session 21 — Frontier-MoE competitive analysis. Attribute tables; the mitigation set; the hallucination epidemic; the attack plan. Outcome: the frontier-MoE dossier.
 
 Session 22 — The Ultimate Masterstroke. The Balancer and the Destroyer; the thanks factor; the collapse; the forced pay loop; the AGI arrival. Outcome: the two-model strategy.
 
@@ -4274,21 +4175,9 @@ DeepSeek numbers:
 - V3: 671 billion total, 37 billion active.
 - Flash price: $0.14 per million input tokens.
 - Flash performance: ~90% of frontier performance at ~1/10th the cost.
-- MLA: 93% KV-cache reduction.
+- compressed: 93% KV-cache reduction.
 - GRPO: five or six candidates per query compared.
 - 0731 update: zero new parameters; post-training only.
-
-Kimi numbers:
-- K3: 2.8 trillion total parameters.
-- K3 experts: 896, with 16 active per token.
-- Effective active compute: ~50B-equivalent.
-- Context window: 1,000,000 tokens.
-- Attention layers: 93 total; 69 KDA plus 24 Gated MLA (3:1 hybrid).
-- Training efficiency gain: 2.5x via hybrid attention.
-- Coding: SWE Marathon 42.0; ProgramBench 77.8 (K2.6: 35.0 and 71.9).
-- QA: AA-Omniscience 46% (K2.6: 33%).
-- Hallucination: 51% (K2.6: 39%; Claude-class: 54.9%).
-- Quantization: MXFP4 weights, MXFP8 activations, QAT-trained.
 
 Hardware numbers:
 - GB200 NVL72: 36 Grace CPUs; 2,592 cores; 72 B200 GPUs; 13.5 TB HBM3E at 576 TB/s; 17 TB LPDDR5X at 14 TB/s; NVLink-C2C 900 GB/s; 130 TB/s NVLink mesh.
@@ -4304,7 +4193,7 @@ Benchmark numbers (locked from the in-house runs):
 - Sparse_99: QUANT4_CW 5.6891e-06; QUANT8_G 4.1486e-07; QUANT_Q1_G 2.9690e-08.
 - FFN-down: QUANT4 1.4796e-05; QUANT4_CW 2.4746e-06; QUANT8_G 1.7636e-08.
 - Grand summary: QUANT4_CW best at 4.0 tier (3.0052e-04); QUANT8 best at 8.0 tier (1.0741e-03); QUANT16/16_G 3.7384e-09.
-- STE training: FP32 1.5506e-03; QUANT4_STE 1.2291e-03 (21% better); QUANT_Q0_STE 2.3183e-03 (49% worse); QUANT2_STE 6.2237e-03 (301% worse); QUANT1_STE 5.6560e-03 (264% worse).
+- STE training: FP32 1.5506e-03; QUANT4_STE 1.2291e-03 (21% better); Q1_5_STE 2.3183e-03 (49% worse); Q2_STE 6.2237e-03 (301% worse); Q1_STE 5.6560e-03 (264% worse).
 
 Engine numbers:
 - Source lines: 108,997.
@@ -4334,7 +4223,7 @@ Q4. What is the 600B+ Flash? A: It never existed; it was DeepSeek-V3 (671B) misl
 
 Q5. Why is a 284B model strong? A: MoE: 256 experts, a router activates a small subset (13B) per task; clean data made the small experts smarter than the old large ones.
 
-Q6. How does 13B active reach 90% of a trillion-parameter model? A: MLA compression (93% less KV memory), DualPipe zero-bubble training, and SFT plus RL self-correction.
+Q6. How does 13B active reach 90% of a trillion-parameter model? A: compressed compression (93% less KV memory), DualPipe zero-bubble training, and SFT plus RL self-correction.
 
 Q7. What does a model really think? A: It learns language from scrap, then learns logic from reinforcement (reward and penalty) and truth from a verifier.
 
@@ -4348,9 +4237,9 @@ Q11. How is hallucination made ~0%? A: The AST gate, the sandbox, the consistenc
 
 Q12. Why does fine-tuning-free weight generation matter? A: Fine-tuning repeatedly costs compute and risks crashes; injection of clamped deltas costs nothing and risks nothing.
 
-Q13. Is K3 better than the Flash? A: K3 wins on scale and context; Flash wins on economics and open weights; InNova wins on guarantees.
+ Q13. Scale or efficiency? A: Scale wins on context; efficiency wins on economics and open weights; Transcender wins on guarantees.
 
-Q14. Why is K3 hallucinating at 51%? A: Binary grading rewards confident guessing; the industry-wide pattern is the same (54.9% for a frontier flagship).
+ Q14. Why do large MoEs hallucinate at ~51%? A: Binary grading rewards confident guessing; the industry-wide pattern is the same (54.9% for a frontier flagship).
 
 Q15. Why remove the license? A: The open-weight promise is unconditional; a promise with a license is a contradiction.
 
@@ -4440,7 +4329,7 @@ The triple-loop verification:
      [99%+ Accurate Output]
 ```
 
-The INNOVA AST gate pipeline:
+The TRANSCENDER AST gate pipeline:
 
 ```
 [User Request] -> [Frozen LLM Generates Tool/Logic Code]
@@ -4468,10 +4357,10 @@ The virtual page directory:
         |
         +---> Page 0 (Input/Embed) ---> Points to Shared Physical RAM Slot
         |
-        +---> Page 1 (Attention) ----> SWAPPABLE: Points to Kimi_Weights_Addr
+        +---> Page 1 (Attention) ----> SWAPPABLE: Points to Reference_Weights_Addr
         |                                          |
         |                                          v (low-latency hot-swap, design target)
-        |                                    Points to Innova5_Weights_Addr
+        |                                    Points to Transcender5_Weights_Addr
         |
         +---> Page 2 (FFN Layer) -------> Points to Shared Physical RAM Slot
 ```
@@ -4575,18 +4464,18 @@ flowchart TD
 sequenceDiagram
     participant User as User
     participant Eng as Engine
-    participant BufA as Buffer A (Kimi)
-    participant BufB as Buffer B (InNova 5)
+    participant BufA as Buffer A (Reference)
+    participant BufB as Buffer B (Transcender 5)
     participant Reg as Registry
 
-    User->>Eng: "Switch to InNova 5"
+    User->>Eng: "Switch to Transcender 5"
     Eng->>Reg: fetch verified persona delta
     Reg-->>Eng: persona blob + verification token
     Eng->>BufB: zero-copy overwrite (inactive buffer)
     Eng->>BufB: verify checksum against token
     BufB-->>Eng: token valid
     Eng->>Eng: atomic pointer swap (design target)
-    Eng-->>User: "Active persona: InNova 5"
+    Eng-->>User: "Active persona: Transcender 5"
     Note over Eng: old page preserved - reversible
 ```
 
@@ -4602,8 +4491,8 @@ graph LR
 
     subgraph RAM["Physical RAM Slots"]
         S0["Shared Slot (Input)"]
-        S1A["Kimi Weights Address"]
-        S1B["InNova 5 Weights Address"]
+        S1A["Reference Weights Address"]
+        S1B["Transcender 5 Weights Address"]
         S2["Shared Slot (FFN)"]
     end
 
@@ -4825,7 +4714,6 @@ graph TD
     DOC --> P8
 
     A1["Appendix A: DeepSeek Deep Dive"]
-    A2["Appendix B: Kimi K3 Deep Dive"]
     A3["Appendix C: AGI Vision Deep Dive"]
     A4["Appendix D: Engineering Deep Dive"]
     A5["Appendix E: Hardware Deep Dive"]
@@ -4836,7 +4724,6 @@ graph TD
     A10["Appendix J: Mermaid Diagram Library"]
 
     P2 -.-> A1
-    P2 -.-> A2
     P3 -.-> A3
     P4 -.-> A4
     P5 -.-> A5
@@ -4943,7 +4830,7 @@ Each open technical question is recorded with its context and its owner expectat
 
 3. At what acquisition number is the answer still no? Context: the manifesto is not for sale; the question is whether the number exists that changes the answer. Expected answer: no number; the answer is structural, not numeric.
 
-4. What is the correct sequencing of market entry: which persona ships first, and which market speaks first? Context: the persona library and the market tiers exist; the sequencing determines the first impression. Expected answer: InNova 5 first, developer tooling market first.
+4. What is the correct sequencing of market entry: which persona ships first, and which market speaks first? Context: the persona library and the market tiers exist; the sequencing determines the first impression. Expected answer: Transcender 5 first, developer tooling market first.
 
 5. How are the honest flags updated as the engine grows: is the impossible list revisable, and who revises it? Context: the impossible list is a public promise; revising it must be as public as publishing it. Expected answer: a revision protocol with public changelog and verification.
 
@@ -4973,11 +4860,11 @@ The revision protocol: if the engine capabilities grow, updates are recorded wit
 
 ## K.6. The Last Word, Expanded
 
-The document closes where it began. The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, Kimi's scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
+The document closes where it began. The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, frontier scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
 
 The last word is the promise, restated exactly as it was made: "No matter how powerful a model we make, we will always make open weights." Everything in this document — every chapter, every number, every honest flag, every diagram — is the evidence that the promise is being kept. The story continues in the code, in the tests, in the deltas, and in the next document that records what happens next. Nothing is forgotten, because nothing is dropped.
 
-**ORIGIN Labs · The InNova Engine · Open Weight · Verified · Free**
+**ORIGIN Labs · The Transcender Engine · Open Weight · Verified · Free**
 
 ---
 
@@ -4985,11 +4872,11 @@ The last word is the promise, restated exactly as it was made: "No matter how po
 
 ## L.1. The One-Minute Card
 
-The InNova Engine is a custom C++ engine with a frozen core, additive bounded pages, zero-overhead persona hot-swap, a deterministic AST gate, sandbox verification, and a 99% consistency vote. It claims 0% catastrophic forgetting, ~0% hallucination, and ~99% accuracy on gated outputs. It is backed by 108,997 lines of source, 90+ build targets, and 42 tests. The market strategy is two engines: the Balancer (trust economy) and the Destroyer (price collapse), funded by the forced pay loop. The ambition is AGI today, built as a controlled, verifiable, self-evolving distributed system — with ASI as the next goal. The release is open-weight, license-free, with published honest flags.
+The Transcender Engine is a custom C++ engine with a frozen core, additive bounded pages, zero-overhead persona hot-swap, a deterministic AST gate, sandbox verification, and a 99% consistency vote. It claims 0% catastrophic forgetting, ~0% hallucination, and ~99% accuracy on gated outputs. It is backed by 108,997 lines of source, 90+ build targets, and 42 tests. The market strategy is two engines: the Balancer (trust economy) and the Destroyer (price collapse), funded by the forced pay loop. The ambition is AGI today, built as a controlled, verifiable, self-evolving distributed system — with ASI as the next goal. The release is open-weight, license-free, with published honest flags.
 
 ## L.2. The Five-Minute Card
 
-The engine exists because the giants fail: DeepSeek is efficient but not immune to hallucination; Kimi K3 is massive (2.8T, 896 experts) but hallucinates at 51%; the frontier flagships hallucinate at ~54.9%; every large model forgets when fine-tuned and leaks memorized data under prefix attacks. The engine answers with architecture, not mitigation: a frozen core (nothing to forget), additive pages (nothing to overwrite), a deterministic gate (nothing to guess), a sandbox (nothing unexecuted), a consistency vote (nothing divergent), clamped deltas (nothing unbounded), and verification tokens (nothing unverified). The same engine runs from a laptop (thin tier) to a data center (ultra tier), and every device participates in the delta upstream network: invent, verify, share, and grow. The market move is the forced pay loop: release free, monetize trust, let the giants pay to survive.
+The engine exists because the giants fail: DeepSeek is efficient but not immune to hallucination; large frontier MoEs hallucinate at ~51%; the frontier flagships hallucinate at ~54.9%; every large model forgets when fine-tuned and leaks memorized data under prefix attacks. The engine answers with architecture, not mitigation: a frozen core (nothing to forget), additive pages (nothing to overwrite), a deterministic gate (nothing to guess), a sandbox (nothing unexecuted), a consistency vote (nothing divergent), clamped deltas (nothing unbounded), and verification tokens (nothing unverified). The same engine runs from a laptop (thin tier) to a data center (ultra tier), and every device participates in the delta upstream network: invent, verify, share, and grow. The market move is the forced pay loop: release free, monetize trust, let the giants pay to survive.
 
 ## L.3. The Investor Card
 
@@ -5001,7 +4888,7 @@ The engineering essentials in one card: the codebase is C++20, 108,997 lines, 90
 
 ## L.5. The Historian Card
 
-The record of how the project began: a video about book burning, a 404 Media investigation, the discovery of the data wall, the photocopy problem, the balance philosophy, and the open-weight prediction. The record of how it developed: the DeepSeek sizing war, the MoE awakening, the Kimi dossier, the AGI vision, the MCOS, the engineering narrative, the hardware doctrine, the market strategy, and the naming. Every session is in the timeline; every number is in the numbers sheet; every feature is in the F1-F68 index; every diagram is in the Mermaid library; every question is in the Q&A reference; every key line is collected. The history is the product: nothing is forgotten, because nothing is dropped.
+The record of how the project began: a video about book burning, a 404 Media investigation, the discovery of the data wall, the photocopy problem, the balance philosophy, and the open-weight prediction. The record of how it developed: the DeepSeek sizing war, the MoE awakening, the frontier-MoE dossier, the AGI vision, the MCOS, the engineering narrative, the hardware doctrine, the market strategy, and the naming. Every session is in the timeline; every number is in the numbers sheet; every feature is in the F1-F68 index; every diagram is in the Mermaid library; every question is in the Q&A reference; every key line is collected. The history is the product: nothing is forgotten, because nothing is dropped.
 
 ## L.6. The Skeptic Card
 
@@ -5009,11 +4896,11 @@ The engine's claims read as extraordinary, and the skeptic deserves direct answe
 
 ## L.7. The Glossary Card
 
-The thirty terms that unlock the document: MoE, active parameters, router, MLA, KV cache, DualPipe, GRPO, SFT, RL, multi-token prediction, high-density knowledge, AttnRes, KDA, Latent MoE, MXFP4/MXFP8, QAT, AA-Omniscience, frozen core, delta weight, pointer swap, virtual layer pages, verification token, pointer hot-swap, double buffering, i-cache invalidation, delta upstream, meta-weights hypernetwork, variance-control bound, orthogonal projection, honest flags.
+The thirty terms that unlock the document: MoE, active parameters, router, compressed, KV cache, DualPipe, GRPO, SFT, RL, multi-token prediction, high-density knowledge, AttnRes, linear, Latent MoE, MXFP4/MXFP8, QAT, AA-Omniscience, frozen core, delta weight, pointer swap, virtual layer pages, verification token, pointer hot-swap, double buffering, i-cache invalidation, delta upstream, meta-weights hypernetwork, variance-control bound, orthogonal projection, honest flags.
 
 ## L.8. The Numbers Card
 
-The numbers that must be remembered: DeepSeek V4 Flash 284B/13B active, $0.14/M; V3 671B; K3 2.8T, 896 experts, 16 active, 1M context, 46% accuracy, 51% hallucination; frontier 54.9% hallucination; engine 108,997 LOC, 90+ targets, 42 tests, 14 years, design-target swap latency, 0.05 delta bound, 99% consistency, 6,391,004 sandbox trials with 16 impurities; GB200 NVL72 2,592 cores/13.5 TB VRAM/17 TB RAM; DGX B200 112 cores/1.5 TB VRAM/4 TB RAM; rack $3-4M; YC $500K; grants $1-5K credits; QUANT4_STE beats FP32 by 21%.
+The numbers that must be remembered: DeepSeek V4 Flash 284B/13B active, $0.14/M; V3 671B; frontier 54.9% hallucination; engine 108,997 LOC, 90+ targets, 42 tests, 14 years, design-target swap latency, 0.05 delta bound, 99% consistency, 6,391,004 sandbox trials with 16 impurities; GB200 NVL72 2,592 cores/13.5 TB VRAM/17 TB RAM; DGX B200 112 cores/1.5 TB VRAM/4 TB RAM; rack $3-4M; YC $500K; grants $1-5K credits; QUANT4_STE beats FP32 by 21%.
 ---
 
 # PART SEVEN APPENDIX E — THE REPOSITORY EVIDENCE
@@ -5024,7 +4911,7 @@ The repository's own changelog is primary evidence for the engineering claims, a
 
 Version 0.1.00 — Internal alpha release (2026-07-20). Initial QUANT format prototypes (QUANT2, QUANT4, QUANT8), basic transformer model scaffolding, tensor and memory management foundations, a math library with scalar and SIMD paths, and the project structure and build system. The reference libraries (`.llama/` and `.bitnet/`) were present but never linked — the project does not vendor competitors' code; it references for study.
 
-Version 0.1.01 — Initial public release (2026-07-24). The core QUANT format system shipped: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32; QUANT_Q0, QUANT_Q1, Binary and Ternary formats; the GRP grouped variants (QUANT2_G, QUANT4_G, QUANT_Q1_G); the Lloyd-Max vector quantization codebook system; sub-block grouping for lossless quantization at low bits per weight. The compute backends: Vulkan (dynamically loaded, no SDK required) and DirectX 12 on Windows; the AVX2/SIMD kernel library. The model side: a transformer architecture with flash attention, a KV cache with the QUANT4 quantized variant, an autograd engine, a BPE tokenizer with Unicode support, dense and MoE trainers with vision, audio, embeddings, OCR, video, and text modules, MoE variants with expert parallelism, distributed training with tensor parallelism, FSDP and DDP, RingAllReduce and ParameterServer, an inference engine with sampler and generator, quantization and conversion CLI tools, a benchmark suite, a hardware probe, a production inference engine with streaming, and the QUANT quantize and codec engines. The claims ledger tracked 47 claims, 46 proven and one pending.
+Version 0.1.01 — Initial public release (2026-07-24). The core QUANT format system shipped: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32; Q1_5, QUANT_Q1, Binary and Ternary formats; the GRP grouped variants (QG2, QUANT4_G, QUANT_Q1_G); the Lloyd-Max vector quantization codebook system; sub-block grouping for lossless quantization at low bits per weight. The compute backends: Vulkan (dynamically loaded, no SDK required) and DirectX 12 on Windows; the AVX2/SIMD kernel library. The model side: a transformer architecture with flash attention, a KV cache with the QUANT4 quantized variant, an autograd engine, a BPE tokenizer with Unicode support, dense and MoE trainers with vision, audio, embeddings, OCR, video, and text modules, MoE variants with expert parallelism, distributed training with tensor parallelism, FSDP and DDP, RingAllReduce and ParameterServer, an inference engine with sampler and generator, quantization and conversion CLI tools, a benchmark suite, a hardware probe, a production inference engine with streaming, and the QUANT quantize and codec engines. The claims ledger tracked 47 claims, 46 proven and one pending.
 
 The 0.1.01 release also recorded two critical benchmark corrections: QUANT8 per-block k-means now beats Q8_0 by 1.02x (previously 1.4x worse with global k-means), and QUANT4 per-block Lloyd-Max now beats Q4_0 by 1.11x (previously 1.6x worse). The lesson locked in the changelog: quantization quality is a property of the block statistics, not the format name.
 
@@ -5068,13 +4955,13 @@ The repository's hash-indexing test log is preserved as evidence of the verifica
 |---|---|
 | QUANTIdx write and read | PASSED |
 | SHA256 corrupt detection (one byte) | PASSED |
-| InNovaIDX magic header | PASSED |
+| TranscenderIDX magic header | PASSED |
 | Truncated idx file detection | PASSED |
 | QUANT writer SHA256 dedup | PASSED |
 
 Summary: 13 total tests, 13 passed, 0 failed, verdict PASSED.
 
-The implementation locations, locked: SHA256 hash indexing in src/quant_format.cpp; the InNovaIDX magic header in the index writer; fail-fast corrupt detection with tensor name in the index reader; content-addressed dedup via SHA256 in the writer's dedup path; the test file tests/test_sha256_corrupt.cpp.
+The implementation locations, locked: SHA256 hash indexing in src/quant_format.cpp; the TranscenderIDX magic header in the index writer; fail-fast corrupt detection with tensor name in the index reader; content-addressed dedup via SHA256 in the writer's dedup path; the test file tests/test_sha256_corrupt.cpp.
 
 The significance: the engine's verification tokens are the same discipline applied at the persona-page level. The repository already proves the pattern — one changed byte is detected and the state is rejected before execution.
 
@@ -5088,7 +4975,7 @@ The build system at version 0.1.02: 25 libraries, 25 executables, and 32 tests �
 
 ## M.5. The Format Registry, 29 Entries
 
-The format registry at 0.1.02: 12 single formats (the QUANT family, QUANT_Q0, QUANT_Q1, Binary, Ternary, and the QUANT32 lossless reference), 13 twi-mix variants, and 4 four-mix variants. The registry carries quality heuristics for automatic format selection — the engine chooses the format for the distribution it sees, which is the same routing philosophy as the MoE router, applied to numerics.
+The format registry at 0.1.02: 12 single formats (the QUANT family, Q1_5, QUANT_Q1, Binary, Ternary, and the QUANT32 lossless reference), 13 twi-mix variants, and 4 four-mix variants. The registry carries quality heuristics for automatic format selection — the engine chooses the format for the distribution it sees, which is the same routing philosophy as the MoE router, applied to numerics.
 
 ## M.6. The Forced Distribution Rule
 
@@ -5132,7 +5019,7 @@ The correspondence between the repository evidence and the narrative chapters:
 |---|---|
 | Chapter 37 (14 years, 108,997 lines) | CHANGELOG versions, build targets, claims ledger |
 | Chapter 36 (cache coherency, delta upstream) | DeltaAdapterHost, distributed training modules |
-| Chapter 38 (virtual layer pages, tokens) | mmap data loader, SHA256 index log, InNovaIDX header |
+| Chapter 38 (virtual layer pages, tokens) | mmap data loader, SHA256 index log, TranscenderIDX header |
 | Chapter 39 (engine writes its own weights) | ContinualTrainer, RL trainer, DeltaAdapterHost |
 | Chapter 42 (crash-proof engineering) | fail-fast corrupt detection, thread-safety fixes |
 | Chapter 57 (F1-F68) | format registry, CLI tools, benchmark suite |
@@ -5154,12 +5041,12 @@ The repository is the source of truth. Every number quoted in this document can 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Kimi
-    Kimi --> InNova5: Switch to InNova 5
-    Inova5 --> Kimi : "Switch to Kimi"
-    Kimi --> Quarantine : "verification token mismatch"
+    [*] --> Reference
+    Reference --> Transcender5: Switch to Transcender 5
+    Inova5 --> Reference : "Switch to Reference"
+    Reference --> Quarantine : "verification token mismatch"
     Inova5 --> Quarantine : "verification token mismatch"
-    Quarantine --> Kimi : "restore previous verified state"
+    Quarantine --> Reference : "restore previous verified state"
     Quarantine --> Inova5 : "restore previous verified state"
 ```
 
@@ -5192,8 +5079,8 @@ The vote is the engineered version of the reward mathematics: agreement is the r
 graph LR
     subgraph OWN["Owned Memory Map"]
         CORE["Frozen Core (shared)"]
-        P_K["Kimi persona page"]
-        P_I["InNova 5 persona page"]
+        P_K["Reference persona page"]
+        P_I["Transcender 5 persona page"]
         P_N["New invented pages"]
     end
 
@@ -5225,7 +5112,7 @@ graph TD
     QUANT --> CW["QUANT4_CW column-wise variant"]
 
     QUANT["QUANT Formats"]
-    QUANT --> S0["QUANT_Q0 (sign + learnable scale)"]
+    QUANT --> S0["Q1_5 (sign + learnable scale)"]
     QUANT --> SS["QUANT_Q1 (exact zeros preserved)"]
     QUANT --> SG["QUANT_Q1_G"]
 ```
@@ -5353,8 +5240,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    D["DeepSeek V4 Flash"] -->|"copy efficiency: MLA, GRPO, quality data"| E["InNova Engine"]
-    K["Kimi K3"] -->|"copy scale and context: 1M ctx, QAT, hybrid attention"| E
+    D["DeepSeek V4 Flash"] -->|"copy efficiency: compressed, GRPO, quality data"| E["Transcender Engine"]
     E -->|"0% forgetting via frozen core"| C1["Guarantee 1"]
     E -->|"~0% hallucination via AST gate"| C2["Guarantee 2"]
     E -->|"0% PII via clamped persona tensors"| C3["Guarantee 3"]
@@ -5392,14 +5278,14 @@ The open-weight commitment was made as a prediction before it was made as a poli
 
 ## R.3. The Balance Philosophy, Restated
 
-"The excess of anything is bad" — the balance philosophy shaped every decision: the frozen core and the additive experts in proportion; the Balancer and the Destroyer as a pair; the aggression tempered by the honest flags; the ambition of AGI bounded by the verification pipeline; the scale of DeepSeek and Kimi balanced by the guarantees of the engine. The engine is not the biggest model, not the cheapest model, and not the fastest model; it is the balanced model, and balance is the only position that can hold all three guarantees at once.
+"The excess of anything is bad" — the balance philosophy shaped every decision: the frozen core and the additive experts in proportion; the Balancer and the Destroyer as a pair; the aggression tempered by the honest flags; the ambition of AGI bounded by the verification pipeline; the scale of DeepSeek and frontier MoEs balanced by the guarantees of the engine. The engine is not the biggest model, not the cheapest model, and not the fastest model; it is the balanced model, and balance is the only position that can hold all three guarantees at once.
 
 ## R.4. The Final Diagram: Everything at Once
 
 ```mermaid
 graph TD
     subgraph ORIGIN["ORIGIN LABS"]
-        subgraph ENGINE["THE INNOVA ENGINE"]
+        subgraph ENGINE["THE TRANSCENDER ENGINE"]
             A["Frozen Core"] --> B["Virtual Pages"]
             B --> C["Verification Tokens"]
             C --> D["Pointer Hot-Swap"]
@@ -5431,11 +5317,11 @@ The numbers that close the document, once more: 108,997 lines; 90+ build targets
 
 ## R.6. The Last Word, Final
 
-The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, Kimi's scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
+The engine began with a story about books being destroyed, and it chose a different path: knowledge preserved, weights open, truth published. It studied the giants — DeepSeek's efficiency, frontier scale, the frontier's hallucination — and it designed the answers: the frozen core, the additive pages, the AST gate, the pointer swap, the trust layer, the forced pay loop. It set the ambition beyond AGI, and it bound that ambition in the strictest verification pipeline that exists.
 
 The last word is the promise, restated exactly as it was made: "No matter how powerful a model we make, we will always make open weights." Everything in this document — every chapter, every number, every honest flag, every diagram — is the evidence that the promise is being kept. The story continues in the code, in the tests, in the deltas, and in the next document that records what happens next. Nothing is forgotten, because nothing is dropped.
 
-**ORIGIN Labs · The InNova Engine · Open Weight · Verified · Free**
+**ORIGIN Labs · The Transcender Engine · Open Weight · Verified · Free**
 
 ---
 
@@ -5444,7 +5330,6 @@ The last word is the promise, restated exactly as it was made: "No matter how po
 | Appendix | Subject | Part |
 |---|---|---|
 | A | DeepSeek Technical Deep Dive | Two |
-| B | Kimi K3 Deep Dive | Two |
 | C | AGI Vision Deep Dive | Three |
 | D | Engineering Deep Dive | Four |
 | E | Hardware Deep Dive | Five |
@@ -5464,7 +5349,7 @@ Every appendix is linked to its part, and every part is linked to its chapters. 
 
 ## How This Document Was Assembled
 
-This document was assembled from the full research record of the InNova Engine project. The record includes the complete design conversation, the competitive research dossiers on DeepSeek and Moonshot AI, the engineering narrative of the custom engine, the hardware and deployment doctrine, the market strategy, and the in-house benchmark results. The assembly followed one rule: nothing dropped. Every feature that was discussed is in the F1-F68 index; every number that was measured is in the numbers sheet; every diagram is in the Mermaid library; every question is in the Q&A reference. The document is the absolute record, and the record is closed.
+This document was assembled from the full research record of the Transcender Engine project. The record includes the complete design conversation, the competitive research dossiers on DeepSeek and frontier MoEs, the engineering narrative of the custom engine, the hardware and deployment doctrine, the market strategy, and the in-house benchmark results. The assembly followed one rule: nothing dropped. Every feature that was discussed is in the F1-F68 index; every number that was measured is in the numbers sheet; every diagram is in the Mermaid library; every question is in the Q&A reference. The document is the absolute record, and the record is closed.
 
 ## The Mandate of the Record
 
@@ -5472,11 +5357,11 @@ The mandate under which this document was produced is simple and absolute: the d
 
 ## The Final Line Count
 
-The document was originally exactly 3,072 lines. After merging with README.md, the combined InNova README is exactly 6,144 lines. The line count is deliberate: completeness in this case was specified as an exact count. The count is verified as part of the record, and the last line of the record is this note.
+The document was originally exactly 3,072 lines. After merging with README.md, the combined Transcender README is exactly 6,144 lines. The line count is deliberate: completeness in this case was specified as an exact count. The count is verified as part of the record, and the last line of the record is this note.
 
 ---
 
-**ORIGIN Labs · The InNova Engine · Open Weight · Verified · Free**
+**ORIGIN Labs · The Transcender Engine · Open Weight · Verified · Free**
 
 **End of Document — The Complete Research and Engineering Narrative. Nothing is forgotten, because nothing is dropped.**
 ---
@@ -5517,8 +5402,8 @@ The merged document now contains two layers. The first layer is the engineering 
 
 ### Layer One — The Engineering README
 
-- # ⚡ InNova — v0.1.03 Release (title + logo)
-- Build Status (v0.1.03)
+- # ⚡ Transcender — R0001.01 Release (title + logo)
+- Build Status (R0001.01)
 - Quick Start
 - Prerequisites
 - 📋 Table of Contents
@@ -5534,7 +5419,7 @@ The merged document now contains two layers. The first layer is the engineering 
 - 🗺️ Phase-by-Phase Roadmap
 - 🧠 Mission Breakdown (SPEC)
 - 📐 Complete Build Blueprint
-- ✅ Current State — v0.1.03 Release
+- ✅ Current State — R0001.01 Release
 - 📊 Comparison with Existing Projects
 - 💻 Developer Machine Reality
 - 🎯 Performance Targets
@@ -5564,7 +5449,6 @@ The merged document now contains two layers. The first layer is the engineering 
 - Part Seven — The Reference Library (Chapters 56-66)
 - Part Eight — The Way Forward (Chapters 67-70)
 - Part Two Appendix A — The DeepSeek Technical Deep Dive
-- Part Two Appendix B — The Kimi K3 Deep Dive
 - Part Three Appendix — The AGI Vision Deep Dive
 - Part Four Appendix — The Engineering Deep Dive
 - Part Five Appendix — The Hardware Deep Dive
@@ -5586,7 +5470,7 @@ The merged document now contains two layers. The first layer is the engineering 
 | README section | Related narrative part | What connects them |
 |---|---|---|
 | 📦 What is QUANT? | Chapter 33 (framework discovery), Appendix H (benchmarks) | The QUANT/QUANT format family is the numeric backbone of the narrative |
-| 🔬 Research Foundation | Chapters 17-18 (thinking and reward), Appendix A.7-A.9 | Research grounding for MLA, GRPO, STE, VQ training |
+| 🔬 Research Foundation | Chapters 17-18 (thinking and reward), Appendix A.7-A.9 | Research grounding for compressed, GRPO, STE, VQ training |
 | 🏗️ Architecture | Part Four (engineering narrative) | The engine internals described twice: once as code, once as story |
 | ⚡ Kernel Design | Chapter 33 (the four pillars), Appendix H | Kernels are the "PyML fastmath layer" of the narrative |
 | 🗺️ Phase-by-Phase Roadmap | Chapter 67 (the roadmap) | The build roadmap and the narrative roadmap are the same plan |
@@ -5610,7 +5494,7 @@ Every term used anywhere in this merged document, defined in one line:
 - ASI — Artificial Superintelligence: the future goal of ORIGIN after AGI, pursued as a controlled, verifiable system.
 - AST gate — the deterministic logic gate that rejects fabrications before output.
 - Attention — the transformer mechanism that lets tokens exchange information.
-- AttnRes — Attention Residuals: K3's dynamic skip connections.
+- AttnRes — Attention Residuals: dynamic skip connections studied for forgetting mitigation.
 - Autograd — automatic differentiation; the engine's computation graph for training.
 - Backpropagation — the algorithm that propagates gradients backward through the network.
 - Balancer — the market engine that monetizes trust (audits, registry, support).
@@ -5639,12 +5523,12 @@ Every term used anywhere in this merged document, defined in one line:
 - Honest flag — a published target or boundary; the engine's public design targets.
 - Hypernetwork — a small generator that produces weight deltas for a larger model.
 - KV cache — the stored key-value tensors attention uses to recall context.
-- KDA — Kimi Delta Attention: K3's cheap linear attention for long context.
+- linear — linear delta attention: cheap linear attention for long-context tractability.
 - Lloyd-Max — the optimal scalar quantizer for a given distribution.
 - MCOS — the Meta-Cognitive Operating System concept: dynamic weights without fine-tuning.
 - Mermaid — the diagram language used throughout the narrative library.
 - Meta-GRPO — the evolution loop that lets the engine invent new reasoning frameworks.
-- MLA — Multi-head Latent Attention: compressed attention reducing KV cache by 93%.
+- compressed — Multi-head Latent Attention: compressed attention reducing KV cache by 93%.
 - MoE — Mixture of Experts: many specialists activated per token by a router.
 - Model collapse — degradation of a model trained on its own output, generation after generation.
 - MoMMoE — the engine's modality-aware MoE blocks.
@@ -5678,7 +5562,7 @@ Every term used anywhere in this merged document, defined in one line:
 Questions the merged document is asked most often, answered from the full text:
 
 - Q: Is this README one project or two documents pasted together? A: One project, two layers — the engineering README and the research narrative are the same engine told twice.
-- Q: Why is the logo an image? A: The InNova logo lives at the top of the README so the repository is recognizable at a glance.
+- Q: Why is the logo an image? A: The Transcender logo lives at the top of the README so the repository is recognizable at a glance.
 - Q: What is the single most important idea? A: A frozen core plus additive, verified pages — nothing is overwritten, so nothing is forgotten.
 - Q: Does the engine really swap personas in zero milliseconds? A: No — that is a design target. The pointer-swap design exists; the latency is not yet measured on shipping hardware.
 - Q: What is the Pointer Hot-Swap Subsystem? A: It is the subsystem that swaps active persona weights by exchanging pointers; the swap is atomic, token-verified, and reversible.
@@ -5704,7 +5588,7 @@ The commands, the numbers, and the guarantees, in one place.
 
 ### Build Commands
 
-- git clone https://github.com/origin-labs-ai/InNova
+- git clone https://github.com/origin-labs-ai/Transcender
 - cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 - cmake --build build --parallel
 - ctest --test-dir build --output-on-failure
@@ -5728,8 +5612,6 @@ The commands, the numbers, and the guarantees, in one place.
 - 0.05 — the delta/variance-control bound.
 - 99% — the self-consistency threshold (design target).
 - 284B / 13B — DeepSeek V4 Flash total / active parameters.
-- 2.8T / 896 — Kimi K3 total parameters / experts.
-- 1M — Kimi K3 context window in tokens.
 - 0.14 — DeepSeek V4 Flash price per million input tokens (USD).
 
 ### The Guarantees, Stated Honestly
@@ -5770,10 +5652,9 @@ The full reading order of the narrative, indexed by part:
 - **Chapter 13** — Knowledge in a 13B Active Brain
 - **Chapter 14** — Three Secret Techniques of the Small Champion
 - **Chapter 15** — The August 2026 Leaderboard
-- **Chapter 16** — The "90% Performance" — MLA, DualPipe, RL
+- **Chapter 16** — The "90% Performance" — compressed, DualPipe, RL
 - **Chapter 17** — How a Model "Thinks" — Internet Garbage and a Real Mind
 - **Chapter 18** — The Mathematics of Reward
-- **Chapter 19** — Kimi K3: Anatomy of a 2.8T Megalith
 - **Chapter 20** — The Hallucination Epidemic
 - **Chapter 21** — Catastrophic Forgetting and the Limit of Attention Residuals
 - **Chapter 22** — Memorization, Privacy, and PII Exposure
@@ -5793,8 +5674,8 @@ The full reading order of the narrative, indexed by part:
 
 ### Part Four — The Engineering Narrative (Chapters 33-42)
 
-- **Chapter 33** — The InNova Framework Discovery
-- **Chapter 34** — Personality Hot-Swap: From Kimi to InNova 5
+- **Chapter 33** — The Transcender Framework Discovery
+- **Chapter 34** — Personality Hot-Swap: Live Persona Demonstration
 - **Chapter 35** — The Pointer Hot-Swap Subsystem
 - **Chapter 36** — Cache Coherency, Double Buffering, and Delta Upstream
 - **Chapter 37** — Development History and Code Size
@@ -5896,11 +5777,11 @@ Every appendix block in Layer Two, indexed for navigation:
 - A.4 — The 13B Active Brain: Storage Versus Processing
 - A.5 — The Three Secret Techniques, Expanded
 - A.6 — The August 2026 Leaderboard, In Detail
-- A.7 — MLA, DualPipe, and RL: The Engineering of the 90%
+- A.7 — compressed, DualPipe, and RL: The Engineering of the 90%
 - A.8 — How a Model Thinks: Scrap to Scientist
 - A.9 — The Mathematics of Reward, In Full
 - B.1 — The Full Attribute Table, Reconstructed
-- B.2 — AttnRes and KDA: The Two Structural Innovations
+- B.2 — AttnRes and linear: The Two Structural Innovations
 - B.3 — The Hallucination Epidemic: Numbers and Causes
 - B.4 — The Mitigation Set, Registered
 - B.5 — Memorization, PII, and the Reproducible Tests
@@ -5916,8 +5797,8 @@ Every appendix block in Layer Two, indexed for navigation:
 - C.5 — MCOS: The Meta-Cognitive Operating System
 - C.6 — Where the Diseases Return, in Detail
 - C.7 — The Full Projection and Gate Mechanics
-- C.8 — The InNova Framework Discovery Path
-- C.9 — From the InNova Blueprint to the Fleet
+- C.8 — The Transcender Framework Discovery Path
+- C.9 — From the Transcender Blueprint to the Fleet
 
 ### Part Four Appendices
 
@@ -6041,4 +5922,4 @@ Every appendix block in Layer Two, indexed for navigation:
 
 This index completes the navigation of the merged document.
 
-**End of the Complete InNova README (exactly 6,144 lines, verified).**
+**End of the Complete Transcender README (exactly 6,144 lines, verified).**

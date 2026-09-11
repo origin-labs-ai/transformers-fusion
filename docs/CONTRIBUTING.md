@@ -1,20 +1,26 @@
-# Contributing to InNova
+# Contributing to Transcender
 
 > **How to Contribute to the Project**
+>
+> **Production-hardening note (2026-09-11):** v1.1.0 / R0001.01 · 105 formats · TranscenderIDX · 72 ctest cases
+> (`tests/CMakeLists.txt`). Source truth: `src/<area>/` layout
+> (`docs/ARCHITECTURE.md`); open tasks: `docs/GOOD_FIRST_ISSUES.md`;
+> measurement rule: every number ships with a bench/ledger source or is flagged
+> UNVERIFIED.
 
 ---
 
 ## 🎉 Welcome!
 
-Thank you for your interest in contributing to InNova! We welcome contributions from everyone, whether you're a seasoned developer or just starting out with AI and C++.
+Thank you for your interest in contributing to Transcender! We welcome contributions from everyone, whether you're a seasoned developer or just starting out with AI and C++.
 
-This document provides guidelines for contributing to InNova. Following these guidelines helps maintain a consistent, high-quality codebase and makes it easier for everyone to collaborate.
+This document provides guidelines for contributing to Transcender. Following these guidelines helps maintain a consistent, high-quality codebase and makes it easier for everyone to collaborate.
 
 ---
 
 ## 📋 Ways to Contribute
 
-There are many ways to contribute to InNova:
+There are many ways to contribute to Transcender:
 
 ### 🎯 Find Your First Issue (Start Here!)
 
@@ -62,14 +68,14 @@ issue, and you own it. Each entry lists exact files and exit criteria.
 - **Implement** new research papers
 - **Propose** new algorithms
 - **Benchmark** against other frameworks
-- **Publish** research using InNova
+- **Publish** research using Transcender
 
 ### 🤝 Community
 
 - **Answer questions** from other users
 - **Review** pull requests
 - **Help** with onboarding
-- **Promote** InNova
+- **Promote** Transcender
 
 ---
 
@@ -77,12 +83,12 @@ issue, and you own it. Each entry lists exact files and exit criteria.
 
 ### 1. Set Up Your Development Environment
 
-Follow the [Build Guide](BUILD.md) to get InNova compiled on your machine:
+Follow the [Build Guide](BUILD.md) to get Transcender compiled on your machine:
 
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/InNova
-cd InNova
+git clone https://github.com/origin-labs-ai/Transcender
+cd Transcender
 
 # Build in debug mode for development
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
@@ -349,7 +355,7 @@ if (shape.rank() != 2) {
 ### File Structure
 
 ```
-InNova/
+Transcender/
 ├── CMakeLists.txt              # Main build configuration
 ├── README.md                   # Project documentation
 ├── include/                    # Public headers
@@ -652,13 +658,13 @@ All contributors will be recognized:
 
 ## 📄 License
 
-By contributing to InNova, you agree that your contributions will be licensed under the **MIT License**. See [LICENSE](../LICENSE) for details.
+By contributing to Transcender, you agree that your contributions will be licensed under the **MIT License**. See [LICENSE](../LICENSE) for details.
 
 ---
 
 ## 🎉 Thank You!
 
-Your contributions help make InNova better for everyone. Thank you for being part of the community!
+Your contributions help make Transcender better for everyone. Thank you for being part of the community!
 
 ---
 

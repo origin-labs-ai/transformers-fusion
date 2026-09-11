@@ -2,6 +2,7 @@
 #include "quant/qwen35_tokenizer.h"
 #include "quant/generator.h"
 #include "quant/production_socket.h"
+#include "quant/http_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -205,15 +206,10 @@ private:
     }
 
     void send_response(int fd, int status, const std::string& content_type, const std::string& body, bool keep_alive = false) {
-        std::string status_str;
-        switch (status) {
-            case 200: status_str = "OK"; break;
-            case 400: status_str = "Bad Request"; break;
-            case 404: status_str = "Not Found"; break;
-            case 500: status_str = "Internal Server Error"; break;
-            case 501: status_str = "Not Implemented"; break;
-            default: status_str = "Unknown";
-        }
+        // C-24 fix: full reason-phrase table (was 200/400/404/500/501 only;
+        // 204/413/414 fell through to "Unknown"). Single source of truth:
+        // quant::http_parse::status_text (see include/quant/http_parse.h).
+        const std::string status_str = quant::http_parse::status_text(status);
 
         std::string resp = "HTTP/1.1 " + std::to_string(status) + " " + status_str + "\r\n"
             "Content-Type: " + content_type + "\r\n"
@@ -500,20 +496,42 @@ private:
     }
 
     void handle_request(int client_fd) {
-        std::vector<char> buf(65536);
-        int n = recv(client_fd, buf.data(), (int)buf.size() - 1, 0);
-        if (n <= 0) return;
-        buf[n] = '\0';
-
-        // Header budget: the recv buffer itself is the cap; a completely
-        // full buffer means the client blew past it -> 413.
-        if ((size_t)n >= buf.size() - 1) {
-            send_response(client_fd, 413, "application/json",
-                          json_error("request too large (header/body cap 64KB)"));
-            return;
+        // C-24 fix: Content-Length-aware body read (was single recv — a
+        // pipelined/split POST body got truncated to the first segment).
+        // Loop until headers + declared body bytes are in, capping the total
+        // at 64KB (413) and the request line at 8KB (414).
+        static constexpr size_t kCap = 65536;
+        std::string raw;
+        raw.reserve(16384);
+        while (raw.size() < kCap) {
+            char tmp[4096];
+            int n = recv(client_fd, tmp, (int)sizeof(tmp), 0);
+            if (n <= 0) break;
+            raw.append(tmp, (size_t)n);
+            auto hend = raw.find("\r\n\r\n");
+            if (hend != std::string::npos) {
+                std::string headers = raw.substr(0, hend);
+                int64_t cl = quant::http_parse::parse_content_length(headers, (int64_t)kCap);
+                if (cl < 0) {
+                    send_response(client_fd, 400, "application/json",
+                                  json_error("malformed Content-Length"));
+                    return;
+                }
+                size_t have_body = raw.size() - hend - 4;
+                if (cl > (int64_t)kCap || have_body + 4 > kCap) {
+                    send_response(client_fd, 413, "application/json",
+                                  json_error("request too large (header/body cap 64KB)"));
+                    return;
+                }
+                if (have_body >= (size_t)cl) break; // full body present
+                // else: keep reading until declared bytes arrive
+            } else if (raw.size() >= kCap) {
+                send_response(client_fd, 413, "application/json",
+                              json_error("request too large (header/body cap 64KB)"));
+                return;
+            }
         }
-
-        std::string raw(buf.data());
+        if (raw.empty()) return;
 
         // Request-line cap: first CRLF must arrive within 8KB.
         const size_t eol = raw.find("\r\n");
@@ -537,7 +555,7 @@ private:
             handle_detokenize(client_fd, req);
         } else if (req.path == "/health" || req.path == "/") {
             send_response(client_fd, 200, "application/json",
-                "{\"status\":\"ok\",\"model\":\"InNova-QUANT\"}");
+                "{\"status\":\"ok\",\"model\":\"Transcender-QUANT\"}");
         } else {
             send_response(client_fd, 404, "application/json",
                 json_error("not found: " + req.path));
