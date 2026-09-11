@@ -25,9 +25,13 @@ BUILD_DIR="${1:-${PROJECT_ROOT}/build/Release}"
 OUTPUT_DIR="${2:-${PROJECT_ROOT}/release/v1.1.0}"
 VERSION="1.1.0"
 
-# Authenticode signing certificate (ORIGIN LABS)
+# Authenticode signing certificate (ORIGIN LABS).
+# P1 fix: the signing password MUST come from the environment — a hardcoded
+# default password in a tracked script is a leaked secret. Fail loud instead.
 AUTHENTICODE_CERT="${AUTHENTICODE_CERT:-dist/signing_cert.pfx}"
-AUTHENTICODE_PASSWORD="${AUTHENTICODE_PASSWORD:-ORIGINLABS2026}"
+if [[ -z "${AUTHENTICODE_PASSWORD:-}" ]]; then
+    error "AUTHENTICODE_PASSWORD is not set (refusing to sign with a default password)"
+fi
 
 # GPG key ID for signing
 GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSCENDER2026KEY}"

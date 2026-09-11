@@ -72,7 +72,9 @@ jobs:
             find "$BINARY_DIR" -maxdepth 1 -type f -executable -exec cp {} dist/${{ matrix.artifact_prefix }}/ \;
           fi
           cd dist/${{ matrix.artifact_prefix }}
-          sha256sum * > SHA256SUMS
+          # P2 fix: sha256sum is missing on macos-latest runners — shasum fallback.
+          if command -v sha256sum >/dev/null 2>&1; then sha256sum * > SHA256SUMS;
+          else shasum -a 256 * > SHA256SUMS; fi
 
       - name: Package source
         if: runner.os == 'Linux'
@@ -80,9 +82,10 @@ jobs:
           cd ${{ github.workspace }}
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
           tar --exclude='.git' --exclude='build' --exclude='dist' --exclude='.kilo' --exclude='research' --exclude='repo' \
-            -czf dist/InNova-$VERSION-source.tar.gz .
+            -czf dist/Transcender-$VERSION-source.tar.gz .
           cd dist
-          sha256sum InNova-$VERSION-source.tar.gz > InNova-$VERSION-source.tar.gz.sha256
+          if command -v sha256sum >/dev/null 2>&1; then sha256sum Transcender-$VERSION-source.tar.gz > Transcender-$VERSION-source.tar.gz.sha256;
+          else shasum -a 256 Transcender-$VERSION-source.tar.gz > Transcender-$VERSION-source.tar.gz.sha256; fi
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -109,7 +112,7 @@ jobs:
           files: |
             dist/**/*
           body: |
-            # InNova ${{ github.ref_name }}
+            # Transcender ${{ github.ref_name }}
 
             ## Build
             - Zero-warning compilation with Clang/GCC/MSVC

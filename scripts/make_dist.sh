@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# InNova distribution builder
+# Transcender distribution builder
 # Usage: bash scripts/make_dist.sh [version]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-VERSION="${1:-v0.1.0-engine-prod}"
+# P2 fix: default version was stale "v0.1.0-engine-prod". Derive the one-truth
+# from CMakeLists.txt (project(Transcender VERSION x.y.z)) unless overridden.
+DEFAULT_VERSION="$(grep -m1 -oE 'VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | awk '{print $2}')"
+VERSION="${1:-v${DEFAULT_VERSION:-1.1.0}}"
 OUTDIR="dist"
 mkdir -p "$OUTDIR/source"
 
@@ -42,16 +45,18 @@ sha256sum * > SHA256SUMS
 cd "$ROOT"
 
 # --- Source tarball ---
+# P2 fix: must include cmake/ (root CMakeLists does include(arch)/include(compiler)),
+# quant_config.h.in (configure_file template), and sops/ (built unconditionally).
 tar --exclude='.git' --exclude='build*' --exclude='dist' --exclude='.kilo' \
     --exclude='.research' --exclude='.github' \
-    -czf "$OUTDIR/InNova-$VERSION-source.tar.gz" \
-    CMakeLists.txt LICENSE README.md AGENTS.md \
-    src/ include/ engines/ tests/ bench/ tools/
+    -czf "$OUTDIR/Transcender-$VERSION-source.tar.gz" \
+    CMakeLists.txt quant_config.h.in LICENSE README.md \
+    cmake/ src/ include/ engines/ tests/ bench/ tools/ sops/
 
 cd "$OUTDIR"
-sha256sum "InNova-$VERSION-source.tar.gz" > "InNova-$VERSION-source.tar.gz.sha256"
+sha256sum "Transcender-$VERSION-source.tar.gz" > "Transcender-$VERSION-source.tar.gz.sha256"
 cd "$ROOT"
 
 echo "=== Distribution built at $OUTDIR/ ==="
 echo "Binaries: $OUTDIR/$PLAT/"
-echo "Source:   $OUTDIR/InNova-$VERSION-source.tar.gz"
+echo "Source:   $OUTDIR/Transcender-$VERSION-source.tar.gz"

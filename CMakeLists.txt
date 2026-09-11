@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(InNova VERSION 0.1.2 LANGUAGES CXX)
+# Display version: R0001.01 (owner scheme). CMake needs numeric: 1.1.0 mirrors R0001.01.
+project(Transcender VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +15,7 @@ include(compiler)
 option(QUANT_BUILD_TESTS "Build unit tests" ON)
 option(QUANT_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(QUANT_BUILD_TOOLS "Build CLI tools" ON)
+option(QUANT_BUILD_ADAPTERS "Build adapter bridge tree (src/adapters, EXCLUDE_FROM_ALL, default OFF until QUANT_ names migrated)" OFF)
 option(QUANT_SANITIZE "Enable address sanitizer" OFF)
 option(QUANT_COVERAGE "Enable code coverage (GCC/Clang only)" OFF)
 
@@ -39,130 +41,128 @@ add_library(quant_config INTERFACE)
 target_include_directories(quant_config INTERFACE "${CMAKE_BINARY_DIR}")
 
 add_library(quant_core
-  src/tensor.cpp
-  src/memory.cpp
-  src/random.cpp
-  src/tensor_view.cpp
-  src/data_gen.cpp
-  src/metrics.cpp
-  src/parquet_streamer.cpp
-  src/telemetry.cpp
+  src/core/tensor.cpp
+  src/core/memory.cpp
+  src/core/random.cpp
+  src/core/tensor_view.cpp
+  src/core/data_gen.cpp
+  src/core/metrics.cpp
+  src/core/parquet_streamer.cpp
+  src/core/telemetry.cpp
 )
 target_include_directories(quant_core PUBLIC include)
 target_link_libraries(quant_core PUBLIC quant_config)
 
 add_library(quant_math
-  src/math.cpp
-  src/math_avx2.cpp
-  src/math_avx2_tiled.cpp
-  src/math_avx2_tensor.cpp
-  src/math_avx2_vec.cpp
-  src/simd_math.cpp
+  src/math/math.cpp
+  src/math/math_avx2.cpp
+  src/math/math_avx2_tiled.cpp
+  src/math/math_avx2_vec.cpp
+  src/math/simd_math.cpp
 )
+# NOTE: src/math/math_avx2_tensor.cpp kept on disk but excluded from build:
+# it duplicates gemm/gemv/dot/axpy/norm/asum/relu symbols from math_avx2.cpp (LNK2005). P18.
 if(QUANT_AVX512)
-  target_sources(quant_math PRIVATE src/math_avx512.cpp)
+  target_sources(quant_math PRIVATE src/math/math_avx512.cpp)
 endif()
 target_include_directories(quant_math PUBLIC include)
 target_link_libraries(quant_math PUBLIC quant_core)
 
 add_library(quant_format
-  src/quant_format.cpp
-  src/codebook.cpp
-  src/format_planner.cpp
-  src/format_registry.cpp
-  src/block_codec.cpp
-  src/vector_quantizer.cpp
-  src/quant_engines_core.cpp
-  src/quant_engines_fp.cpp
-  src/quant_engines_quant1.cpp
-  src/quant_engines_quant2.cpp
-  src/quant_engines_quant4.cpp
-  src/quant_engines_quant8.cpp
-  src/quant_engines_quant.cpp
+  src/codec/quant_format.cpp
+  src/codec/codebook.cpp
+  src/codec/format_planner.cpp
+  src/codec/format_registry.cpp
+  src/codec/block_codec.cpp
+  src/codec/vector_quantizer.cpp
+  src/codec/quant_engines_core.cpp
+  src/codec/quant_engines_fp.cpp
+  src/codec/quant_engines_quant1.cpp
+  src/codec/quant_engines_quant2.cpp
+  src/codec/quant_engines_quant4.cpp
+  src/codec/quant_engines_quant8.cpp
+  src/codec/quant_engines_quant.cpp
 )
 target_include_directories(quant_format PUBLIC include)
 target_link_libraries(quant_format PUBLIC quant_math)
 
 add_library(quant_kernel
-  src/kernel_tl.cpp
-  src/kernel_quant8.cpp
-  src/kernel_quant4.cpp
-  src/kernel_q3.cpp
-  src/kernel_q6.cpp
-  src/kernel_q12.cpp
-  src/kernel_q24.cpp
-  src/kernel_gemm.cpp
-  src/int8_quant.cpp
-  src/kernel_production.cpp
+  src/kernel/kernel_tl.cpp
+  src/kernel/kernel_quant8.cpp
+  src/kernel/kernel_quant4.cpp
+  src/kernel/kernel_q3.cpp
+  src/kernel/kernel_q6.cpp
+  src/kernel/kernel_q12.cpp
+  src/kernel/kernel_q24.cpp
+  src/kernel/kernel_gemm.cpp
+  src/kernel/int8_quant.cpp
+  src/kernel/kernel_production.cpp
 )
 target_include_directories(quant_kernel PUBLIC include)
 target_link_libraries(quant_kernel PUBLIC quant_format)
 
 add_library(quant_model
-  src/transformer.cpp
-  src/kda_attention.cpp
-  src/mla_attention.cpp
-  src/hybrid_scheduler.cpp
-  src/hybrid_block.cpp
-  src/hybrid_expert.cpp
-  src/hybrid_moe_model.cpp
-  src/model.cpp
-  src/kv_cache.cpp
-  src/kv_cache_quant4.cpp
-  src/autograd_engine.cpp
-  src/autograd_functions.cpp
-  src/autograd_grad.cpp
-  src/flash_attention.cpp
+  src/model/transformer.cpp
+  src/model/hybrid_scheduler.cpp
+  src/model/hybrid_block.cpp
+  src/model/hybrid_expert.cpp
+  src/model/hybrid_moe_model.cpp
+  src/model/model.cpp
+  src/model/kv_cache.cpp
+  src/model/kv_cache_quant4.cpp
+  src/model/autograd_engine.cpp
+  src/model/autograd_functions.cpp
+  src/model/autograd_grad.cpp
+  src/kernel/flash_attention.cpp
 )
 target_include_directories(quant_model PUBLIC include)
 target_link_libraries(quant_model PUBLIC quant_kernel)
 
 add_library(quant_inference
-  src/sampler.cpp
-  src/generator.cpp
+  src/inference/sampler.cpp
+  src/inference/generator.cpp
 )
 target_include_directories(quant_inference PUBLIC include)
 target_link_libraries(quant_inference PUBLIC quant_model)
 
 add_library(quant_tokenizer
-  src/bpe_tokenizer_advanced.cpp
-  src/bpe_tokenizer_bpe.cpp
-  src/bpe_tokenizer_unicode.cpp
-  src/qwen35_tokenizer.cpp
-  src/k3_tokenizer.cpp
-  src/dataset.cpp
+  src/tokenizer/bpe_tokenizer_advanced.cpp
+  src/tokenizer/bpe_tokenizer_bpe.cpp
+  src/tokenizer/bpe_tokenizer_unicode.cpp
+  src/tokenizer/qwen35_tokenizer.cpp
+  src/core/dataset.cpp
 )
 target_include_directories(quant_tokenizer PUBLIC include)
 target_link_libraries(quant_tokenizer PUBLIC quant_core)
 
 add_library(quant_trainer
-  src/optimizer.cpp
-  src/scheduler.cpp
-  src/eval.cpp
-  src/ste_quantizer.cpp
-  src/qat.cpp
-  src/finetune.cpp
-  src/fine_tuning.cpp
-  src/log_writer.cpp
-  src/distributed.cpp
-  src/native_weight.cpp
-  src/native_trainer.cpp
-  src/hf_streamer.cpp
-  src/moe_trainer.cpp
-  src/hpo_nas.cpp
-  src/ddp.cpp
-  src/pipeline.cpp
-  src/reward.cpp
-  src/continual_engine.cpp
-  src/trainer_core.cpp
-  src/trainer_data.cpp
-  src/trainer_rl.cpp
-  src/trainer_rl_ops.cpp
-  src/rollout_worker.cpp
-  src/training_utils.cpp
-  src/zero_offload.cpp
-  src/zero_optimizer_core.cpp
-  src/zero_optimizer_mem.cpp
+  src/trainer/optimizer.cpp
+  src/trainer/scheduler.cpp
+  src/trainer/eval.cpp
+  src/codec/ste_quantizer.cpp
+  src/codec/qat.cpp
+  src/trainer/finetune.cpp
+  src/trainer/fine_tuning.cpp
+  src/core/log_writer.cpp
+  src/trainer/distributed.cpp
+  src/trainer/native_weight.cpp
+  src/trainer/native_trainer.cpp
+  src/trainer/hf_streamer.cpp
+  src/trainer/moe_trainer.cpp
+  src/trainer/hpo_nas.cpp
+  src/trainer/ddp.cpp
+  src/trainer/pipeline.cpp
+  src/trainer/reward.cpp
+  src/trainer/continual_engine.cpp
+  src/trainer/trainer_core.cpp
+  src/trainer/trainer_data.cpp
+  src/trainer/trainer_rl.cpp
+  src/trainer/trainer_rl_ops.cpp
+  src/trainer/rollout_worker.cpp
+  src/trainer/training_utils.cpp
+  src/trainer/zero_offload.cpp
+  src/trainer/zero_optimizer_core.cpp
+  src/trainer/zero_optimizer_mem.cpp
 )
 target_include_directories(quant_trainer PUBLIC include)
 target_link_libraries(quant_trainer PUBLIC quant_model quant_inference quant_tokenizer quant_continual)
@@ -172,7 +172,7 @@ add_library(quant_engine
   engines/inference/stream.cpp
   engines/quant/quantize.cpp
   engines/quant/codec.cpp
-  src/code_gen.cpp
+  src/trainer/code_gen.cpp
 )
 target_include_directories(quant_engine PUBLIC include engines/inference engines/quant)
 target_link_libraries(quant_engine PUBLIC quant_inference quant_tokenizer)
@@ -211,80 +211,87 @@ target_link_libraries(quant_moe PUBLIC quant_model)
 
 # GPU compute library (Cross-platform, all 18 backends registered)
 if(WIN32)
-  add_library(quant_gpu src/gpu_compute.cpp src/gpu_compute_full.cpp src/gpu_compute_vulkan.cpp src/gpu_compute_cuda.cpp src/igpu_zero_copy.cpp src/gpu_compute_sycl.cpp src/gpu_compute_cann.cpp src/gpu_compute_rpc.cpp src/gpu_compute_metal.cpp src/gpu_compute_openvino.cpp src/gpu_compute_virtgpu.cpp src/gpu_compute_webgpu.cpp src/gpu_compute_zendnn.cpp src/gpu_compute_hexagon.cpp src/gpu_compute_hip.cpp src/gpu_compute_musa.cpp src/gpu_compute_opencl.cpp src/gpu_compute_zdnn.cpp)
+  add_library(quant_gpu src/backend/gpu_compute.cpp src/backend/gpu_compute_full.cpp src/backend/gpu_compute_vulkan.cpp src/backend/gpu_compute_cuda.cpp src/backend/igpu_zero_copy.cpp src/backend/gpu_compute_sycl.cpp src/backend/gpu_compute_cann.cpp src/backend/gpu_compute_rpc.cpp src/backend/gpu_compute_metal.cpp src/backend/gpu_compute_openvino.cpp src/backend/gpu_compute_virtgpu.cpp src/backend/gpu_compute_webgpu.cpp src/backend/gpu_compute_zendnn.cpp src/backend/gpu_compute_hexagon.cpp src/backend/gpu_compute_hip.cpp src/backend/gpu_compute_musa.cpp src/backend/gpu_compute_opencl.cpp src/backend/gpu_compute_zdnn.cpp)
   target_include_directories(quant_gpu PUBLIC include)
   target_link_libraries(quant_gpu PUBLIC quant_core)
   target_link_libraries(quant_gpu PUBLIC d3d12 dxgi d3dcompiler)
   target_compile_definitions(quant_gpu PRIVATE QUANT_USE_DIRECTX)
-  target_sources(quant_gpu PRIVATE src/gpu_extras.cpp)
+  target_sources(quant_gpu PRIVATE src/backend/gpu_extras.cpp)
 else()
-  add_library(quant_gpu src/gpu_compute.cpp src/gpu_compute_full.cpp src/gpu_compute_vulkan.cpp src/gpu_compute_cuda.cpp src/igpu_zero_copy.cpp src/gpu_compute_sycl.cpp src/gpu_compute_cann.cpp src/gpu_compute_rpc.cpp src/gpu_compute_metal.cpp src/gpu_compute_openvino.cpp src/gpu_compute_virtgpu.cpp src/gpu_compute_webgpu.cpp src/gpu_compute_zendnn.cpp src/gpu_compute_hexagon.cpp src/gpu_compute_hip.cpp src/gpu_compute_musa.cpp src/gpu_compute_opencl.cpp src/gpu_compute_zdnn.cpp)
+  add_library(quant_gpu src/backend/gpu_compute.cpp src/backend/gpu_compute_full.cpp src/backend/gpu_compute_vulkan.cpp src/backend/gpu_compute_cuda.cpp src/backend/igpu_zero_copy.cpp src/backend/gpu_compute_sycl.cpp src/backend/gpu_compute_cann.cpp src/backend/gpu_compute_rpc.cpp src/backend/gpu_compute_metal.cpp src/backend/gpu_compute_openvino.cpp src/backend/gpu_compute_virtgpu.cpp src/backend/gpu_compute_webgpu.cpp src/backend/gpu_compute_zendnn.cpp src/backend/gpu_compute_hexagon.cpp src/backend/gpu_compute_hip.cpp src/backend/gpu_compute_musa.cpp src/backend/gpu_compute_opencl.cpp src/backend/gpu_compute_zdnn.cpp)
   target_include_directories(quant_gpu PUBLIC include)
 endif()
 
 # Hardware backend abstraction
 add_library(quant_backend
-  src/backend.cpp
+  src/backend/backend.cpp
 )
 target_include_directories(quant_backend PUBLIC include)
 target_link_libraries(quant_backend PUBLIC quant_math quant_gpu)
 
 # All MoE variants
 add_library(quant_moe_variants
-  src/moe_variants.cpp
-  src/moe_model.cpp
-  src/expert_parallel.cpp
-  src/expert_prefetch.cpp
-  src/moe_advanced_support.cpp
-  src/moe_quantized_test_core.cpp
-  src/moe_quantized_test_extra.cpp
-  src/mommoe_block.cpp
-  src/native_quant_moe.cpp
+  src/model/moe_core.cpp
+  src/model/moe_variants.cpp
+  src/model/moe_model.cpp
+  src/model/expert_parallel.cpp
+  src/model/expert_prefetch.cpp
+  src/model/moe_advanced_support.cpp
+  src/model/moe_quantized_test_core.cpp
+  src/model/moe_quantized_test_extra.cpp
+  src/model/mommoe_block.cpp
+  src/model/native_quant_moe.cpp
 )
 target_include_directories(quant_moe_variants PUBLIC include)
 target_link_libraries(quant_moe_variants PUBLIC quant_model quant_backend quant_trainer)
 
 # Distributed training (tensor parallelism, FSDP)
 add_library(quant_distributed
-  src/tensor_parallelism.cpp
-  src/fsdp.cpp
+  src/trainer/tensor_parallelism.cpp
+  src/trainer/fsdp.cpp
 )
 target_include_directories(quant_distributed PUBLIC include)
 target_link_libraries(quant_distributed PUBLIC quant_model quant_kernel)
 
 # Cat D: Inference optimization
 add_library(quant_inference_opt
-  src/inference_opt.cpp
+  src/inference/inference_opt.cpp
+  src/inference/inference_paging.cpp
+  src/inference/inference_speculative.cpp
+  src/inference/inference_kv.cpp
+  src/inference/inference_lowprec.cpp
+  src/inference/inference_serve.cpp
 )
 target_include_directories(quant_inference_opt PUBLIC include)
 target_link_libraries(quant_inference_opt PUBLIC quant_model quant_inference)
 
 # Cat F: MoE enhancement
 add_library(quant_moe_enhance
-  src/moe_enhance.cpp
+  src/model/moe_enhance.cpp
 )
 target_include_directories(quant_moe_enhance PUBLIC include)
 target_link_libraries(quant_moe_enhance PUBLIC quant_model quant_moe_variants)
 
 # Cat G: AGI Pipeline
 add_library(quant_agi
-  src/agi.cpp
-  src/agi_flywheel.cpp
-  src/agi_extended.cpp
-  src/meta_cognition.cpp
-  src/self_eval.cpp
-  src/world_model.cpp
-  src/multi_agent.cpp
-  src/agi_guardrails.cpp
+  src/agi/agi.cpp
+  src/agi/agi_flywheel.cpp
+  src/agi/agi_extended.cpp
+  src/agi/meta_cognition.cpp
+  src/agi/self_eval.cpp
+  src/agi/world_model.cpp
+  src/agi/multi_agent.cpp
+  src/agi/agi_guardrails.cpp
+  src/agi/sandbox.cpp
 )
 target_include_directories(quant_agi PUBLIC include)
 target_link_libraries(quant_agi PUBLIC quant_trainer quant_model)
 
 # Cat H: Multi-Modal
 add_library(quant_multimodal
-  src/multimodal.cpp
-  src/multimodal_cross_attn.cpp
-  src/multimodal_fusion.cpp
+  src/multimodal/multimodal.cpp
+  src/multimodal/multimodal_cross_attn.cpp
+  src/multimodal/multimodal_fusion.cpp
   engines/trainer/multimodal/vision/vision.cpp
   engines/trainer/multimodal/image/image.cpp
   engines/trainer/multimodal/video/video.cpp
@@ -308,12 +315,12 @@ target_link_libraries(quant_multimodal PUBLIC quant_tokenizer quant_trainer)
 
 # Cat I: Production (HTTP server, logging, config, C API, plugins)
 add_library(quant_production
-  src/production_core.cpp
-  src/production_gen.cpp
-  src/production_api.cpp
-  src/production_gen_ops.cpp
-  src/http_server.cpp
-  src/json_parser.cpp
+  src/server/production_core.cpp
+  src/server/production_gen.cpp
+  src/server/production_api.cpp
+  src/server/production_gen_ops.cpp
+  src/server/http_server.cpp
+  src/server/json_parser.cpp
 )
 target_include_directories(quant_production PUBLIC include)
 target_link_libraries(quant_production PUBLIC quant_model quant_inference quant_tokenizer)
@@ -336,8 +343,8 @@ endif()
 
 if(QUANT_BUILD_TOOLS)
   add_executable(quant_infer tools/infer.cpp
-    src/qwen35_tokenizer.cpp
-    src/json_parser.cpp
+    src/tokenizer/qwen35_tokenizer.cpp
+    src/server/json_parser.cpp
   )
   target_include_directories(quant_infer PRIVATE engines/inference)
   target_link_libraries(quant_infer PRIVATE quant_engine quant_tokenizer)
@@ -353,9 +360,6 @@ if(QUANT_BUILD_TOOLS)
 
   add_executable(quant_convert tools/convert.cpp)
   target_link_libraries(quant_convert PRIVATE quant_format)
-
-  add_executable(k3_convert tools/k3_convert.cpp)
-  target_link_libraries(k3_convert PRIVATE quant_format quant_model quant_tokenizer)
 
   add_executable(quant_bench tools/bench.cpp)
   target_link_libraries(quant_bench PRIVATE quant_kernel quant_inference quant_tokenizer)
@@ -373,14 +377,14 @@ if(QUANT_BUILD_TOOLS)
   target_link_libraries(quant_quantize PRIVATE quant_format quant_kernel)
 
   add_executable(quant_server tools/quant_server.cpp
-    src/qwen35_tokenizer.cpp
-    src/json_parser.cpp
+    src/tokenizer/qwen35_tokenizer.cpp
+    src/server/json_parser.cpp
   )
   target_link_libraries(quant_server PRIVATE quant_model quant_tokenizer)
 
   add_executable(quant_evaluate tools/evaluate.cpp
-    src/qwen35_tokenizer.cpp
-    src/json_parser.cpp
+    src/tokenizer/qwen35_tokenizer.cpp
+    src/server/json_parser.cpp
   )
   target_link_libraries(quant_evaluate PRIVATE quant_model quant_inference quant_tokenizer quant_trainer)
 
@@ -418,7 +422,7 @@ if(QUANT_BUILD_TESTS)
                  --output-file ${QUANT_COVERAGE_LCOV_DIR}/coverage_filtered.info
         COMMAND ${GENHTML_PATH} ${QUANT_COVERAGE_LCOV_DIR}/coverage_filtered.info
                  --output-directory ${QUANT_COVERAGE_LCOV_DIR}/html
-                 --title "InNova Coverage"
+                 --title "Transcender Coverage"
                  --legend
         COMMENT "Generating code coverage report in ${QUANT_COVERAGE_LCOV_DIR}/html"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -438,6 +442,12 @@ if(QUANT_BUILD_BENCHMARKS)
   endmacro()
   add_quant_bench(bench_kernels   bench/bench_kernels.cpp   quant_kernel quant_math)
   add_quant_bench(bench_inference bench/bench_inference.cpp quant_inference quant_model quant_math quant_core)
+  add_quant_bench(bench_gemm_tiled bench/bench_gemm_tiled.cpp quant_math quant_core)
+  add_quant_bench(bench_hotswap_lat bench/bench_hotswap_lat.cpp quant_core)
+  add_quant_bench(bench_throughput bench/bench_throughput.cpp quant_core)
+  add_executable(probe_mi_extraction tools/probe_mi_extraction.cpp)
+  target_include_directories(probe_mi_extraction PRIVATE include)
+  target_link_libraries(probe_mi_extraction PRIVATE quant_agi quant_core)
   add_executable(bench_quality bench/bench_quality.cpp)
   target_include_directories(bench_quality PRIVATE include)
   target_link_libraries(bench_quality PRIVATE quant_inference quant_tokenizer quant_model quant_format quant_math quant_core)
@@ -471,7 +481,7 @@ endif()
 # SOPS tools + integration
 add_library(quant_sops STATIC
   sops/sops_scheduler.cpp
-  src/sops_integration.cpp
+  src/core/sops_integration.cpp
 )
 target_include_directories(quant_sops PUBLIC include sops)
 target_link_libraries(quant_sops PUBLIC quant_core)
@@ -479,7 +489,7 @@ set_target_properties(quant_sops PROPERTIES CXX_STANDARD 20)
 
 # Thread safety primitives
 add_library(quant_thread_safety STATIC
-  src/thread_safety.cpp
+  src/core/thread_safety.cpp
 )
 target_include_directories(quant_thread_safety PUBLIC include)
 target_link_libraries(quant_thread_safety PUBLIC quant_core)
@@ -497,14 +507,14 @@ target_link_libraries(gle_report PRIVATE quant_gle)
 
 # Continual learning engine
 add_library(quant_continual STATIC
-  src/continual_engine.cpp
+  src/trainer/continual_engine.cpp
 )
 target_include_directories(quant_continual PUBLIC include)
 target_link_libraries(quant_continual PUBLIC quant_format quant_sops)
 
 # Speculative decoding engine
 add_library(quant_speculative STATIC
-  src/speculative_decoder.cpp
+  src/inference/speculative_decoder.cpp
 )
 target_include_directories(quant_speculative PUBLIC include)
 target_link_libraries(quant_speculative PUBLIC quant_model quant_sops)
@@ -522,3 +532,35 @@ add_executable(sops_train_sim sops/sops_training_sim.cpp)
 target_include_directories(sops_train_sim PRIVATE include)
 target_link_libraries(sops_train_sim PRIVATE quant_core)
 set_target_properties(sops_train_sim PROPERTIES CXX_STANDARD 20)
+
+# Adapter bridge tree (P18: wired, no file missed, no delete).
+# Default OFF because adapters still reference pre-QG names (QUANT_Q1_G/TWI_MIX era)
+# and need migration to QG4/QG_4_K_M/QG_4.5/Q_MX_4.5/QG_MX_4.5. EXCLUDE_FROM_ALL
+# keeps default build green while `cmake --build build --target quant_adapter`
+# still works when -DQUANT_BUILD_ADAPTERS=ON.
+if(QUANT_BUILD_ADAPTERS)
+  add_subdirectory(src/adapters EXCLUDE_FROM_ALL)
+endif()
+
+# ===========================================================================
+# P2: install + packaging — `cmake --install` / CPack shipped nothing before
+# (zero install() rules). Tools + public headers + static libs install so a
+# user can `cmake --install build --prefix <dir>` and get a working tree.
+# ===========================================================================
+include(GNUInstallDirs)
+if(QUANT_BUILD_TOOLS)
+  install(TARGETS
+    quant_infer quant_train quant_finetune quant_convert quant_info
+    quant_bench quant_format_list quant_serve quant_quantize quant_server
+    quant_evaluate
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+install(DIRECTORY include/quant DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.h")
+install(FILES quant_config.h.in DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+set(CPACK_PACKAGE_NAME "TransCender")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR "ORIGIN Labs")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Zero-dependency C++20 AI engine (QUANT format)")
+set(CPACK_GENERATOR "ZIP;TGZ")
+include(CPack)

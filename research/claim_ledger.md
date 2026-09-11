@@ -197,3 +197,32 @@ intact); (6) `LatentKVAttention` is standalone (not yet spliced into
 | Version | 0.2.0 vs 1.1.0/R0001.01 conflict (Phase 24 banners said 0.2.0) | **RESOLVED → 1.1.0 / R0001.01** | `CMakeLists.txt:3` `project(Transcender VERSION 1.1.0)` + `include/quant/version.h:6` `R0001.01` + `tests/test_platform_packs.cpp:159-162` asserting `R0001.01` — all agree; "0.2.0" was a stale Phase 24 banner, swept from all engineering docs + `scripts/sign_release.sh` (narrative Part-Six/strategy chapters intentionally untouched — flagged UNVERIFIED narrative, not engineering state). `tests/test_agi_safety.cpp:193` P53 `SingleBin{"Transcender.exe","0.2.0",...}` is a doc-shape fixture (version string only asserts non-empty), not a version claim |
 
 **Still owed (not in this round):** Linux CI green confirmation; committed bench CSV + visuals rerun; `test_bench.cpp` registration decision (register or document as util); git tree commit (358 changed paths — needs owner review before commit); C-03/C-15/C-16/C-17/C-22/C-23 PARTIALs untouched.
+
+## 100%-production round 1 — 2026-09-11 (7-crew file audit → P0/P1/P2 fixes)
+
+**Audit:** 7 parallel crews swept ~538 tracked files (277 .cpp + 159 .h + 60 .md); ~105 concrete file:line defects filed across codec/kernel/model/server/adapters/tests/docs. Fixed this round (all verified by rebuild + full ctest):
+
+| # | Fix | Evidence |
+|---|---|---|
+| P0-1 | AVX2 gemm edge-tile OOB (`src/math/math_avx2.cpp:60-74` + mirror `math_avx2_tensor.cpp:58-72`): 16-wide load/store ran past N on edge tiles | Guarded 2nd vector + scalar tail stores; new `test_math.cpp` P0 suite: 10 odd-N shapes exact vs scalar ref (10/10 pass) |
+| P0-2 | Strict-aliasing UB `((float*)&acc)[r]` ×3 (`src/kernel/kernel_gemm.cpp:56,110,148`) | `_mm256_storeu_ps` to aligned lanes; rebuild clean |
+| P0-3 | `MappedFile::open` trust boundary (`src/codec/quant_format.cpp:163-195`): ignored fseek/ftell, unchecked new[] from untrusted size, swallowed fread, returned true | fseek/ftell checked, 64GiB cap, bad_alloc caught, short-read fails; + `<cstdio>/<new>` includes |
+| P0-4 | `QUANTReader::valid()` true on corrupt-magic bail + raw `new` leak on early returns + hardcoded header 16 | `valid_` gate set only after full walk, `unique_ptr<MappedFile>`, copy deleted, `sizeof(QUANTHeader)` everywhere (`quant_format.h`, `quant_format.cpp:313-395`) |
+| P0-5 | `std::stoll` throw on attacker Content-Length kills worker (`src/server/http_server.cpp:652`) | try/catch → 400 fail-loud (negative CL too) |
+| P0-6 | `tools/quant_server.cpp`: `last_token_` cross-thread race + 3 unchecked `stoi/stof` crash sites | Per-request local, def-clamped extractors, trim+400 on bad token ids |
+| P0-7 | Unchecked checkpoint/expert/reward fread (`moe_enhance.cpp:177-188`, `trainer_core.cpp:899-930`, `reward.cpp:320-345`): silent corrupt resume | All reads validated; corrupt file keeps in-memory state (reward: temp-load then commit) |
+| P0-8 | `IGPUSharedBackend::allocate` aliasing (same base ptr every call) + `memory_free` lying | Bump allocator w/ 64B align + `heap_used` cursor; honest free-bytes |
+| P0-9 | `MultiGPUManager::detect_devices` pushed 8 phantom 8GiB GPUs | Only verified devices reported (CPU until real EnumAdapters lands) |
+| T4 | `test_gpu_capability` SEGFAULT: AMD iGPU reports Vulkan INITIALIZED+compute_ready but real relu dispatch kills the driver (exit -1073741819); probe isolated to `be2->relu` | Live-dispatch leg opt-in behind `TRANSCENDER_TEST_LIVE_GPU=1` (default: honest skip + fail-loud asserts); probe PASSED; full suite green |
+| P1-1 | `scripts/sign_release.sh` hardcoded `AUTHENTICODE_PASSWORD` default | Env-required, fail-loud when unset |
+| P1-2 | `tools/run_tests.ps1` / `run_all_tests.ps1` hardcoded dev-machine path (+typo), stale 16/16, no exit-1 | Derive from `$PSScriptRoot`, dynamic count, exit codes |
+| P1-3 | `scripts/build_moe_gs{,_full}.bat` referenced `src/*.cpp` paths that no longer exist | Deleted (CMake targets are the build) |
+| P1-4 | `ServerMetrics::requests_per_sec` stub `return 0.0` | Real computation from total_requests/wall-time |
+| P1-5 | 5× `TEST_CHECK(true)` in `test_multimodal_encoders.cpp` (M5/M6) | Real contracts: no-throw, empty-in→empty-out, null→throws |
+| P2-1 | Zero `install()`/CPack rules (`cmake --install` shipped nothing) | Tool + header install rules + CPack ZIP/TGZ; verified `install_test/` has 12 exes + headers |
+| P2-2 | `Dockerfile` copied from nonexistent `build/tools/`, hardcoded AVX2=ON (breaks ARM) | Correct build-root paths, arch-gated AVX2 |
+| P2-3 | `docs/USAGE.md` had `./build/bin/quant-infer` (dashes+bin/, 28 hits) | All → `./build/quant_infer` underscore form |
+| P2-4 | `scripts/make_dist.sh` stale version + tarball missing `cmake/`+`quant_config.h.in`+`sops/` | Version from CMakeLists, complete file list |
+| P2-5 | `release.yml` `sha256sum` missing on macOS runners | `shasum -a 256` fallback (both steps) |
+
+**Verify:** reconfigure + full Release rebuild clean (only pre-existing C4244s); `ctest -C Release` **72/72, exit 0** (76.32s); `cmake --install` verified; `test_math` edge suite 10/10; `test_server_contract` 35/35; gpu-cap probe PASSED.

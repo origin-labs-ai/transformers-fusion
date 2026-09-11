@@ -97,39 +97,69 @@ int main() {
     }
 
     // Speech recognition / OCR / video pipeline smoke
+    // P1 fix: was 3x TEST_CHECK(true) (vacuous). Now asserts the real
+    // contracts from src/multimodal/multimodal.cpp: non-empty input runs
+    // the encoder+decoder without throwing; empty input returns "" (never
+    // a plausible-English constant); null encoder throws invalid_argument.
     {
         fprintf(stderr, "M5 speech/ocr/video\n");
         SpeechRecognizer sr(&enc);
         Tensor audio(Shape{1, 32}, DType::F32);
         audio.fill(0.1f);
-        std::string trans = sr.transcribe(audio);
-        TEST_CHECK(true, "speech recognizer runs");
+        bool threw = false;
+        std::string trans;
+        try { trans = sr.transcribe(audio); } catch (...) { threw = true; }
+        TEST_CHECK(!threw, "speech recognizer runs without throwing");
+        TEST_CHECK(sr.transcribe(Tensor(Shape{0}, DType::F32)).empty(),
+                   "speech empty input returns empty");
+        bool null_threw = false;
+        try { SpeechRecognizer bad(nullptr); bad.transcribe(audio); }
+        catch (const std::invalid_argument&) { null_threw = true; } catch (...) {}
+        TEST_CHECK(null_threw, "speech null encoder throws");
 
         OCRPipeline ocr(&enc);
         Tensor image(Shape{1, 16}, DType::F32);
         image.fill(0.1f);
-        std::string txt = ocr.recognize(image);
-        TEST_CHECK(true, "OCR pipeline runs");
+        threw = false;
+        try { ocr.recognize(image); } catch (...) { threw = true; }
+        TEST_CHECK(!threw, "OCR pipeline runs without throwing");
+        TEST_CHECK(ocr.recognize(Tensor(Shape{0}, DType::F32)).empty(),
+                   "OCR empty input returns empty");
 
         VideoUnderstanding vu(&enc);
         Tensor frames(Shape{4, 16}, DType::F32);
         frames.fill(0.1f);
-        std::string desc = vu.describe(frames);
-        TEST_CHECK(true, "video understanding runs");
+        threw = false;
+        try { vu.describe(frames); } catch (...) { threw = true; }
+        TEST_CHECK(!threw, "video understanding runs without throwing");
+        TEST_CHECK(vu.describe(Tensor(Shape{0}, DType::F32)).empty(),
+                   "video empty input returns empty");
     }
 
     // Image captioning / Visual QA
+    // P1 fix: was 2x TEST_CHECK(true). Contracts: no-throw on valid input,
+    // empty image returns "", null handles throw invalid_argument.
     {
         fprintf(stderr, "M6 captioning/vqa\n");
         ImageCaptioning cap(&enc, &enc);
         Tensor image(Shape{1, 32}, DType::F32);
         image.fill(0.1f);
-        std::string c = cap.caption(image, 8);
-        TEST_CHECK(true, "image captioning runs");
+        bool threw = false;
+        try { cap.caption(image, 8); } catch (...) { threw = true; }
+        TEST_CHECK(!threw, "image captioning runs without throwing");
+        TEST_CHECK(cap.caption(Tensor(Shape{0}, DType::F32), 8).empty(),
+                   "caption empty image returns empty");
+        bool null_threw = false;
+        try { ImageCaptioning bad(nullptr, &enc); bad.caption(image, 8); }
+        catch (const std::invalid_argument&) { null_threw = true; } catch (...) {}
+        TEST_CHECK(null_threw, "caption null encoder throws");
 
         VisualQA vqa(&enc, &enc);
-        std::string a = vqa.answer(image, "what is this?");
-        TEST_CHECK(true, "visual QA runs");
+        threw = false;
+        try { vqa.answer(image, "what is this?"); } catch (...) { threw = true; }
+        TEST_CHECK(!threw, "visual QA runs without throwing");
+        TEST_CHECK(vqa.answer(Tensor(Shape{0}, DType::F32), "what is this?").empty(),
+                   "VQA empty image returns empty");
     }
 
     // MultiModalTokenizer with BPE

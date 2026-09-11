@@ -1,4 +1,4 @@
-# Usage Guide
+﻿# Usage Guide
 
 > **How to Use Transcender for Inference and Training**
 >
@@ -17,10 +17,10 @@
 
 ```bash
 # Basic inference with a model
-./build/bin/quant-infer --model path/to/model.quant --prompt "Hello, world!"
+./build/quant_infer --model path/to/model.quant --prompt "Hello, world!"
 
 # With more options
-./build/bin/quant-infer \
+./build/quant_infer \
     --model path/to/model.quant \
     --prompt "Write a poem about AI" \
     --max-tokens 100 \
@@ -33,7 +33,7 @@
 
 ```bash
 # Train from scratch
-./build/bin/quant-train \
+./build/quant_train \
     --config path/to/config.json \
     --data path/to/training.txt \
     --output path/to/trained.quant \
@@ -47,7 +47,7 @@
 
 ```bash
 # Fine-tune an existing model
-./build/bin/quant-finetune \
+./build/quant_finetune \
     --model path/to/base.quant \
     --data path/to/fine-tune.txt \
     --output path/to/fine-tuned.quant \
@@ -59,20 +59,20 @@
 
 ```bash
 # Convert HuggingFace safetensors to QUANT
-./build/bin/quant-convert \
+./build/quant_convert \
     --input model.safetensors \
     --output model.quant \
     --target-bpw 1.50
 
 # Get model info
-./build/bin/quant-info --model model.quant
+./build/quant_info --model model.quant
 ```
 
 ### Run Benchmarks
 
 ```bash
 # Benchmark inference speed
-./build/bin/quant-bench \
+./build/quant_bench \
     --model model.quant \
     --prompts bench/prompts.txt \
     --iterations 100 \
@@ -83,13 +83,13 @@
 
 ## 📚 Command-Line Tools Reference
 
-### quant-infer - Run Inference
+### quant_infer - Run Inference
 
 **Description:** Run inference with a trained Transcender model.
 
 **Usage:**
 ```bash
-quant-infer [OPTIONS]
+quant_infer [OPTIONS]
 ```
 
 **Options:**
@@ -113,27 +113,27 @@ quant-infer [OPTIONS]
 
 ```bash
 # Basic inference
-quant-infer -m model.quant -p "Once upon a time"
+quant_infer -m model.quant -p "Once upon a time"
 
 # Creative writing with temperature
-quant-infer -m model.quant -p "Write a haiku" --temperature 0.8 --max-tokens 50
+quant_infer -m model.quant -p "Write a haiku" --temperature 0.8 --max-tokens 50
 
 # Batch inference
-quant-infer -m model.quant -p "Prompt 1" -p "Prompt 2" --batch-size 2
+quant_infer -m model.quant -p "Prompt 1" -p "Prompt 2" --batch-size 2
 
 # Save output to file
-quant-infer -m model.quant -p "Tell me a story" -o story.txt --max-tokens 200
+quant_infer -m model.quant -p "Tell me a story" -o story.txt --max-tokens 200
 ```
 
 ---
 
-### quant-train - Train a Model from Scratch
+### quant_train - Train a Model from Scratch
 
 **Description:** Train a new model from scratch.
 
 **Usage:**
 ```bash
-quant-train [OPTIONS]
+quant_train [OPTIONS]
 ```
 
 **Options:**
@@ -186,24 +186,24 @@ quant-train [OPTIONS]
 
 ```bash
 # Train with configuration file
-quant-train -c config.json -d data/tinyshakespeare.txt -o model.quant
+quant_train -c config.json -d data/tinyshakespeare.txt -o model.quant
 
 # Train with command-line options
-quant-train -d data.txt -o model.quant --dim 512 --n-layers 6 --epochs 5
+quant_train -d data.txt -o model.quant --dim 512 --n-layers 6 --epochs 5
 
 # Train with GPU
-quant-train -c config.json -d data.txt -o model.quant --gpu
+quant_train -c config.json -d data.txt -o model.quant --gpu
 ```
 
 ---
 
-### quant-finetune - Fine-tune an Existing Model
+### quant_finetune - Fine-tune an Existing Model
 
 **Description:** Fine-tune a pre-trained model on new data.
 
 **Usage:**
 ```bash
-quant-finetune [OPTIONS]
+quant_finetune [OPTIONS]
 ```
 
 **Options:**
@@ -231,21 +231,21 @@ quant-finetune [OPTIONS]
 
 ```bash
 # Full fine-tuning
-quant-finetune -m base.quant -d data.txt -o fine-tuned.quant --epochs 3
+quant_finetune -m base.quant -d data.txt -o fine-tuned.quant --epochs 3
 
 # Quantized fine-tuning (native QUANT, target 2.0 BPW)
-quant-finetune -m base.quant -d data.txt -o quant.quant --method quantized --target-bpw 2.0
+quant_finetune -m base.quant -d data.txt -o quant.quant --method quantized --target-bpw 2.0
 ```
 
 ---
 
-### quant-convert - Convert Model Formats
+### quant_convert - Convert Model Formats
 
 **Description:** Convert models between different formats.
 
 **Usage:**
 ```bash
-quant-convert [OPTIONS]
+quant_convert [OPTIONS]
 ```
 
 **Options:**
@@ -267,24 +267,24 @@ quant-convert [OPTIONS]
 
 ```bash
 # Convert raw FP32 to QUANT
-quant-convert -i model.rawfp32 -o model.quant --bpw 1.50
+quant_convert -i model.rawfp32 -o model.quant --bpw 1.50
 
 # Convert with different BPW
-quant-convert -i model.rawfp32 -o model_small.quant --bpw 2.0
+quant_convert -i model.rawfp32 -o model_small.quant --bpw 2.0
 
 # Convert GGUF to QUANT
-quant-convert -i model.gguf -o model.quant --format gguf
+quant_convert -i model.gguf -o model.quant --format gguf
 ```
 
 ---
 
-### quant-info - Display Model Information
+### quant_info - Display Model Information
 
 **Description:** Display information about a Transcender model.
 
 **Usage:**
 ```bash
-quant-info [OPTIONS]
+quant_info [OPTIONS]
 ```
 
 **Options:**
@@ -307,13 +307,13 @@ quant-info [OPTIONS]
 
 ```bash
 # Basic info
-quant-info -m model.quant
+quant_info -m model.quant
 
 # JSON output
-quant-info -m model.quant --json > model_info.json
+quant_info -m model.quant --json > model_info.json
 
 # Verbose output
-quant-info -m model.quant -v
+quant_info -m model.quant -v
 ```
 
 **Example Output:**
@@ -346,13 +346,13 @@ Memory Usage:
 
 ---
 
-### quant-bench - Run Performance Benchmarks
+### quant_bench - Run Performance Benchmarks
 
 **Description:** Benchmark model performance.
 
 **Usage:**
 ```bash
-quant-bench [OPTIONS]
+quant_bench [OPTIONS]
 ```
 
 **Options:**
@@ -391,13 +391,13 @@ Explain quantum computing to a 5-year-old
 
 ```bash
 # Basic benchmark
-quant-bench -m model.quant -p bench/prompts.txt -n 100
+quant_bench -m model.quant -p bench/prompts.txt -n 100
 
 # With warmup and CSV output
-quant-bench -m model.quant -p prompts.txt -n 1000 --warmup 50 --csv -o results.csv
+quant_bench -m model.quant -p prompts.txt -n 1000 --warmup 50 --csv -o results.csv
 
 # GPU benchmark
-quant-bench -m model.quant -p prompts.txt -n 100 --gpu
+quant_bench -m model.quant -p prompts.txt -n 100 --gpu
 ```
 
 ---

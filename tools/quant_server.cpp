@@ -255,6 +255,8 @@ private:
             return val;
         };
 
+        // P0 fix: stoi/stof throw invalid_argument/out_of_range on
+        // crafted JSON and would kill the request thread. Clamp to def.
         auto extract_int = [&](const std::string& key, int def) -> int {
             auto pos = req.body.find("\"" + key + "\"");
             if (pos == std::string::npos) return def;
@@ -264,7 +266,11 @@ private:
             if (num_start == std::string::npos) return def;
             auto num_end = req.body.find_first_not_of("0123456789", num_start);
             if (num_end == std::string::npos) num_end = req.body.size();
-            return std::stoi(req.body.substr(num_start, num_end - num_start));
+            try {
+                return std::stoi(req.body.substr(num_start, num_end - num_start));
+            } catch (const std::exception&) {
+                return def;
+            }
         };
 
         auto extract_float = [&](const std::string& key, float def) -> float {
@@ -276,7 +282,11 @@ private:
             if (num_start == std::string::npos) return def;
             size_t end = colon + 1;
             while (end < req.body.size() && (isdigit(req.body[end]) || req.body[end] == '.' || req.body[end] == '-')) end++;
-            return std::stof(req.body.substr(num_start, end - num_start));
+            try {
+                return std::stof(req.body.substr(num_start, end - num_start));
+            } catch (const std::exception&) {
+                return def;
+            }
         };
 
         std::string p = extract_str("prompt");
@@ -318,6 +328,7 @@ private:
                                model_->config.head_dim);
 
             int count = 0;
+            int last_token = 0; // P0: per-request (was racy member)
             for (int i = 0; i < max_tokens; i++) {
                 try {
                     int64_t seq_len = (int64_t)(tokens.size() + i);
@@ -326,7 +337,9 @@ private:
                     if (i == 0) {
                         for (size_t j = 0; j < tokens.size(); j++) id[j] = (float)tokens[j];
                     } else {
-                        id[0] = (float)last_token_;
+                        // P0 fix: was shared member last_token_ (data race
+                        // across worker threads). Per-request local instead.
+                        id[0] = (float)last_token;
                     }
                     quant::Tensor pos({1, seq_len < 2 ? 1 : seq_len});
                     float* pd = pos.data<float>();
@@ -347,7 +360,7 @@ private:
                         if (ld[v] > ld[next]) next = (int)v;
 
                     if (next == 2) break;
-                    last_token_ = next;
+                    last_token = next;
                     count++;
 
                     std::string token_text = tokenizer_->decode({next});
@@ -468,7 +481,18 @@ private:
                     std::istringstream ss(arr);
                     std::string item;
                     while (std::getline(ss, item, ',')) {
-                        tokens.push_back(std::stoi(item));
+                        // P0 fix: trim + try/catch — whitespace/empty/overflow
+                        // tokens threw and killed the request thread.
+                        size_t a = item.find_first_not_of(" \t\r\n");
+                        if (a == std::string::npos) continue;
+                        size_t b = item.find_last_not_of(" \t\r\n");
+                        try {
+                            tokens.push_back(std::stoi(item.substr(a, b - a + 1)));
+                        } catch (const std::exception&) {
+                            send_response(fd, 400, "application/json",
+                                          json_error("invalid token id in tokens array"));
+                            return;
+                        }
                     }
                 }
             }
@@ -586,8 +610,7 @@ private:
             quant::socket_helpers::close_socket(client_fd);
         }
     }
-
-    int last_token_ = 0;
+    // (P0: racy last_token_ member removed — now a per-request local.)
 };
 
 int main(int argc, char** argv) {

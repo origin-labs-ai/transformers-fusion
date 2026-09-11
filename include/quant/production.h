@@ -1,6 +1,7 @@
 #pragma once
 #include "quant/model.h"
 #include "quant/generator.h"
+#include <memory>
 #include <string>
 #include <vector>
 #include <functional>
@@ -24,6 +25,11 @@ struct ServerMetrics {
     std::atomic<int64_t> current_requests{0};
     std::atomic<int64_t> max_concurrent{0};
     std::atomic<double> total_latency_ms{0.0};
+    // P1 fix: requests_per_sec() needs a start instant. First call stamps it
+    // (mutable mutex guards the stamp, not the atomics).
+    mutable std::mutex start_mtx;
+    mutable std::chrono::steady_clock::time_point start_tp{};
+    mutable bool start_set = false;
     double avg_latency_ms() const {
         auto n = total_requests.load();
         return n > 0 ? total_latency_ms.load() / n : 0.0;
@@ -140,44 +146,24 @@ extern "C" {
     const char* quant_last_error();
 }
 
-// I5: HTTP API server (Model-integrated, direct inference)
+// I5: HTTP API server (Model-integrated, direct inference).
+// Thin delegate over HTTPServer (forward declaration keeps socket/Windows
+// headers out of this header, protecting Logger::Level from the ERROR macro).
+class HTTPServer;
 class ModelHTTPServer {
 public:
     ModelHTTPServer(Model* model, int port = 8080);
     ~ModelHTTPServer();
     void start();
     void stop();
-    bool is_running() const { return running_; }
+    bool is_running() const;
     void set_thread_pool_size(int n);
     void set_timeout_seconds(int sec);
     void set_max_body_size(size_t bytes);
 private:
     Model* model_;
     int port_;
-    std::atomic<bool> running_{false};
-    std::atomic<bool> stop_requested_{false};
-    int thread_pool_size_ = 4;
-    int timeout_seconds_ = 30;
-    size_t max_body_size_ = 4 * 1024 * 1024;
-
-    struct ClientConnection { int fd; };
-    std::thread server_thread_;
-    std::vector<std::thread> worker_threads_;
-    std::queue<ClientConnection> conn_queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
-
-    void server_loop();
-    void worker_loop();
-    void handle_request(int client_fd);
-    void send_response(int client_fd, int status, const std::string& content_type,
-                       const std::string& body);
-    void send_stream_response(int client_fd, const std::string& prompt, int max_tokens);
-    std::string get_mime_type(const std::string& path) const;
-    bool set_socket_timeout(int fd, int seconds);
-    void close_socket(int fd);
-    static bool platform_init();
-    static void platform_cleanup();
+    std::unique_ptr<HTTPServer> inner_;
 };
 
 // I6: WebSocket streaming

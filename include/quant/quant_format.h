@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <memory>
 #include <unordered_map>
 
 namespace quant {
@@ -65,6 +66,10 @@ class QUANTReader {
 public:
     explicit QUANTReader(const std::string& path);
     ~QUANTReader();
+    QUANTReader(const QUANTReader&) = delete;
+    QUANTReader& operator=(const QUANTReader&) = delete;
+    QUANTReader(QUANTReader&&) noexcept = default;
+    QUANTReader& operator=(QUANTReader&&) noexcept = default;
     
     const QUANTHeader& header() const;
     std::vector<uint8_t> read_config() const;
@@ -82,14 +87,17 @@ public:
     const FormatBlockEntry& format_entry(uint32_t block_id) const { return cached_ft_[block_id]; }
     bool tensor_blocks(const std::string& name, uint32_t& start, uint32_t& count) const;
     
-    // Check if file was successfully opened
-    bool valid() const { return data_ != nullptr; }
+    // Check if file was successfully opened AND fully validated.
+    // P0 fix: old valid() returned true whenever data_ != nullptr, so a
+    // corrupt-magic file that bailed mid-parse still looked valid. valid_
+    // flips true only after the whole header walk succeeds.
+    bool valid() const { return valid_; }
 
     // Get format info for a tensor
     std::vector<Format> tensor_formats(const std::string& name) const;
-    
+
 private:
-    MappedFile* mapped_file_;
+    std::unique_ptr<MappedFile> mapped_file_;
     const uint8_t* data_;
     size_t file_size_;
     QUANTHeader header_;
@@ -100,11 +108,12 @@ private:
     uint32_t num_tensors_;
     mutable std::vector<FormatBlockEntry> cached_ft_;
     std::vector<size_t> block_offsets_;   // per-block byte offset from file start
+    bool valid_ = false; // P0: set true only after full header walk succeeds
 };
 
 // ===========================================================================
 // QUANT Idx — SHA256 integrity-checked index file format
-// Header: magic "InNovaIDX" | version | num_tensors
+// Header: magic "TranscenderIDX" | version | num_tensors
 // Then for each tensor: name_len | name bytes | sha256(name) [32 bytes]
 // On read, each tensor name is re-hashed and compared fail-fast; the first
 // corrupt name is reported by name.
@@ -124,7 +133,7 @@ public:
     explicit QUANTIdxWriter(const std::string& path);
     ~QUANTIdxWriter();
 
-    // Writes the full idx file: header magic "InNovaIDX", version,
+    // Writes the full idx file: header magic "TranscenderIDX", version,
     // num_tensors, then per-tensor name + computed sha256(name).
     void write_idx(uint32_t version, const std::vector<std::string>& tensor_names);
 
@@ -155,6 +164,7 @@ private:
     uint32_t version_;
     uint32_t num_tensors_;
     bool checked_;
+    size_t magic_size_ = 15; // 15 = TranscenderIDX, 10 = legacy InNovaIDX
     std::vector<std::string> names_;
 };
 

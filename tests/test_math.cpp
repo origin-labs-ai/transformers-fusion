@@ -1,5 +1,7 @@
-// test_math.cpp — Unit test for InNova math library (activations, norms, BLAS)
+// test_math.cpp — Unit test for Transcender math library (activations, norms, BLAS)
 #include "quant/math.h"
+#include "quant/tensor.h"
+#include "quant/test.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
@@ -7,7 +9,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      InNova Math Library Unit Test      " << std::endl;
+    std::cout << "      Transcender Math Library Unit Test      " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     constexpr int N = 256;
@@ -44,5 +46,33 @@ int main() {
     std::cout << "  -> PASSED: RMSNorm verified!" << std::endl;
 
     std::cout << "\nALL MATH TESTS PASSED SUCCESSFULLY!" << std::endl;
-    return 0;
+
+    // P0 regression: AVX2 gemm edge-tile OOB (math_avx2.cpp:60-74).
+    // Old code loaded/stored 16 B/C floats even when N-j < 16 — over-read
+    // past B and over-wrote past C. Odd sizes hit the edge path.
+    {
+        TEST_SUITE("P0: gemm edge tiles (odd N)");
+        const int64_t M = 7, K = 9;
+        const int64_t Ns[] = {1, 3, 7, 8, 9, 15, 16, 17, 23, 31};
+        for (int64_t N : Ns) {
+            quant::Tensor A(quant::Shape(M, K)), B(quant::Shape(K, N)), C(quant::Shape(M, N));
+            float* pa = A.data<float>();
+            float* pb = B.data<float>();
+            for (int64_t i = 0; i < M * K; i++) pa[i] = (float)(i % 7) * 0.25f - 0.5f;
+            for (int64_t i = 0; i < K * N; i++) pb[i] = (float)(i % 5) * 0.2f - 0.3f;
+            quant::math::gemm(1.0f, A, B, 0.0f, C);
+            const float* pc = C.data<float>();
+            bool ok = true;
+            for (int64_t m = 0; m < M && ok; m++)
+                for (int64_t n = 0; n < N && ok; n++) {
+                    double ref = 0;
+                    for (int64_t k = 0; k < K; k++)
+                        ref += (double)pa[m * K + k] * pb[k * N + n];
+                    if (std::abs(pc[m * N + n] - (float)ref) > 1e-3f) ok = false;
+                }
+            TEST_CHECK(ok, "gemm exact vs scalar reference");
+        }
+    }
+
+    return TEST_REPORT() > 0 ? 1 : 0;
 }

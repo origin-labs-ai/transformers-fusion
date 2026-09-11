@@ -11,19 +11,31 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 WORKDIR /app
 COPY . .
 
+# P2 fix: CMake sets no RUNTIME_OUTPUT_DIRECTORY, so binaries land at the
+# build-root and build/tests/ — NOT build/tools/ or build/bench/. Also gated
+# -DQUANT_AVX2=ON on amd64 only (breaks ARM image builds otherwise).
+ARG TARGETARCH=amd64
 RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_COMPILER=g++-13 \
     -DCMAKE_C_COMPILER=gcc-13 \
-    -DQUANT_AVX2=ON \
+    $([ "$TARGETARCH" = "amd64" ] && echo -DQUANT_AVX2=ON || echo -DQUANT_AVX2=OFF) \
     -DQUANT_BUILD_TESTS=ON \
     -DQUANT_BUILD_BENCHMARKS=ON \
     -DQUANT_BUILD_TOOLS=ON \
     -DCMAKE_CXX_STANDARD=20 \
     && cmake --build build --parallel $(nproc)
 
+# D7 W5: exclusion kept intentionally for docker build speed (PR-speed set, aligned with ci_full.yml Quick/ASAN/Coverage).
+# - test_protected: heavy integrity/monolith test, too slow for image build.
+# - test_gpu: requires GPU/CUDA hardware; not present in docker build.
+# - test_training: long training loop (600s TIMEOUT), nightly-full-asan only.
+# - test_native_quant: long training-linked quant test, ASAN-heavy/slow.
+# - test_moe_training: distributed MoE training test, heavy/flaky, nightly only.
+# - paged_kv_1t_test: paged_kv family (covers test_paged_kv_4m); large-memory cache test, slow in image build.
+# NOTE: full suite with NO excludes runs in the weekly docker-full-test workflow (separate workflow file).
 RUN ctest --test-dir build --output-on-failure --timeout 120 \
-    --exclude-regex "test_protected|test_gpu|test_training|paged_kv_1t_test" || true
+    --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
 
 FROM ubuntu:24.04
 
@@ -33,12 +45,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 
 WORKDIR /app
 
-COPY --from=builder /app/build/tools/quant_infer .
-COPY --from=builder /app/build/tools/quant_convert .
-COPY --from=builder /app/build/tools/quant_bench .
-COPY --from=builder /app/build/bench/bench_kernels .
-COPY --from=builder /app/build/bench/bench_inference .
-COPY --from=builder /app/build/bench/bench_quality .
+COPY --from=builder /app/build/quant_infer .
+COPY --from=builder /app/build/quant_convert .
+COPY --from=builder /app/build/quant_bench .
+COPY --from=builder /app/build/bench_kernels .
+COPY --from=builder /app/build/bench_inference .
+COPY --from=builder /app/build/bench_quality .
 
 EXPOSE 8080
 
