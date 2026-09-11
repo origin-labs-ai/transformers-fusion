@@ -333,7 +333,12 @@ private:
     void scan_directory(std::vector<ModelInfo>& out) const;
 };
 
-// I16-I18: Language bindings — dynamic library loading for Python/Java/Rust FFI
+// I16-I18: Language bindings — dynamic library loading for Python/Java/Rust FFI.
+// Contract: init() is idempotent; safe to call twice. It attempts to load the
+// matching runtime bridge (python_bridge / jni_bridge / rust_bridge); when the
+// bridge library is absent it logs a WARN and leaves the process running
+// WITHOUT bindings (no throw, no abort) — servers must keep serving.
+// Returns void; check backend availability via probe_hardware() instead.
 class PythonBindings { public: static void init(); };
 class JavaBindings { public: static void init(); };
 class RustBindings { public: static void init(); };

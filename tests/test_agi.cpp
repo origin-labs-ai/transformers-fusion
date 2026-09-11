@@ -129,7 +129,9 @@ int main() {
         TEST_CHECK(planner.get_execution_history().empty(), "execution history cleared");
     }
 
-    // MemorySystem
+    // MemorySystem — store 2 similar entries, consolidate merges them.
+    // (PROD: was TEST_CHECK(true) — vacuous. consolidate() merges entries
+    // with cosine sim > 0.95, so retrieval still works after merging.)
     {
         agi::MemorySystem mem(100);
         Tensor key(Shape{1, 4}, DType::F32);
@@ -139,8 +141,15 @@ int main() {
         mem.store(key, val);
         Tensor out = mem.retrieve(key, 1);
         TEST_CHECK(out.numel() > 0, "memory retrieves stored entry");
+        mem.store(key, val); // near-duplicate (sim = 1.0 > 0.95)
         mem.consolidate();
-        TEST_CHECK(true, "memory consolidation runs");
+        Tensor out2 = mem.retrieve(key, 1);
+        TEST_CHECK(out2.numel() > 0, "memory retrieves after consolidation");
+        const float* d = out2.data<float>();
+        bool finite = true;
+        for (int64_t i = 0; i < out2.numel(); i++)
+            if (!std::isfinite(d[i])) finite = false;
+        TEST_CHECK(finite, "post-consolidation retrieval finite");
     }
 
     // ToolUse

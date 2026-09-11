@@ -118,8 +118,29 @@ int main() {
         printf("  rank adapter step loss: %.4f (step %d)\n", ra.last_loss(), ra.step());
         TEST_CHECK(std::isfinite(ra.last_loss()), "adapter step loss finite");
         TEST_CHECK(ra.step() == 1, "adapter step counter advanced");
+        // PROD: was TEST_CHECK(true) — vacuous. merge_into_base() adds
+        // ΔW=B·A into down_proj. NOTE (LoRA-correct): B inits to 0, so one
+        // step leaves ΔW≈0 — run several steps so B moves, then assert.
+        for (int s = 0; s < 9; s++) ra.train_step(ids, pos, tgt);
+        TEST_CHECK(ra.step() == 10, "adapter ran 10 steps");
+        const float* wb0 = m2.layers[0]->ffn.down_proj.weight.data<float>();
+        int64_t nwb = m2.layers[0]->ffn.down_proj.weight.numel();
+        std::vector<float> snap(wb0, wb0 + nwb);
         ra.merge_into_base();
-        TEST_CHECK(true, "adapter merge into base runs");
+        const float* wb1 = m2.layers[0]->ffn.down_proj.weight.data<float>();
+        double delta = 0.0;
+        for (int64_t i = 0; i < nwb; i++) {
+            double d = (double)wb1[i] - (double)snap[(size_t)i];
+            delta += d * d;
+        }
+        printf("  merge delta^2: %.6g\n", delta);
+        TEST_CHECK(delta > 0.0, "adapter merge changes base weights");
+        Tensor merged_out = m2.forward(ids, pos);
+        bool mfinite = true;
+        const float* md = merged_out.data<float>();
+        for (int64_t i = 0; i < merged_out.numel(); i++)
+            if (!std::isfinite(md[i])) mfinite = false;
+        TEST_CHECK(mfinite, "merged model forward finite");
     }
 
     // --- Method 3: Knowledge expansion ---

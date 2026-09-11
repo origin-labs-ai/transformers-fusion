@@ -251,3 +251,13 @@ intact); (6) `LatentKVAttention` is standalone (not yet spliced into
 | T7 | `test_backends_realonly` `PROOF_CHECK(true)` on RPC transport failure (vacuous pass) | Honest `[skip]` instead of pass; proof only on numeric agreement |
 | T8 | `test_production` nullptr + `TEST_CHECK(true)` vacuous | `direct_plugin_count()` API + probe plugin: nullptr ignored, dispatch verified |
 | T9 | `test_trainer.cpp` 27× bare `assert` (stripped under NDEBUG → silent pass in Release-with-NDEBUG) | `TRAINER_CHECK` macro (always active, file:line, fail-count, exit 1); 0 asserts left; suite passes |
+
+## 100%-production round 4 — 2026-09-11 (last vacuous asserts + header docs)
+
+| # | Fix | Evidence |
+|---|---|---|
+| T10 | `test_agi` consolidate `TEST_CHECK(true)` → store×2 + consolidate + retrieve-finite | 34/34 AGI TEST PASSED |
+| T11 | `test_expert_parallel` reset `TEST_CHECK(true)` → all-done-after-reset + re-schedule works | 18/18 EXPERT PARALLEL PASSED |
+| T12 | `test_fine_tuning` merge `TEST_CHECK(true)` → 10 steps + ΔW snapshot + merged-forward finite. CAUGHT a real subtlety: 1-step merge delta is EXACT 0 (LoRA-correct B=0 init), so the test runs 10 steps (delta²=7.9e-10) | 18/18 FINE TUNING PASSED |
+| D3 | `math_avx512.h` 13 undocumented APIs → full contracts (aliasing, eps, shapes, thread-safety) | Header-only, rebuild clean |
+| D4 | `production.h` bindings `init()` undocumented → idempotent/no-throw/WARN contract (matches impl) | Matches `production_api.cpp:362-419` |

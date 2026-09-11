@@ -66,12 +66,16 @@ int main() {
     TEST_CHECK(disjoint, "rank expert sets are disjoint");
 
     // --- PipelineScheduler: stage bookkeeping ---
+    // (PROD: was TEST_CHECK(true) after reset — vacuous. reset() clears
+    // ready flags AND step count, so re-scheduling must work like fresh.)
     expert::PipelineScheduler ps(2, 4);
     Tensor input(Shape{4, 16}, DType::F32);
     ps.schedule_forward(input, 0);
     TEST_CHECK(ps.all_stages_done() == false, "pipeline not done after one stage");
     ps.reset();
-    TEST_CHECK(true, "pipeline reset runs");
+    TEST_CHECK(ps.all_stages_done() == true, "pipeline all-done after reset (flags cleared)");
+    ps.schedule_forward(input, 0);
+    TEST_CHECK(ps.all_stages_done() == false, "pipeline re-schedules after reset");
 
     int failures = TEST_REPORT();
     printf("\nEXPERT PARALLEL TEST %s\n", failures == 0 ? "PASSED" : "FAILED");
