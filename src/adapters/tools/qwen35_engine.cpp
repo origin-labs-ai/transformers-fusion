@@ -2,6 +2,8 @@
 #include "quant/block_codec.h"
 #include <cmath>
 #include <cstring>
+#include <memory>
+#include <new>
 #include <thread>
 #include <algorithm>
 #include <cstdio>
@@ -13,7 +15,7 @@ static const int MAX_BATCH = 512;
 
 // ---- block decode ---------------------------------------------------------
 // Every QUANT/QUANT format (0..14) is decoded via the canonical block codec, so
-// the engine runs TWI_MIX / QUAD_MIX files too (they are per-block formats).
+// the engine runs QG_MX files too (they are per-block formats).
 void Qwen35Engine::decode_block(const QUANTReader& rd, uint32_t block_id, uint32_t nw, float* out) {
     for (uint32_t i = 0; i < 256; i++) out[i] = 0.0f;
     const uint8_t* raw = rd.block_ptr(block_id);
@@ -166,15 +168,27 @@ bool Qwen35Engine::load_layer(int L) {
 }
 
 bool Qwen35Engine::load(const std::string& quant_path) {
-    reader_ = new QUANTReader(quant_path);
-    if (!reader_->valid()) return false;
+    // PROD fix: double-load leaked the old reader + scratch (raw new
+    // overwrite), and mid-load `return false` left a half-loaded reader
+    // behind. Free first; any failure rolls back to clean not-ok state.
+    auto fail = [&]() -> bool {
+        delete reader_; reader_ = nullptr;
+        delete[] scratch_; scratch_ = nullptr;
+        ok_ = false;
+        return false;
+    };
+    delete reader_; reader_ = nullptr;
+    delete[] scratch_; scratch_ = nullptr;
+    ok_ = false;
+    reader_ = new (std::nothrow) QUANTReader(quant_path);
+    if (!reader_ || !reader_->valid()) return fail();
 
-    if (!resolve("model.language_model.embed_tokens.weight", 248320, 4096)) return false;
-    if (!resolve("model.language_model.norm.weight", 4096, 4096)) return false;
-    if (!resolve("lm_head.weight", 248320, 4096)) return false;
+    if (!resolve("model.language_model.embed_tokens.weight", 248320, 4096)) return fail();
+    if (!resolve("model.language_model.norm.weight", 4096, 4096)) return fail();
+    if (!resolve("lm_head.weight", 248320, 4096)) return fail();
 
     for (int L = 0; L < 32; L++) {
-        if (!load_layer(L)) return false;
+        if (!load_layer(L)) return fail();
     }
     vocab_ = 248320;
 
@@ -228,7 +242,9 @@ bool Qwen35Engine::load(const std::string& quant_path) {
     ga_.assign(MAX_BATCH * 12288, 0.0f);
     up_.assign(MAX_BATCH * 12288, 0.0f);
     tmp_.assign(MAX_BATCH * HID, 0.0f);
-    scratch_ = new float[256];
+    float* scratch = new (std::nothrow) float[256];
+    if (!scratch) return fail(); // ok_ stays false, reader rolled back
+    scratch_ = scratch;
     ok_ = true;
     return true;
 }

@@ -8,12 +8,19 @@
 #include "quant/types.h"
 #include "quant/math.h"
 
+#include "quant/test.h"
 #include <iostream>
-#include <cassert>
+// PROD: cassert REMOVED — bare assert() is stripped under NDEBUG. All checks
 #include <cmath>
 #include <cstring>
 #include <vector>
 #include <cstdio>
+
+static int g_trainer_fail = 0;
+#define TRAINER_CHECK(cond, msg) do { \
+    if (cond) { std::printf("  [ok] %s\n", msg); } \
+    else { std::printf("  [FAIL] %s (%s:%d)\n", msg, __FILE__, __LINE__); g_trainer_fail++; } \
+} while (0)
 
 int main() {
     // Create a tiny model
@@ -57,11 +64,11 @@ int main() {
         std::cout << "Initial loss: " << loss << std::endl;
 
         // Verify loss is finite
-        assert(std::isfinite(loss));
-        assert(!std::isnan(loss));
+        TRAINER_CHECK((std::isfinite(loss)), "std::isfinite(loss)");
+        TRAINER_CHECK((!std::isnan(loss)), "!std::isnan(loss)");
 
         // Verify loss is non-negative (cross-entropy is always >= 0)
-        assert(loss >= 0.0f);
+        TRAINER_CHECK((loss >= 0.0f), "loss >= 0.0f");
     }
 
     // Test train_step produces finite loss
@@ -80,9 +87,9 @@ int main() {
         float loss = trainer.train_step(input_ids, labels);
         std::cout << "Train step loss: " << loss << std::endl;
 
-        assert(std::isfinite(loss));
-        assert(!std::isnan(loss));
-        assert(loss >= 0.0f);
+        TRAINER_CHECK((std::isfinite(loss)), "std::isfinite(loss)");
+        TRAINER_CHECK((!std::isnan(loss)), "!std::isnan(loss)");
+        TRAINER_CHECK((loss >= 0.0f), "loss >= 0.0f");
     }
 
     // Test DataLoader creation (with synthetic data)
@@ -91,7 +98,7 @@ int main() {
         std::string tmp_path = "_test_trainer_data.txt";
         {
             std::FILE* f = std::fopen(tmp_path.c_str(), "w");
-            assert(f);
+            TRAINER_CHECK((f), "f");
             for (int i = 0; i < 100; i++)
                 std::fprintf(f, "hello world this is training data %d\n", i);
             std::fclose(f);
@@ -102,19 +109,19 @@ int main() {
         tokenizer2.train(corpus, 32);
 
         quant::DataLoader dataloader(&tokenizer2, tmp_path, 2, 8);
-        assert(dataloader.num_batches() > 0);
+        TRAINER_CHECK((dataloader.num_batches() > 0), "dataloader.num_batches() > 0");
 
         quant::Tensor batch_ids(quant::Shape{2, 8}, quant::DType::F32);
         quant::Tensor batch_labels(quant::Shape{2, 8}, quant::DType::F32);
 
         bool has_data = dataloader.next_batch(batch_ids, batch_labels);
-        assert(has_data);
+        TRAINER_CHECK((has_data), "has_data");
 
         std::remove(tmp_path.c_str());
 
         // Test reset and shuffle
         dataloader.reset();
-        assert(dataloader.num_batches() > 0);
+        TRAINER_CHECK((dataloader.num_batches() > 0), "dataloader.num_batches() > 0");
         dataloader.shuffle();
     }
 
@@ -132,21 +139,21 @@ int main() {
             targets.data<float>()[i] = (float)(i % V);
 
         auto grad = quant::cross_entropy_grad(logits, targets);
-        assert(grad.shape() == logits.shape());
+        TRAINER_CHECK((grad.shape() == logits.shape()), "grad.shape() == logits.shape()");
         for (int64_t i = 0; i < grad.numel(); i++) {
-            assert(std::isfinite(grad.data<float>()[i]));
+            TRAINER_CHECK((std::isfinite(grad.data<float>()[i])), "std::isfinite(grad.data<float>()[i])");
         }
     }
 
     // Test TrainConfig defaults
     {
         quant::TrainConfig cfg;
-        assert(cfg.batch_size == 8);
-        assert(cfg.seq_length == 512);
-        assert(cfg.num_epochs == 3);
-        assert(cfg.learning_rate == 3e-4f);
-        assert(cfg.weight_decay == 1e-2f);
-        assert(cfg.warmup_steps == 100);
+        TRAINER_CHECK((cfg.batch_size == 8), "cfg.batch_size == 8");
+        TRAINER_CHECK((cfg.seq_length == 512), "cfg.seq_length == 512");
+        TRAINER_CHECK((cfg.num_epochs == 3), "cfg.num_epochs == 3");
+        TRAINER_CHECK((cfg.learning_rate == 3e-4f), "cfg.learning_rate == 3e-4f");
+        TRAINER_CHECK((cfg.weight_decay == 1e-2f), "cfg.weight_decay == 1e-2f");
+        TRAINER_CHECK((cfg.warmup_steps == 100), "cfg.warmup_steps == 100");
     }
 
     // Test multi-step training decreases loss
@@ -171,8 +178,8 @@ int main() {
                 labels.data<float>()[i] = (float)((i * 7 + step) % cfg.vocab_size);
             }
             float loss = trainer2.train_step(input_ids, labels);
-            assert(std::isfinite(loss));
-            assert(!std::isnan(loss));
+            TRAINER_CHECK((std::isfinite(loss)), "std::isfinite(loss)");
+            TRAINER_CHECK((!std::isnan(loss)), "!std::isnan(loss)");
             if (loss < prev) n_decreasing++;
             prev = loss;
         }
@@ -233,13 +240,13 @@ int main() {
         for (auto& p : all_params) {
             fprintf(stderr, "[TDBG] check %s has_grad=%d numel=%d\n", p.name.c_str(), (int)p.t->has_grad(), (int)p.t->numel());
             if (!p.t->has_grad()) continue;
-            assert(p.t->has_grad() && "Parameter must have a gradient");
+            TRAINER_CHECK(p.t->has_grad(), "Parameter must have a gradient");
             const float* gd = p.t->grad().data<float>();
             bool has_nonzero = false;
             for (int64_t j = 0; j < p.t->numel(); j++) {
                 if (gd[j] != 0.0f) { has_nonzero = true; break; }
             }
-            assert(has_nonzero && ("Parameter has zero gradient: " + p.name).c_str());
+            TRAINER_CHECK(has_nonzero, ("Parameter has nonzero gradient: " + p.name).c_str());
             n_nonzero++;
         }
         std::cout << "All " << n_nonzero << "/20 parameters have non-zero gradients" << std::endl;
@@ -339,7 +346,7 @@ int main() {
         ml_check(ml_model.lm_head->weight);
 
         std::cout << "Multi-layer: " << ml_nz << "/" << ml_total << " params with non-zero gradients" << std::endl;
-        assert(ml_nz == ml_total && "All parameters must have non-zero gradients in multi-layer model");
+        TRAINER_CHECK(ml_nz == ml_total, "All parameters have non-zero gradients in multi-layer model");
     }
 
     // Finite-difference gradient check for key ops
@@ -472,23 +479,24 @@ int main() {
 
         float initial_loss = ovr_trainer.train_step(fixed_input, fixed_labels);
         std::cout << "Overfit test: initial loss = " << initial_loss << std::endl;
-        assert(std::isfinite(initial_loss));
+        TRAINER_CHECK((std::isfinite(initial_loss)), "std::isfinite(initial_loss)");
 
         float final_loss = initial_loss;
         for (int step = 0; step < 100; step++) {
             final_loss = ovr_trainer.train_step(fixed_input, fixed_labels);
-            assert(std::isfinite(final_loss));
-            assert(!std::isnan(final_loss));
+            TRAINER_CHECK((std::isfinite(final_loss)), "std::isfinite(final_loss)");
+            TRAINER_CHECK((!std::isnan(final_loss)), "!std::isnan(final_loss)");
         }
 
         std::cout << "Overfit test: final loss after 100 steps = " << final_loss << std::endl;
         std::cout << "Overfit test: loss reduction = " << (initial_loss - final_loss) << std::endl;
 
-        assert(final_loss < initial_loss);
+        TRAINER_CHECK((final_loss < initial_loss), "final_loss < initial_loss");
         std::cout << "Overfit test PASSED: loss decreased from " << initial_loss
                   << " to " << final_loss << std::endl;
     }
 
-    std::cout << "All trainer tests passed!" << std::endl;
-    return 0;
+    if (g_trainer_fail == 0) { std::cout << "All trainer tests passed!" << std::endl; return 0; }
+    std::cout << "TRAINER TESTS FAILED (" << g_trainer_fail << " checks)" << std::endl;
+    return 1;
 }

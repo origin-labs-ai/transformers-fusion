@@ -188,7 +188,13 @@ inline BackendConfig auto_select_backend(int64_t model_size_bytes = 0) {
 
 // Micro-benchmark a single operation on a backend. Returns GFLOPS or bandwidth.
 // operation: "gemm", "relu", "add", "softmax", "rms_norm"
-// Returns measured throughput in GFLOPS, or 0 if unavailable.
+// Returns measured throughput in GFLOPS (always > 0 on success), or exactly
+// 0.0 as the documented UNMEASURABLE sentinel: null/dead backend, unknown op,
+// or the device threw mid-benchmark (a real throw is logged to stderr).
+// Callers must treat 0.0 as "no measurement", never as a slow device —
+// a live benchmark cannot return 0.0 since any completed timing is finite.
+// (Deliberately NOT NaN: callers and T5 pin `== 0.0`; NaN would silently
+// pass/fail those equality checks. See backend.cpp:3043.)
 double benchmark_operation(ComputeBackend* backend, const char* operation,
                            int64_t M = 1024, int64_t N = 1024, int64_t K = 1024,
                            int warmup = 5, int iters = 30);

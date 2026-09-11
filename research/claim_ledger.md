@@ -240,3 +240,14 @@ intact); (6) `LatentKVAttention` is standalone (not yet spliced into
 | T6 | `test_training_features` 8× vacuous: overflow2 ignored, EMA ×3, augmentation, curriculum static-only | inf→true/finite-large→false; EMA apply/copy overwrite verified; aug no-batch contract; curriculum schedule grows (all green, 70+ asserts) |
 
 **Verify:** full rebuild clean; `ctest -C Release` **72/72 exit 0**; touched binaries: code_gen 45/45, training_features green, moe_training 25/25, multimodal_encoders 23/23, math 10/10 edge.
+
+## 100%-production round 3 — 2026-09-11 (leaks, honesty, vacuous asserts)
+
+| # | Fix | Evidence |
+|---|---|---|
+| L1 | `Qwen35Engine::load` double-load leaked reader+scratch; mid-load failure left half-loaded engine with ok_ possibly set | fail-lambda rollback: free-first + `new (nothrow)` + every `return false` → `fail()`; ok_ only on full load |
+| L2 | `VirtualLayerPages::page_in` unchecked malloc + memset (null-deref on OOM) | null-check → nullptr (callers handle non-resident) |
+| H1 | `benchmark_operation` 0.0-sentinel undocumented (audit suggested NaN — rejected: T5 + callers pin `== 0.0`) | Header contract: 0.0 = UNMEASURABLE, live always > 0; T5 unchanged, still green |
+| T7 | `test_backends_realonly` `PROOF_CHECK(true)` on RPC transport failure (vacuous pass) | Honest `[skip]` instead of pass; proof only on numeric agreement |
+| T8 | `test_production` nullptr + `TEST_CHECK(true)` vacuous | `direct_plugin_count()` API + probe plugin: nullptr ignored, dispatch verified |
+| T9 | `test_trainer.cpp` 27× bare `assert` (stripped under NDEBUG → silent pass in Release-with-NDEBUG) | `TRAINER_CHECK` macro (always active, file:line, fail-count, exit 1); 0 asserts left; suite passes |

@@ -298,7 +298,10 @@ public:
     void unload(const std::string& name);
     void unload_all();
     bool hot_reload(const std::string& path);
+    // Null-safe: nullptr is ignored (never stored). Returns the count of
+    // directly-registered plugins (for tests/monitoring).
     void register_plugin(Plugin* plugin);
+    size_t direct_plugin_count() const;
     void on_generate_start(const std::string& prompt);
     void on_token_generated(int token);
     void on_generate_end(const std::string& output);

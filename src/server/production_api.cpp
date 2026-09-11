@@ -168,6 +168,14 @@ void PluginManager::register_plugin(Plugin* p) {
     direct_plugins_.push_back(p);
 }
 
+size_t PluginManager::direct_plugin_count() const {
+    // PROD: mutex is non-mutable; count is read under a const-cast lock.
+    // (Entries only grow via register_plugin; exactness beats purity here.)
+    std::lock_guard<std::mutex> lock(
+        const_cast<std::mutex&>(plugins_mutex_));
+    return direct_plugins_.size();
+}
+
 void PluginManager::on_generate_start(const std::string& prompt) {
     std::lock_guard<std::mutex> lock(plugins_mutex_);
     for (auto& e : entries_) {

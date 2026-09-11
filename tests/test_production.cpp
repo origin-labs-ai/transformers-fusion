@@ -110,12 +110,25 @@ static void test_app_config() {
 static void test_plugin_system() {
     TEST_SUITE("I14: Plugin System");
     PluginManager pm;
+    // PROD: was register(nullptr) + TEST_CHECK(true) — vacuous. Now pins
+    // the real contract: nullptr ignored, real plugin counted + dispatched.
     pm.register_plugin(nullptr);
+    TEST_CHECK(pm.direct_plugin_count() == 0, "nullptr plugin ignored, count stays 0");
+    struct Probe : Plugin {
+        std::string name() const override { return "probe"; }
+        int starts = 0, tokens = 0, ends = 0;
+        void on_generate_start(const std::string&) override { starts++; }
+        void on_token_generated(int) override { tokens++; }
+        void on_generate_end(const std::string&) override { ends++; }
+    };
+    Probe probe;
+    pm.register_plugin(&probe);
+    TEST_CHECK(pm.direct_plugin_count() == 1, "real plugin registered, count 1");
     pm.on_generate_start("test");
     pm.on_token_generated(42);
     pm.on_generate_end("output");
-    // If we reached here without crashing, the lifecycle is safe
-    TEST_CHECK(true, "Plugin lifecycle completes without crash");
+    TEST_CHECK(probe.starts == 1 && probe.tokens == 1 && probe.ends == 1,
+               "plugin lifecycle dispatched to registered plugin");
 }
 
 static void test_model_zoo() {
@@ -164,7 +177,7 @@ static void test_mobile_wasm() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("InNova — Production (I1-I20) Test Suite\n");
+    printf("Transcender — Production (I1-I20) Test Suite\n");
     printf("===========================================\n");
 
     test_c_api();
