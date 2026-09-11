@@ -167,6 +167,39 @@ int main() {
         TEST_CHECK(all.numel() > 0 && all_finite(all), "all-modality fusion finite");
     }
 
+    // H9: TextToImage DDIM pipeline — honest contract (PROD round-8).
+    // The pipeline is structurally real (DDIM schedule + text conditioning +
+    // tanh decode) but the noise predictor is a local-smoothing proxy, NOT a
+    // trained UNet — so assert pipeline properties, never image quality:
+    // (a) output shape {3,S,S} + finite, (b) deterministic (seed-42),
+    // (c) prompt-sensitive (text conditioning is wired, not ignored).
+    {
+        fprintf(stderr, "MM9 t2i\n");
+        TextToImage t2i(16, 32);
+        Tensor img1 = t2i.generate("a red sunset over mountains", 5);
+        TEST_CHECK(img1.dim(0) == 3 && img1.dim(1) == 32 && img1.dim(2) == 32,
+                   "t2i output shape {3,32,32}");
+        TEST_CHECK(all_finite(img1), "t2i output finite");
+        Tensor img1b = t2i.generate("a red sunset over mountains", 5);
+        bool same = img1.numel() == img1b.numel();
+        if (same) {
+            const float* d1 = img1.data<float>();
+            const float* d2 = img1b.data<float>();
+            for (int64_t i = 0; i < img1.numel() && same; i++)
+                if (d1[i] != d2[i]) same = false;
+        }
+        TEST_CHECK(same, "t2i deterministic for same prompt+steps");
+        Tensor img2 = t2i.generate("a blue ocean with white waves", 5);
+        bool differs = false;
+        if (img2.numel() == img1.numel()) {
+            const float* d1 = img1.data<float>();
+            const float* d2 = img2.data<float>();
+            for (int64_t i = 0; i < img1.numel(); i++)
+                if (d1[i] != d2[i]) { differs = true; break; }
+        }
+        TEST_CHECK(differs, "t2i prompt-sensitive (conditioning wired)");
+    }
+
     int failures = TEST_REPORT();
     printf("\nMULTIMODAL TEST %s\n", failures == 0 ? "PASSED" : "FAILED");
     return failures > 0 ? 1 : 0;

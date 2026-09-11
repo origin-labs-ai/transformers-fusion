@@ -13,6 +13,18 @@
 
 #include <cstdio>
 #include <string>
+#include <thread>
+#include <chrono>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
 
 using namespace quant;
 
@@ -106,6 +118,72 @@ static void test_parse_content_length() {
                "oversize CL signaled for 413");
 }
 
+#ifdef _WIN32
+static void sock_init() { WSADATA w; WSAStartup(MAKEWORD(2, 2), &w); }
+static void sock_cleanup() { WSACleanup(); }
+static void sock_close(int fd) { closesocket(fd); }
+#else
+static void sock_init() {}
+static void sock_cleanup() {}
+static void sock_close(int fd) { ::close(fd); }
+#endif
+
+static std::string http_get(const std::string& host, int port, const std::string& req) {
+    int fd = (int)::socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return "";
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((unsigned short)port);
+#ifdef _WIN32
+    InetPtonA(AF_INET, host.c_str(), &addr.sin_addr);
+#else
+    inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
+#endif
+    if (::connect(fd, (sockaddr*)&addr, sizeof(addr)) != 0) { sock_close(fd); return ""; }
+    ::send(fd, req.c_str(), (int)req.size(), 0);
+    std::string out;
+    char buf[4096];
+    for (int i = 0; i < 20; i++) {
+        int n = ::recv(fd, buf, (int)sizeof(buf) - 1, 0);
+        if (n <= 0) break;
+        buf[n] = '\0';
+        out += buf;
+        if (out.find("\r\n\r\n") != std::string::npos) break;
+    }
+    sock_close(fd);
+    return out;
+}
+
+static void test_live_server_smoke() {
+    TEST_SUITE("C-24: live HTTPServer smoke (real socket, ephemeral port)");
+    sock_init();
+    const int kPort = 18091; // ephemeral, avoids clashing with dev servers
+    HTTPServer srv(kPort);
+    srv.set_model_name("smoke-test");
+    srv.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    TEST_CHECK(srv.is_running(), "server thread running after start");
+
+    // 1. GET /health → 200 OK + {"status":"ok"}
+    std::string h = http_get("127.0.0.1", kPort, "GET /health HTTP/1.1\r\nHost: x\r\n\r\n");
+    TEST_CHECK(h.find("200 OK") != std::string::npos, "GET /health returns 200 OK");
+    TEST_CHECK(h.find("\"status\"") != std::string::npos, "health body carries status");
+
+    // 2. Oversized request line (>8KB) → 414 with correct reason phrase
+    std::string big_path(9000, 'a');
+    std::string r = http_get("127.0.0.1", kPort, "GET /" + big_path + " HTTP/1.1\r\nHost: x\r\n\r\n");
+    TEST_CHECK(r.find("414") != std::string::npos, "oversized request line returns 414");
+    TEST_CHECK(r.find("URI Too Long") != std::string::npos, "414 carries 'URI Too Long' (was Unknown)");
+
+    // 3. Unknown path → 404 (server still alive after the 414)
+    std::string n = http_get("127.0.0.1", kPort, "GET /nope HTTP/1.1\r\nHost: x\r\n\r\n");
+    TEST_CHECK(n.find("404") != std::string::npos, "unknown path returns 404");
+
+    srv.stop();
+    TEST_CHECK(!srv.is_running(), "server stopped cleanly");
+    sock_cleanup();
+}
+
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("Transcender - OpenAI Server Contract (L076) Test Suite\n");
@@ -118,6 +196,7 @@ int main() {
     test_hardening_setters();
     test_legacy_status_text();
     test_parse_content_length();
+    test_live_server_smoke();
 
     printf("\n======================================================\n");
     return TEST_REPORT() > 0 ? 1 : 0;
