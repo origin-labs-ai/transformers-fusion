@@ -512,3 +512,13 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | M1-M3 | `SparseMoE`/`BaseLayerMoE`/`SharedExpertMoE::forward` `(void)training` hid intent | Documented-unused (deterministic routing; cf. GatingDropoutMoE/DeepSeekMoE which honor it) |
 | G1-G3 | `gemm_tiled` discarded `tile_size` (shader hardcodes 16); `reduce_sum/max_axis` discarded `axis` (row-reduce only) | Validate-and-throw instead of silent miscompute |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 8 — 2026-09-12 (prefetch bounds, offload, expert-file bounds)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| F1-F2 | `schedule_prefetch` / `get_expert_weights` unchecked indices (OOB) | Bounds-check, fail-closed nullptr |
+| F3 | `ExpertPrefetcher::initialize` unchecked malloc + lock-on-null | Null-check, size validation |
+| Z1 | `reload_optimizer_state` unchecked memcpy (stale-shape OOB read+write) | Buffer-range + shape-match validation |
+| X1-X2 | `load_experts`: unbounded expert count (OOM/DoS) + unchecked dims (unbounded alloc) | 4096 cap + per-dim/overflow validation |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

@@ -162,6 +162,10 @@ std::vector<Tensor> MoEQUANTFormat::load_experts(const std::string& path) {
         std::fclose(fp);
         return experts;
     }
+    // BUGFIX (bug census): file-controlled n looped unbounded pushing expert
+    // tensors (OOM/DoS on corrupt files). Bound before looping.
+    static constexpr int32_t kMaxExpertsFile = 4096;
+    if (n < 0 || n > kMaxExpertsFile) { std::fclose(fp); return experts; }
 
     for (int32_t i = 0; i < n; i++) {
         int32_t rank = 0;
@@ -172,6 +176,17 @@ std::vector<Tensor> MoEQUANTFormat::load_experts(const std::string& path) {
         int64_t dims[8] = {0};
         for (int32_t r = 0; r < rank; r++)
             if (std::fread(&dims[r], sizeof(int64_t), 1, fp) != 1) break;
+
+        // BUGFIX (bug census): dims assigned unchecked — negative/huge dims
+        // drove unbounded Tensor allocs. Validate each dim + total bytes.
+        int64_t numel = 1;
+        bool dims_ok = true;
+        for (int32_t r = 0; r < rank; r++) {
+            if (dims[r] < 0 || dims[r] > (int64_t)1 << 30) { dims_ok = false; break; }
+            if (numel > ((int64_t)1 << 34) / std::max<int64_t>(1, dims[r])) { dims_ok = false; break; }
+            numel *= dims[r];
+        }
+        if (!dims_ok) break;
 
         uint8_t dt = (uint8_t)DType::F32;
         // P0 fix: unchecked fread let silent corrupt experts through.
