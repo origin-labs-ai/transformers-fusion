@@ -49,7 +49,12 @@ RouterOutput MoERouter::forward(const Tensor& x, const Tensor& modality_hints) {
     int64_t S = x.dim(1);
     int64_t hidden = x.dim(2);
     int64_t E = config_.num_experts;
+    // BUGFIX (bug census): unvalidated top_k drove partial_sort(begin,
+    // begin+K) OOB when K > E (UB) or K <= 0 (empty top-k → garbage routes).
     int64_t K = config_.top_k;
+    if (E <= 0) return RouterOutput{};
+    if (K < 1) K = 1;
+    if (K > E) K = E;
     int64_t T = B * S;
     int64_t num_mod = 9;
 

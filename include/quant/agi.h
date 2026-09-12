@@ -3,6 +3,7 @@
 #include "quant/model.h"
 #include "quant/trainer.h"
 #include "quant/reward.h"
+#include "quant/world_model.h"
 #include <string>
 #include <vector>
 #include <functional>
@@ -187,7 +188,15 @@ private:
     float dropout_rate_ = 0.0f;
 };
 
-// Subsystem 5: Sandbox — static analysis, resource limits, correctness verification
+// Subsystem 5: Sandbox — static analysis, resource limits, correctness verification.
+//
+// HONESTY CONTRACT (bug census): compile_and_test / verify_correctness /
+// benchmark / run_with_timeout REQUIRE compiling+executing untrusted code,
+// which needs an owner-gated process-execution path that does not exist in
+// this tree. They are fail-closed stubs: always report failure (false /
+// compiled=false / exit_code=-1) + stderr note, NEVER a fake pass. Callers
+// must treat false as "could not verify", not "code is bad". static_analysis
+// and check_resource_limits ARE real (pure text analysis).
 class Sandbox {
 public:
     Sandbox();
@@ -350,16 +359,9 @@ private:
     Model* model_;
 };
 
-// WorldModel
-class WorldModel {
-public:
-    WorldModel(Model* model);
-    Tensor simulate_step(const Tensor& state, const Tensor& action);
-    std::vector<Tensor> plan(int64_t horizon);
-private:
-    Model* model_;
-};
-
+// WorldModel — canonical definition lives in quant/world_model.h (DIFFUSION T48,
+// full predict/plan/memory API plus legacy Tensor simulate_step/plan compat).
+// agi.h includes it at top; the old G13 stub was removed to end the ODR clash.
 // CuriosityDrivenExplorer
 class CuriosityDrivenExplorer {
 public:
@@ -477,6 +479,9 @@ public:
     const std::vector<FlywheelIteration>& get_history() const { return history_; }
     int get_no_improvement_count() const { return no_improvement_count_; }
     std::string get_log_path() const;
+    // P17 test hook (additive): public wrapper over private self_play() so
+    // tests can assert non-empty / round-robin without friending or macros.
+    std::string self_play_for_test();
 private:
     std::string self_play();
     SandboxResult sandbox_compile_and_test(const std::string& code, const std::string& task);
@@ -533,4 +538,10 @@ namespace util {
 } // namespace util
 
 } // namespace agi
+
+// Legacy top-level alias: quant::WorldModel == quant::agi::WorldModel.
+// Wave-7 smoke (test_wave7_missing) constructs quant::WorldModel(nullptr) and
+// calls Tensor simulate_step/plan; the alias keeps one implementation.
+using WorldModel = agi::WorldModel;
+
 } // namespace quant

@@ -103,7 +103,13 @@ public:
         for (int i = 0; i < SIZE; i++) centroids[i] = 0.0f;
     }
     void train(const float* data, size_t count);
-    void ema_update(float) override {}
+    // No batch accumulators (unlike QUANT8/QUANT4): k-means retrains whole
+    // centroids via train(), so decay-only EMA is intentionally a no-op.
+    // Validates decay range so misuse fails loud instead of silently.
+    void ema_update(float decay) override {
+        if (!(decay > 0.0f && decay < 1.0f))
+            throw Error("CodebookQ3::ema_update: decay must be in (0,1)");
+    }
     uint16_t quantize(float val) const override;
     float dequantize(uint16_t idx) const override;
 };
@@ -117,7 +123,11 @@ public:
         for (int i = 0; i < SIZE; i++) centroids[i] = 0.0f;
     }
     void train(const float* data, size_t count);
-    void ema_update(float) override {}
+    // Same no-op-by-design contract as CodebookQ3 (k-means via train()).
+    void ema_update(float decay) override {
+        if (!(decay > 0.0f && decay < 1.0f))
+            throw Error("CodebookQ6::ema_update: decay must be in (0,1)");
+    }
     uint16_t quantize(float val) const override;
     float dequantize(uint16_t idx) const override;
 };
@@ -131,7 +141,11 @@ public:
         for (int i = 0; i < SIZE; i++) centroids[i] = 0;
     }
     void train(const float* data, size_t count);
-    void ema_update(float) override {}
+    // Same no-op-by-design contract as CodebookQ3 (k-means via train()).
+    void ema_update(float decay) override {
+        if (!(decay > 0.0f && decay < 1.0f))
+            throw Error("CodebookQ12::ema_update: decay must be in (0,1)");
+    }
     uint16_t quantize(float val) const override;
     float dequantize(uint16_t idx) const override;
 };

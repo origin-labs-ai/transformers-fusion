@@ -494,3 +494,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | A5 | `ThreadLocalPoolRegistry` stale-pool leak on generation mismatch | Delete-before-replace |
 | D1 | `InMemoryDataset` vector races (concurrent train/loader) | `mutable mutex_` on get/add/clear |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 6 — 2026-09-12 (MoE bounds, EMA honesty, sandbox contract)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| E1 | `MoERouter::forward` unvalidated `top_k` → `partial_sort` OOB when K>E/K<0 | Clamp 1<=K<=E (+ E<=0 early-out) |
+| E2-E4 | `CodebookQ3/Q6/Q12::ema_update` silent no-op stubs | Documented no-op-by-design (k-means via `train()`) + decay range validation that throws |
+| S3 | `Sandbox` compile/execute stubs undocumented (looked like missing impl) | Header honesty contract: fail-closed by owner-gate decision; `static_analysis`/`check_resource_limits` real |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
