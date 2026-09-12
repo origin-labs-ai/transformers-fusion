@@ -503,3 +503,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | E2-E4 | `CodebookQ3/Q6/Q12::ema_update` silent no-op stubs | Documented no-op-by-design (k-means via `train()`) + decay range validation that throws |
 | S3 | `Sandbox` compile/execute stubs undocumented (looked like missing impl) | Header honesty contract: fail-closed by owner-gate decision; `static_analysis`/`check_resource_limits` real |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 7 — 2026-09-12 (hybrid stubs, MoE flags, shader params)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| H1-H2 | `HybridMoeModel::load/save` silent vacu-stubs (pretended to save) | Fail-loud `Error` (no .quant mapping for hybrid blocks) |
+| M1-M3 | `SparseMoE`/`BaseLayerMoE`/`SharedExpertMoE::forward` `(void)training` hid intent | Documented-unused (deterministic routing; cf. GatingDropoutMoE/DeepSeekMoE which honor it) |
+| G1-G3 | `gemm_tiled` discarded `tile_size` (shader hardcodes 16); `reduce_sum/max_axis` discarded `axis` (row-reduce only) | Validate-and-throw instead of silent miscompute |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

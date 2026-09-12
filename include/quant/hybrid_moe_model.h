@@ -1,8 +1,6 @@
 #pragma once
 #include "quant/model.h"
 #include "quant/hybrid_scheduler.h"
-#include "quant/kda_attention.h"
-#include "quant/mla_attention.h"
 #include "quant/moe_variants.h"
 #include "quant/transformer.h"
 #include "quant/kv_cache.h"
@@ -13,9 +11,8 @@ class HybridMoeBlock {
 public:
     RMSNorm attention_norm;
     RMSNorm ffn_norm;
-    HybridAttnKind kind = HybridAttnKind::KDA;
-    KDAAttention kda;
-    MLAAttention mla;
+    HybridAttnKind kind = HybridAttnKind::STD;
+    Attention attn;
     std::unique_ptr<moe::SparseMoE> moe;
     std::unique_ptr<moe::ExpertFFN> shared_expert;
     moe::MoEAllConfig moe_cfg;
@@ -38,8 +35,15 @@ public:
 
     Tensor forward(const Tensor& input_ids, const Tensor& positions,
                    KVCache* cache = nullptr) override;
-    void load(const std::string& p) override { (void)p; }
-    void save(const std::string& p) const override { (void)p; }
+    // BUGFIX (bug census): load/save were silent vacu-stubs (discarded the
+    // path). HybridMoeModel has no .quant loader of its own (block layout
+    // differs from DenseModel) — fail loud instead of pretending to save.
+    void load(const std::string& p) override {
+        throw Error("HybridMoeModel::load not implemented (no .quant mapping for hybrid blocks): " + p);
+    }
+    void save(const std::string& p) const override {
+        throw Error("HybridMoeModel::save not implemented (no .quant mapping for hybrid blocks): " + p);
+    }
     int64_t param_count() const override;
     int64_t vocab_size() const override { return config.vocab_size; }
     int64_t stored_param_count() const { return param_count(); }
