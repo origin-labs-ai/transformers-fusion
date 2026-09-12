@@ -280,6 +280,12 @@ int64_t StreamingDataset::read_tokens_from_shard(size_t idx, std::vector<int64_t
 
 void StreamingDataset::refill() {
     std::lock_guard<std::mutex> lock(mutex_);
+    refill_locked();
+}
+
+// Internal: caller MUST hold mutex_ (get() holds it across the drain loop;
+// re-locking the non-recursive mutex would self-deadlock).
+void StreamingDataset::refill_locked() {
 
     std::vector<int64_t> tokens;
     int64_t needed = buffer_size_;
@@ -349,6 +355,13 @@ bool StreamingDataset::has_next() {
 }
 
 std::pair<Tensor, Tensor> StreamingDataset::get(size_t index) {
+    // BUGFIX (bug census): touched buffer_/shards_/current_shard_ with no
+    // mutex_ while prefetch_worker mutates shards (race/lost tokens), and
+    // buffer_ paths were inconsistently locked for concurrent consumers.
+    // Whole body serialized on mutex_ now (prefetch handoff still via
+    // prefetch_mutex_ inside the same critical section — fixed lock order:
+    // mutex_ before prefetch_mutex_, matching has_next/shuffle/reset).
+    std::lock_guard<std::mutex> lock(mutex_);
     (void)index;
     int64_t needed = seq_len_ + 1;
 
@@ -365,7 +378,7 @@ std::pair<Tensor, Tensor> StreamingDataset::get(size_t index) {
             }
         }
         if ((int64_t)buffer_.size() < needed) {
-            refill();
+            refill_locked();
         }
         if ((int64_t)buffer_.size() < needed) break;
     }

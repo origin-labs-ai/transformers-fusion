@@ -311,6 +311,9 @@ void ModelZoo::scan_directory(std::vector<ModelInfo>& out) const {
 }
 
 std::vector<ModelZoo::ModelInfo> ModelZoo::list_models() const {
+    // BUGFIX (bug census): cache_/cache_valid_ read/written with no lock
+    // (vector race + double directory scan across threads). Guarded now.
+    std::lock_guard<std::mutex> lock(zoo_mtx_);
     if (cache_valid_) return cache_;
 
     cache_.clear();
@@ -327,10 +330,22 @@ std::vector<ModelZoo::ModelInfo> ModelZoo::list_models() const {
 }
 
 Model* ModelZoo::load(const std::string& name) {
-    // Check cache
-    if (!cache_valid_) list_models();
+    // BUGFIX (bug census): cache walk + push_back raced list_models callers.
+    // Snapshot the cache under lock; disk loads happen outside it (slow I/O
+    // must not serialize all zoo users); cache mutation re-locks.
+    bool need_scan = false;
+    {
+        std::lock_guard<std::mutex> lock(zoo_mtx_);
+        need_scan = !cache_valid_;
+    }
+    if (need_scan) list_models();
+    std::vector<ModelInfo> snap;
+    {
+        std::lock_guard<std::mutex> lock(zoo_mtx_);
+        snap = cache_;
+    }
 
-    for (auto& m : cache_) {
+    for (auto& m : snap) {
         if (m.name == name || m.path.find(name) != std::string::npos) {
             auto* model = new DenseModel();
             try {
@@ -362,7 +377,10 @@ Model* ModelZoo::load(const std::string& name) {
     model = new DenseModel();
     try {
         model->load(direct_path);
-        cache_.push_back({name, direct_path, model->param_count(), "QUANT8"});
+        {
+            std::lock_guard<std::mutex> lock(zoo_mtx_);
+            cache_.push_back({name, direct_path, model->param_count(), "QUANT8"});
+        }
         return model;
     } catch (...) {
         Logger::instance().log(Logger::WARN, "ModelZoo: failed to load zoo path: " + direct_path);

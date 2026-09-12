@@ -93,6 +93,9 @@ private:
     std::condition_variable prefetch_cv_;
 
     void refill();
+    // Internal: caller MUST hold mutex_ (get() holds it; re-locking the
+    // non-recursive mutex would self-deadlock — same split as kv_cache).
+    void refill_locked();
     void prefetch_worker();
     void open_shard(size_t idx);
     void close_shard(size_t idx);

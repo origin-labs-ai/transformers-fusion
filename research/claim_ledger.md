@@ -531,3 +531,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | V4 | `try_acquire_slot` fetch_add-overshoot (cap not enforced under contention) | CAS-loop hard cap |
 | L1 | `Logger::log` thread-unsafe `localtime` + unlocked `level_`/`file_path_` reads | `localtime_r/s` + locked snapshot; locked setters |
 | Suite | Rebuild 0 errors; full ctest green (incl. 42/42 server smoke) | 72/72 |
+
+## 1000-bug sweep round 10 — 2026-09-12 (dataset/zoo/seeds races)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| S1-S2 | `StreamingDataset::get` lock-free buffer/shard races + `refill()` self-deadlock via my new lock | Whole-body `mutex_` + `refill_locked()` split (same pattern as kv_cache) |
+| Z1 | `ModelZoo` cache vector race + double-scan + unlocked push | `zoo_mtx_`, snapshot-walk, locked mutation; slow I/O outside lock |
+| R1 | `GlobalSeedManager` plain statics (duplicate seeds/threads) | Atomic base/counter + CAS init |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

@@ -331,6 +331,8 @@ public:
     Model* load(const std::string& name);
 private:
     std::string zoo_path_;
+    // BUGFIX (bug census): cache_ scan + mutation raced across threads.
+    mutable std::mutex zoo_mtx_;
     mutable std::vector<ModelInfo> cache_;
     mutable bool cache_valid_ = false;
     void scan_directory(std::vector<ModelInfo>& out) const;
