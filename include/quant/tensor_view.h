@@ -109,20 +109,30 @@ public:
 
     template<typename T>
     T at(const std::vector<int64_t>& indices) const {
+        // BUGFIX (bug census): no arity/bounds check — OOB read on wrong
+        // index count or negative/out-of-range indices. Fail loud instead.
+        if ((int)indices.size() != shape_.rank)
+            throw Error("TensorView::at: index arity mismatch");
         int64_t offset = 0;
         for (int i = 0; i < shape_.rank; ++i) {
-            offset += indices[i] * strides_[i];
+            if (indices[(size_t)i] < 0 || indices[(size_t)i] >= shape_.dims[i])
+                throw Error("TensorView::at: index out of bounds");
+            offset += indices[(size_t)i] * strides_[i];
         }
         return *reinterpret_cast<T*>(data_ + offset * dtype_size(dtype_));
     }
 
     template<typename T>
     T* data_at(int64_t flat_offset) {
+        if (flat_offset < 0 || flat_offset >= numel())
+            throw Error("TensorView::data_at: flat offset out of bounds");
         return reinterpret_cast<T*>(data_ + flat_offset * dtype_size(dtype_));
     }
 
     template<typename T>
     const T* data_at(int64_t flat_offset) const {
+        if (flat_offset < 0 || flat_offset >= numel())
+            throw Error("TensorView::data_at: flat offset out of bounds");
         return reinterpret_cast<const T*>(data_ + flat_offset * dtype_size(dtype_));
     }
 

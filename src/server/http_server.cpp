@@ -871,24 +871,30 @@ void HTTPServer::handle_completions(int fd, const HTTPRequest& req) {
 
     if (parsed.is_object()) {
         // L075: prompt accepts string or array-of-strings (first used).
+        // BUGFIX (bug census): p.arr[0] bypassed bounds/type checks.
         if (parsed.has("prompt")) {
             const JsonValue& p = parsed["prompt"];
-            if (p.is_array() && !p.arr.empty())
-                prompt = p.arr[0].as_string();
+            if (p.is_array() && !p.arr.empty() && p.arr[0].is_string())
+                prompt = p.arr[0].as_string_checked();
             else if (p.is_string())
-                prompt = p.as_string();
+                prompt = p.as_string_checked();
         }
         if (parsed.has("model") && parsed["model"].is_string() &&
             !parsed["model"].as_string().empty())
             requested_model = parsed["model"].as_string();
-        if (parsed.has("max_tokens")) max_tokens = parsed["max_tokens"].as_int();
+        if (parsed.has("max_tokens") && parsed["max_tokens"].is_number())
+            max_tokens = (int)parsed["max_tokens"].as_float_checked();
         // L075: OpenAI chat alias honored on this endpoint too.
-        if (parsed.has("max_completion_tokens"))
-            max_tokens = parsed["max_completion_tokens"].as_int();
-        if (parsed.has("stream")) stream = parsed["stream"].as_bool();
-        if (parsed.has("temperature")) temperature = parsed["temperature"].as_float();
-        if (parsed.has("top_p")) top_p = parsed["top_p"].as_float();
-        if (parsed.has("top_k")) top_k = parsed["top_k"].as_int();
+        if (parsed.has("max_completion_tokens") && parsed["max_completion_tokens"].is_number())
+            max_tokens = (int)parsed["max_completion_tokens"].as_float_checked();
+        if (parsed.has("stream") && parsed["stream"].is_bool())
+            stream = parsed["stream"].as_bool_checked();
+        if (parsed.has("temperature") && parsed["temperature"].is_number())
+            temperature = (float)parsed["temperature"].as_float_checked();
+        if (parsed.has("top_p") && parsed["top_p"].is_number())
+            top_p = (float)parsed["top_p"].as_float_checked();
+        if (parsed.has("top_k") && parsed["top_k"].is_number())
+            top_k = (int)parsed["top_k"].as_float_checked();
     }
     (void)temperature; (void)top_p; (void)top_k;
 

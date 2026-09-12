@@ -458,3 +458,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | S1 | `sign_release.sh` `error()` used before definition (aborted every run) | Helpers moved above first use |
 | T2 | Flaky fixed sleeps (prefetch 20ms, server 400ms) | Poll-with-deadline |
 | Warnings | 86× C4244 + C4267 + C4018 inventoried (mostly `int64_t`→`int` narrowing in GPU/bench code; pre-existing, no errors) | Full rebuild: 0 errors |
+
+## 1000-bug sweep round 2 — 2026-09-12 (bounds + strict JSON + server types)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| B1 | `TensorView::at`/`data_at` unchecked (OOB read on bad arity/indices/offsets) | Arity + per-dim + flat-offset checks, `Error` throw |
+| B2 | `JsonValue` untyped accessors (union garbage on mismatch) + lenient `operator[](size_t)` OOB→null | `*_checked()` strict variants; `operator[]` throws, `at_or_null()` for probing |
+| B3 | Server `/v1/completions` untyped JSON reads (bool from STRING, int from garbage) | `is_*` gate + checked accessors on all 6 params; `p.arr[0]` type-checked |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

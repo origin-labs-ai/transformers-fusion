@@ -1,5 +1,6 @@
 #pragma once
 
+#include "quant/types.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -44,10 +45,30 @@ public:
     bool is_array() const { return type == ARRAY; }
     bool is_object() const { return type == OBJECT; }
 
+    // BUGFIX (bug census): untyped accessors returned garbage on type
+    // mismatch (as_bool on a STRING read an uninitialized union member).
+    // Strict variants throw; lenient as_* keep legacy behavior for callers
+    // that pre-check with is_* (server code does).
     bool as_bool() const { return bool_val; }
     int64_t as_int() const { return int_val; }
     double as_float() const { return type == INT ? (double)int_val : float_val; }
     const std::string& as_string() const { return str_val; }
+    bool as_bool_checked() const {
+        if (type != BOOL) throw Error("JsonValue: not a bool");
+        return bool_val;
+    }
+    int64_t as_int_checked() const {
+        if (type != INT) throw Error("JsonValue: not an int");
+        return int_val;
+    }
+    double as_float_checked() const {
+        if (!is_number()) throw Error("JsonValue: not a number");
+        return as_float();
+    }
+    const std::string& as_string_checked() const {
+        if (type != STRING) throw Error("JsonValue: not a string");
+        return str_val;
+    }
 
     const JsonValue& operator[](const std::string& key) const {
         static JsonValue null_val;
@@ -56,6 +77,12 @@ public:
     }
 
     const JsonValue& operator[](size_t index) const {
+        if (index >= arr.size()) throw Error("JsonValue: array index out of range");
+        return arr[index];
+    }
+    // Legacy lenient index (returns null instead of throwing) for callers
+    // that probe optional elements.
+    const JsonValue& at_or_null(size_t index) const {
         static JsonValue null_val;
         return index < arr.size() ? arr[index] : null_val;
     }
