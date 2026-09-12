@@ -48,6 +48,9 @@ public:
     const std::vector<Tensor>& targets() const { return targets_; }
 
 private:
+    // BUGFIX (bug census): concurrent train/loader threads raced on these
+    // vectors. All access serialized on mutex_.
+    mutable std::mutex mutex_;
     std::vector<Tensor> inputs_;
     std::vector<Tensor> targets_;
 };

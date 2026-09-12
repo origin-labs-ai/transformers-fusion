@@ -484,3 +484,13 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | R1-R3 | RPC silently dropped `alpha`/`beta` (gemm), `axis` (softmax), `eps` (rms_norm) off-wire — callers got wrong results with no error | Non-default scalars now throw until the protocol carries them |
 | W1 | `gpu_compute_cuda.cpp` ~30× C4244 (`int64_t`→`uint32_t`/grid-dims, silent 4G wrap) | `checked_u32()` range-guarded narrow; file now **0 warnings** |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 5 — 2026-09-12 (allocator + dataset races)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| A1-A3 | `MemoryPool`/`StackAllocator`: wraparound on huge bytes, 0/non-pow2 alignment, fetch_add-rollback corrupting concurrent claims | `align_size` validation + CAS-loop reserve (no rollback); `deallocate` documented no-op |
+| A4 | `Buffer::allocate_block` leaked `ptr` when `new atomic` threw | Counter first, memory second with cleanup |
+| A5 | `ThreadLocalPoolRegistry` stale-pool leak on generation mismatch | Delete-before-replace |
+| D1 | `InMemoryDataset` vector races (concurrent train/loader) | `mutable mutex_` on get/add/clear |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

@@ -118,8 +118,17 @@ private:
 
     static Block allocate_block(size_t bytes, size_t alignment) {
         if (bytes == 0) return {nullptr, nullptr, nullptr, 0};
-        void* ptr = AlignedAllocator::allocate(bytes, alignment);
+        // BUGFIX (bug census): `new atomic` throwing after allocate() leaked
+        // ptr. Allocate the counter first (nothing to leak yet), then memory.
         auto* rc = new std::atomic<int>(1);
+        void* ptr = nullptr;
+        try {
+            ptr = AlignedAllocator::allocate(bytes, alignment);
+        } catch (...) {
+            delete rc;
+            throw;
+        }
+        if (!ptr) { delete rc; return {nullptr, nullptr, nullptr, 0}; }
         return {ptr, ptr, rc, bytes};
     }
 
@@ -170,12 +179,27 @@ public:
         if (data_) AlignedAllocator::deallocate(data_);
     }
 
+    // BUGFIX (bug census): three defects — (a) `bytes + alignment - 1`
+    // wrapped on huge bytes (tiny heap alloc → heap overflow); (b) alignment
+    // 0/non-pow2 wrapped the mask; (c) fetch_add-then-fetch_sub rollback
+    // corrupts concurrent reservations (loses another thread's claim).
+    // Now: validate first, reserve with a CAS loop (no rollback).
+    static bool align_size(size_t bytes, size_t alignment, size_t& out) {
+        if (alignment == 0 || (alignment & (alignment - 1)) != 0) return false;
+        if (bytes > SIZE_MAX - (alignment - 1)) return false;
+        out = (bytes + alignment - 1) & ~(alignment - 1);
+        return true;
+    }
+
     void* allocate(size_t bytes, size_t alignment = 64) {
-        size_t aligned = (bytes + alignment - 1) & ~(alignment - 1);
-        size_t old_offset = offset_.fetch_add(aligned, std::memory_order_relaxed);
-        if (old_offset + aligned > capacity_) {
-            offset_.fetch_sub(aligned, std::memory_order_relaxed);
-            return nullptr;
+        size_t aligned = 0;
+        if (!align_size(bytes, alignment, aligned)) return nullptr;
+        size_t old_offset = offset_.load(std::memory_order_relaxed);
+        for (;;) {
+            if (old_offset + aligned > capacity_) return nullptr;
+            if (offset_.compare_exchange_weak(old_offset, old_offset + aligned,
+                                              std::memory_order_relaxed))
+                break;
         }
         size_t prev_peak = peak_.load(std::memory_order_relaxed);
         while (old_offset + aligned > prev_peak) {
@@ -187,6 +211,7 @@ public:
     }
 
     void deallocate(void* ptr) {
+        // Bump allocator: individual free is a no-op by design (use reset()).
         (void)ptr;
     }
 
@@ -257,11 +282,14 @@ public:
     }
 
     void* allocate(size_t bytes, size_t alignment = 64) {
-        size_t aligned = (bytes + alignment - 1) & ~(alignment - 1);
-        size_t old_offset = offset_.fetch_add(aligned, std::memory_order_relaxed);
-        if (old_offset + aligned > capacity_) {
-            offset_.fetch_sub(aligned, std::memory_order_relaxed);
-            return nullptr;
+        size_t aligned = 0;
+        if (!MemoryPool::align_size(bytes, alignment, aligned)) return nullptr;
+        size_t old_offset = offset_.load(std::memory_order_relaxed);
+        for (;;) {
+            if (old_offset + aligned > capacity_) return nullptr;
+            if (offset_.compare_exchange_weak(old_offset, old_offset + aligned,
+                                              std::memory_order_relaxed))
+                break;
         }
         size_t prev_peak = peak_.load(std::memory_order_relaxed);
         while (old_offset + aligned > prev_peak) {
@@ -302,6 +330,18 @@ public:
         if (it != pools_.end() && it->second.generation == active_generation_[tid])
             return it->second.pool;
         auto* pool = new MemoryPool(pool_size);
+        // BUGFIX (bug census): generation-mismatch path overwrote pools_[tid]
+        // without deleting the stale pool (leak). Free it first.
+        auto old = pools_.find(tid);
+        if (old != pools_.end() && old->second.pool && old->second.pool != pool) {
+            auto own = owners_.find(tid);
+            if (own != owners_.end() && own->second == old->second.pool) {
+                delete own->second;
+                owners_.erase(own);
+            } else {
+                delete old->second.pool;
+            }
+        }
         pools_[tid] = {pool, active_generation_[tid]};
         owners_[tid] = pool;
         return pool;
