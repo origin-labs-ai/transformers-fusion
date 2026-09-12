@@ -522,3 +522,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Z1 | `reload_optimizer_state` unchecked memcpy (stale-shape OOB read+write) | Buffer-range + shape-match validation |
 | X1-X2 | `load_experts`: unbounded expert count (OOM/DoS) + unchecked dims (unbounded alloc) | 4096 cap + per-dim/overflow validation |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 9 — 2026-09-12 (server config races + logger)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| V1-V3 | `HTTPServer` config races: setters wrote plain fields, workers read lock-free (`auth_token_`, `max_header_bytes_`, `max_concurrent_`, pool/timeout/body) | `config_mtx_` + per-request snapshot; getters locked |
+| V4 | `try_acquire_slot` fetch_add-overshoot (cap not enforced under contention) | CAS-loop hard cap |
+| L1 | `Logger::log` thread-unsafe `localtime` + unlocked `level_`/`file_path_` reads | `localtime_r/s` + locked snapshot; locked setters |
+| Suite | Rebuild 0 errors; full ctest green (incl. 42/42 server smoke) | 72/72 |

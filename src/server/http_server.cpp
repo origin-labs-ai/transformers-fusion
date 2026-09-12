@@ -163,14 +163,17 @@ HTTPServer::~HTTPServer() {
 }
 
 void HTTPServer::set_thread_pool_size(int n) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     thread_pool_size_ = (std::max)(1, n);
 }
 
 void HTTPServer::set_timeout_seconds(int sec) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     timeout_seconds_ = (std::max)(1, sec);
 }
 
 void HTTPServer::set_max_body_size(int64_t bytes) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     max_body_size_ = bytes;
 }
 
@@ -179,16 +182,24 @@ void HTTPServer::set_rate_limit(int64_t max_requests_per_sec, int64_t burst) {
 }
 
 // ── L074 hardening setters ─────────────────────────────────────────────────
+// BUGFIX (bug census): plain-field writes raced worker-thread reads
+// (auth_token_/max_header_bytes_/max_concurrent_ read lock-free in
+// check_auth/try_acquire_slot). Config now snapshot under a mutex; the
+// admission counter uses a CAS loop so max_concurrent_ is a hard cap
+// (fetch_add-then-check overshot under contention).
 
 void HTTPServer::set_auth_token(const std::string& token) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     auth_token_ = token;
 }
 
 void HTTPServer::set_max_header_bytes(int64_t bytes) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     max_header_bytes_ = bytes > 0 ? bytes : (64 * 1024);
 }
 
 void HTTPServer::set_max_concurrent(int n) {
+    std::lock_guard<std::mutex> lock(config_mtx_);
     max_concurrent_ = n > 0 ? n : 0;
     if (max_concurrent_ == 0) current_requests_.store(0);
 }
@@ -240,7 +251,12 @@ void HTTPServer::send_sse_data(int fd, const std::string& json) {
 }
 
 bool HTTPServer::check_auth(int fd, const HTTPRequest& req, const std::string& path) {
-    if (auth_token_.empty()) return true;
+    std::string token;
+    {
+        std::lock_guard<std::mutex> lock(config_mtx_);
+        token = auth_token_;
+    }
+    if (token.empty()) return true;
     if (!is_v1_path(path)) return true; // /health stays open for probes
     auto it = req.headers.find("authorization");
     if (it == req.headers.end()) {
@@ -248,7 +264,7 @@ bool HTTPServer::check_auth(int fd, const HTTPRequest& req, const std::string& p
                           "invalid_request_error", "invalid_api_key");
         return false;
     }
-    const std::string want = "Bearer " + auth_token_;
+    const std::string want = "Bearer " + token;
     if (it->second != want) {
         send_openai_error(fd, 401, "Incorrect API key provided",
                           "invalid_request_error", "invalid_api_key");
@@ -258,19 +274,32 @@ bool HTTPServer::check_auth(int fd, const HTTPRequest& req, const std::string& p
 }
 
 bool HTTPServer::try_acquire_slot(int fd, const std::string& path) {
-    if (max_concurrent_ <= 0 || !is_v1_path(path)) return true;
-    int64_t cur = current_requests_.fetch_add(1) + 1;
-    if (cur > max_concurrent_) {
-        current_requests_.fetch_sub(1);
-        send_openai_error(fd, 503, "Server is overloaded, try again later",
-                          "server_error", "overloaded");
-        return false;
+    if (!is_v1_path(path)) return true;
+    int cap = 0;
+    {
+        std::lock_guard<std::mutex> lock(config_mtx_);
+        cap = max_concurrent_;
     }
-    return true;
+    if (cap <= 0) return true;
+    // CAS loop: claim only when under cap (fetch_add-then-check overshot).
+    int64_t cur = current_requests_.load();
+    while (cur < cap) {
+        if (current_requests_.compare_exchange_weak(cur, cur + 1))
+            return true;
+    }
+    send_openai_error(fd, 503, "Server is overloaded, try again later",
+                      "server_error", "overloaded");
+    return false;
 }
 
 void HTTPServer::release_slot(const std::string& path) {
-    if (max_concurrent_ <= 0 || !is_v1_path(path)) return;
+    if (!is_v1_path(path)) return;
+    int cap = 0;
+    {
+        std::lock_guard<std::mutex> lock(config_mtx_);
+        cap = max_concurrent_;
+    }
+    if (cap <= 0) return;
     current_requests_.fetch_sub(1);
 }
 
@@ -419,7 +448,12 @@ void HTTPServer::worker_loop() {
             conn_queue_.pop();
         }
 
-        set_socket_timeout(conn.fd, timeout_seconds_);
+        int timeout_snap = 0;
+        {
+            std::lock_guard<std::mutex> lock(config_mtx_);
+            timeout_snap = timeout_seconds_;
+        }
+        set_socket_timeout(conn.fd, timeout_snap);
         handle_request(conn.fd);
         close_fd(conn.fd);
     }
@@ -615,14 +649,25 @@ void HTTPServer::handle_request(int fd) {
     buf.reserve(16384);
     char tmp[4096];
 
+    // BUGFIX (bug census): snapshot hot config once per request — setters
+    // take config_mtx_ and workers must not read the plain fields directly.
+    int64_t max_body = 0, max_hdr = 0;
+    int timeout_s = 0;
+    {
+        std::lock_guard<std::mutex> lock(config_mtx_);
+        max_body = max_body_size_;
+        max_hdr = max_header_bytes_;
+        timeout_s = timeout_seconds_;
+    }
+
     int n;
     bool timeout = false;
     auto start_time = std::chrono::steady_clock::now();
 
-    while ((int64_t)buf.size() < max_body_size_) {
+    while ((int64_t)buf.size() < max_body) {
         auto elapsed = std::chrono::steady_clock::now() - start_time;
         if (std::chrono::duration_cast<std::chrono::seconds>(elapsed).count()
-            >= timeout_seconds_) {
+            >= timeout_s) {
             timeout = true;
             break;
         }
@@ -667,7 +712,7 @@ void HTTPServer::handle_request(int fd) {
                         total_errors_.fetch_add(1);
                         return;
                     }
-                    if (content_length > max_body_size_) {
+                    if (content_length > max_body) {
                         send_error(fd, 413, "Payload Too Large");
                         total_errors_.fetch_add(1);
                         return;
@@ -703,7 +748,7 @@ void HTTPServer::handle_request(int fd) {
     {
         auto hend = request.find("\r\n\r\n");
         size_t header_len = (hend == std::string::npos) ? request.size() : hend;
-        if ((int64_t)header_len > max_header_bytes_) {
+        if ((int64_t)header_len > max_hdr) {
             send_openai_error(fd, 431, "Request header fields too large",
                               "invalid_request_error", "header_too_large");
             total_errors_.fetch_add(1);

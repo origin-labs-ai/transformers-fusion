@@ -222,7 +222,10 @@ public:
     enum Level : uint8_t { DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3 };
     Logger(Level level = INFO);
     void log(Level level, const std::string& message);
-    void set_level(Level level) { level_ = level; }
+    void set_level(Level level) {
+        std::lock_guard<std::mutex> lock(mtx_);
+        level_ = level;
+    }
     void set_file(const std::string& path);
     static Logger& instance();
 private:
