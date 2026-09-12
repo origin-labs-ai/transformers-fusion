@@ -1,13 +1,17 @@
-#include "quant/model.h"
+﻿#include "quant/model.h"
 #include "quant/transformer.h"
 #include "quant/tokenizer.h"
 #include "quant/trainer.h"
 #include "quant/optimizer.h"
+#include "quant/random.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstring>
+#include <cstdlib>
+#include <cstdint>
 #include <fstream>
 #include <sstream>
 
@@ -26,6 +30,7 @@ struct TrainArgs {
     int log_interval = 10;
     int save_interval = 1000;
     std::string optimizer_name = "adafactor";
+    uint64_t seed = 0;
 };
 
 static TrainArgs parse_args(int argc, char** argv) {
@@ -38,27 +43,29 @@ static TrainArgs parse_args(int argc, char** argv) {
         else if (strcmp(argv[i], "--config") == 0 && i + 1 < argc)
             args.config_path = argv[++i];
         else if (strcmp(argv[i], "--batch-size") == 0 && i + 1 < argc)
-            args.batch_size = std::stoll(argv[++i]);
+            args.batch_size = quant::cli_parse::parse_ll(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--seq-length") == 0 && i + 1 < argc)
-            args.seq_length = std::stoll(argv[++i]);
+            args.seq_length = quant::cli_parse::parse_ll(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--epochs") == 0 && i + 1 < argc)
-            args.num_epochs = std::stoi(argv[++i]);
+            args.num_epochs = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--lr") == 0 && i + 1 < argc)
-            args.learning_rate = std::stof(argv[++i]);
+            args.learning_rate = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--vocab-size") == 0 && i + 1 < argc)
-            args.vocab_size = std::stoi(argv[++i]);
+            args.vocab_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--hidden-size") == 0 && i + 1 < argc)
-            args.hidden_size = std::stoi(argv[++i]);
+            args.hidden_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--num-layers") == 0 && i + 1 < argc)
-            args.num_layers = std::stoi(argv[++i]);
+            args.num_layers = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--num-heads") == 0 && i + 1 < argc)
-            args.num_heads = std::stoi(argv[++i]);
+            args.num_heads = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--log-interval") == 0 && i + 1 < argc)
-            args.log_interval = std::stoi(argv[++i]);
+            args.log_interval = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--save-interval") == 0 && i + 1 < argc)
-            args.save_interval = std::stoi(argv[++i]);
+            args.save_interval = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--optimizer") == 0 && i + 1 < argc)
             args.optimizer_name = argv[++i];
+        else if (strcmp(argv[i], "--seed") == 0 && i + 1 < argc)
+            args.seed = std::strtoull(argv[++i], nullptr, 10);
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_train --model model.quant --data data.txt [options]\n";
             std::cout << "Options:\n";
@@ -71,6 +78,7 @@ static TrainArgs parse_args(int argc, char** argv) {
             std::cout << "  --num-layers N    Number of layers (default: 12)\n";
             std::cout << "  --num-heads N     Number of heads (default: 12)\n";
             std::cout << "  --optimizer NAME  Optimizer: 'adafactor' or 'adamw' (default: adafactor)\n";
+            std::cout << "  --seed N          Base seed (0=default 42, or QUANT_SEED env)\n";
             exit(0);
         }
     }
@@ -79,6 +87,21 @@ static TrainArgs parse_args(int argc, char** argv) {
 
 int main(int argc, char** argv) {
     auto args = parse_args(argc, argv);
+
+    if (args.seed != 0) {
+#ifdef _WIN32
+        _putenv_s("QUANT_SEED", std::to_string(args.seed).c_str());
+#else
+        setenv("QUANT_SEED", std::to_string(args.seed).c_str(), 1);
+#endif
+    }
+    {
+        uint64_t run_seed = quant::resolve_base_seed(args.seed);
+        const char* env_seed = std::getenv("QUANT_SEED");
+        std::cout << "[seed] base=" << run_seed
+                  << " (cli=" << args.seed
+                  << " env=" << (env_seed ? env_seed : "-") << ")" << std::endl;
+    }
 
     std::cout << "=== QUANT Training ===\n";
     std::cout << "Model: " << args.model_path << "\n";
@@ -106,31 +129,20 @@ int main(int argc, char** argv) {
     std::vector<std::string> texts = {corpus};
     tokenizer.train(texts, static_cast<int>(cfg.vocab_size));
 
-    quant::Trainer trainer(&model, &tokenizer);
+    // L073: single entry — all training CLI paths go through UnifiedTrainer.
+    quant::UnifiedTrainArgs uargs;
+    uargs.kind = quant::UnifiedTrainerKind::Dense;
+    uargs.batch_size = args.batch_size;
+    uargs.seq_length = args.seq_length;
+    uargs.num_epochs = args.num_epochs;
+    uargs.learning_rate = args.learning_rate;
+    uargs.log_interval = args.log_interval;
+    uargs.save_interval = args.save_interval;
+    uargs.output_path = args.model_path;
+    uargs.data_path = args.data_path;
+    uargs.optimizer_name = args.optimizer_name;
 
-    quant::Adafactor opt_adafactor(args.learning_rate);
-    quant::AdamW opt_adamw(args.learning_rate);
-
-    if (args.optimizer_name == "adamw") {
-        std::cout << "Using AdamW optimizer.\n";
-        trainer.compile(&opt_adamw);
-    } else {
-        std::cout << "Using Adafactor optimizer.\n";
-        trainer.compile(&opt_adafactor);
-    }
-
-    quant::DataLoader dataloader(&tokenizer, args.data_path,
-                               args.batch_size, args.seq_length);
-
-    quant::TrainConfig train_cfg;
-    train_cfg.batch_size = args.batch_size;
-    train_cfg.seq_length = args.seq_length;
-    train_cfg.num_epochs = args.num_epochs;
-    train_cfg.learning_rate = args.learning_rate;
-    train_cfg.log_interval = args.log_interval;
-    train_cfg.save_interval = args.save_interval;
-    train_cfg.output_path = args.model_path;
-
+    quant::UnifiedTrainer trainer(&model, &tokenizer);
     trainer.set_log_callback([](const quant::TrainMetrics& m) {
         std::cout << "Step " << m.step
                   << " | loss: " << m.loss
@@ -139,8 +151,19 @@ int main(int argc, char** argv) {
                   << " | tok/s: " << m.tokens_per_sec
                   << std::endl;
     });
-
-    trainer.fit(dataloader, train_cfg);
+    std::cout << "Using " << (args.optimizer_name == "adamw" ? "AdamW" : "Adafactor")
+              << " optimizer via UnifiedTrainer ("
+              << quant::unified_trainer_kind_name(uargs.kind) << ").\n";
+    std::string cfg_err;
+    if (!trainer.configure(uargs, &cfg_err)) {
+        std::cerr << "Error: " << cfg_err << std::endl;
+        return 1;
+    }
+    std::string run_err;
+    if (!trainer.run(&run_err)) {
+        std::cerr << "Error: " << run_err << std::endl;
+        return 1;
+    }
     std::cout << "Training complete. Model saved to " << args.model_path << std::endl;
     return 0;
 }

@@ -1,8 +1,9 @@
-#include "quant/model.h"
+﻿#include "quant/model.h"
 #include "quant/eval.h"
 #include "quant/qwen35_tokenizer.h"
 #include "quant/metrics.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -34,11 +35,11 @@ static EvalArgs parse_args(int argc, char** argv) {
         else if (strcmp(argv[i], "--data") == 0 && i + 1 < argc)
             args.data_path = argv[++i];
         else if (strcmp(argv[i], "--batch-size") == 0 && i + 1 < argc)
-            args.batch_size = std::stoi(argv[++i]);
+            args.batch_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--context") == 0 && i + 1 < argc)
-            args.context_size = std::stoi(argv[++i]);
+            args.context_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--max-tokens") == 0 && i + 1 < argc)
-            args.max_tokens = std::stoi(argv[++i]);
+            args.max_tokens = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_evaluate --model model.quant --task <task> [options]\n";
             std::cout << "Tasks: perplexity, accuracy, classification, generation, hellaswag, all\n";

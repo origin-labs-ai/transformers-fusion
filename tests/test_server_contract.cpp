@@ -161,11 +161,17 @@ static void test_live_server_smoke() {
     HTTPServer srv(kPort);
     srv.set_model_name("smoke-test");
     srv.start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    // BUGFIX (bug census): fixed 400ms sleep raced server startup
+    // (flaky/slow). Poll /health with a deadline instead.
+    std::string h;
+    for (int i = 0; i < 40; i++) {
+        h = http_get("127.0.0.1", kPort, "GET /health HTTP/1.1\r\nHost: x\r\n\r\n");
+        if (h.find("200 OK") != std::string::npos) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
     TEST_CHECK(srv.is_running(), "server thread running after start");
 
     // 1. GET /health → 200 OK + {"status":"ok"}
-    std::string h = http_get("127.0.0.1", kPort, "GET /health HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_CHECK(h.find("200 OK") != std::string::npos, "GET /health returns 200 OK");
     TEST_CHECK(h.find("\"status\"") != std::string::npos, "health body carries status");
 

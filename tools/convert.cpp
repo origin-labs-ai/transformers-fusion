@@ -63,15 +63,25 @@ static const uint32_t GGML_TYPE_Q8_0 = 8;
 static const uint32_t GGML_TYPE_F16  = 1;
 static const uint32_t GGML_TYPE_F32  = 0;
 
-static uint64_t read_le_u64(std::istream& is) {
+static uint64_t read_le_u64(std::istream& is, bool& ok) {
     uint64_t v = 0;
     is.read(reinterpret_cast<char*>(&v), 8);
+    if (!is) { ok = false; return 0; }
+    return v;
+}
+static uint64_t read_le_u64(std::istream& is) {
+    bool ok = true;
+    return read_le_u64(is, ok);
+}
+static uint32_t read_le_u32(std::istream& is, bool& ok) {
+    uint32_t v = 0;
+    is.read(reinterpret_cast<char*>(&v), 4);
+    if (!is) { ok = false; return 0; }
     return v;
 }
 static uint32_t read_le_u32(std::istream& is) {
-    uint32_t v = 0;
-    is.read(reinterpret_cast<char*>(&v), 4);
-    return v;
+    bool ok = true;
+    return read_le_u32(is, ok);
 }
 [[maybe_unused]] static uint16_t read_le_u16(std::istream& is) {
     uint16_t v = 0;
@@ -84,14 +94,25 @@ static uint32_t read_le_u32(std::istream& is) {
     return v;
 }
 static std::string read_string(std::istream& is) {
-    uint64_t len = read_le_u64(is);
-    std::string s(len, '\0');
-    if (len > 0) is.read(&s[0], (std::streamsize)len);
+    // BUGFIX (bug census): trusted 8-byte len for string(len) + short read —
+    // corrupt length = OOM, and &s[0] on empty string is UB.
+    bool ok = true;
+    uint64_t len = read_le_u64(is, ok);
+    if (!ok) return "";
+    static constexpr uint64_t kMaxNameLen = 1 << 20; // 1 MiB: names are tiny
+    if (len > kMaxNameLen || !is) return "";
+    std::string s;
+    if (len == 0) return s;
+    s.resize((size_t)len);
+    is.read(&s[0], (std::streamsize)len);
+    if (!is) return "";
     return s;
 }
 
-// Dequantization helpers
-static void dequantize_q4_0(const uint8_t* block, float* out, int offset) {
+// Dequantization helpers — all take (block, out, offset, count) so the tail
+// block writes only its valid remainder (BUGFIX: always wrote 32 floats,
+// overflowing all_weights when numel%32 != 0).
+static void dequantize_q4_0(const uint8_t* block, float* out, int64_t offset, int count) {
     // Q4_0 block: 1x fp16 scale (2 bytes) + 32x 4-bit values (16 bytes) = 18 bytes
     int16_t scale_half = *(const int16_t*)(block);
     float scale = (float)scale_half;
@@ -111,7 +132,7 @@ static void dequantize_q4_0(const uint8_t* block, float* out, int offset) {
             if (sign) scale = -scale;
         }
     }
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < count; i++) {
         uint8_t q = block[2 + i / 2];
         if (i % 2 == 0) q &= 0x0F;
         else            q >>= 4;
@@ -119,7 +140,7 @@ static void dequantize_q4_0(const uint8_t* block, float* out, int offset) {
     }
 }
 
-static void dequantize_q4_1(const uint8_t* block, float* out, int offset) {
+static void dequantize_q4_1(const uint8_t* block, float* out, int64_t offset, int count) {
     // Q4_1 block: 1x fp16 scale (2 bytes) + 1x fp16 min (2 bytes) + 32x 4-bit values (16 bytes) = 20 bytes
     int16_t scale_half = *(const int16_t*)(block);
     int16_t min_half   = *(const int16_t*)(block + 2);
@@ -139,7 +160,7 @@ static void dequantize_q4_1(const uint8_t* block, float* out, int offset) {
     };
     float scale = half_to_float(scale_half);
     float min   = half_to_float(min_half);
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < count; i++) {
         uint8_t q = block[4 + i / 2];
         if (i % 2 == 0) q &= 0x0F;
         else            q >>= 4;
@@ -147,7 +168,7 @@ static void dequantize_q4_1(const uint8_t* block, float* out, int offset) {
     }
 }
 
-static void dequantize_q8_0(const uint8_t* block, float* out, int offset) {
+static void dequantize_q8_0(const uint8_t* block, float* out, int64_t offset, int count) {
     // Q8_0 block: 1x fp16 scale (2 bytes) + 32x int8 values (32 bytes) = 34 bytes
     int16_t scale_half = *(const int16_t*)(block);
     auto half_to_float = [](int16_t h) -> float {
@@ -165,7 +186,7 @@ static void dequantize_q8_0(const uint8_t* block, float* out, int offset) {
         }
     };
     float scale = half_to_float(scale_half);
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < count; i++) {
         int8_t q = (int8_t)block[2 + i];
         out[offset + i] = (float)q * scale;
     }
@@ -233,14 +254,19 @@ static bool read_gguf(const std::string& path, std::vector<float>& all_weights,
     tensor_infos.reserve(n_tensors);
     for (uint64_t i = 0; i < n_tensors; i++) {
         info.name = read_string(is);
+        if (!is) { std::cerr << "Truncated tensor header\n"; return false; }
         info.n_dims = read_le_u32(is);
+        // BUGFIX (bug census): attacker n_dims wrote past ne[4] stack array.
+        if (!is || info.n_dims > 4) { std::cerr << "Bad n_dims\n"; return false; }
         info.ggml_type = read_le_u32(is);
         info.offset = read_le_u64(is);
         // v3 adds file offset alignment
         if (version >= 3)
             info.offset = read_le_u64(is);
+        if (!is) { std::cerr << "Truncated tensor header\n"; return false; }
         for (uint32_t d = 0; d < info.n_dims; d++)
             info.ne[d] = read_le_u64(is);
+        if (!is) { std::cerr << "Truncated tensor dims\n"; return false; }
         for (uint32_t d = info.n_dims; d < 4; d++)
             info.ne[d] = 1;
         tensor_infos.push_back(info);
@@ -285,21 +311,27 @@ static bool read_gguf(const std::string& path, std::vector<float>& all_weights,
             for (int64_t b = 0; b < n_blocks; b++) {
                 uint8_t block[18];
                 is.read(reinterpret_cast<char*>(block), 18);
-                dequantize_q4_0(block, all_weights.data(), (int)(start + b * 32));
+                if (!is) { std::cerr << "Truncated Q4_0 block\n"; return false; }
+                int64_t done = std::min<int64_t>(32, num_el - b * 32);
+                dequantize_q4_0(block, all_weights.data(), start + b * 32, (int)done);
             }
         } else if (ti.ggml_type == GGML_TYPE_Q4_1) {
             int64_t n_blocks = (num_el + 31) / 32;
             for (int64_t b = 0; b < n_blocks; b++) {
                 uint8_t block[20];
                 is.read(reinterpret_cast<char*>(block), 20);
-                dequantize_q4_1(block, all_weights.data(), (int)(start + b * 32));
+                if (!is) { std::cerr << "Truncated Q4_1 block\n"; return false; }
+                int64_t done = std::min<int64_t>(32, num_el - b * 32);
+                dequantize_q4_1(block, all_weights.data(), start + b * 32, (int)done);
             }
         } else if (ti.ggml_type == GGML_TYPE_Q8_0) {
             int64_t n_blocks = (num_el + 31) / 32;
             for (int64_t b = 0; b < n_blocks; b++) {
                 uint8_t block[34];
                 is.read(reinterpret_cast<char*>(block), 34);
-                dequantize_q8_0(block, all_weights.data(), (int)(start + b * 32));
+                if (!is) { std::cerr << "Truncated Q8_0 block\n"; return false; }
+                int64_t done = std::min<int64_t>(32, num_el - b * 32);
+                dequantize_q8_0(block, all_weights.data(), start + b * 32, (int)done);
             }
         } else {
             std::cerr << "Unsupported GGML type " << ti.ggml_type << " for tensor " << ti.name << "\n";

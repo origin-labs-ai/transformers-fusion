@@ -1,8 +1,9 @@
-#include "quant/production.h"
+﻿#include "quant/production.h"
 #include "quant/model.h"
 #include "quant/tokenizer.h"
 #include "quant/generator.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -27,13 +28,13 @@ static ServeArgs parse_args(int argc, char** argv) {
         if (strcmp(argv[i], "--model") == 0 && i + 1 < argc)
             args.model_path = argv[++i];
         else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc)
-            args.port = std::stoi(argv[++i]);
+            args.port = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--batch-size") == 0 && i + 1 < argc)
-            args.batch_size = std::stoi(argv[++i]);
+            args.batch_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--workers") == 0 && i + 1 < argc)
-            args.num_workers = std::stoi(argv[++i]);
+            args.num_workers = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--max-tokens") == 0 && i + 1 < argc)
-            args.max_tokens = std::stoi(argv[++i]);
+            args.max_tokens = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_serve --model model.quant [options]\n";
             std::cout << "Options:\n";

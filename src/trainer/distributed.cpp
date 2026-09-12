@@ -747,8 +747,12 @@ void ParameterServer::process_gradient(const std::string& name, const float* gra
 }
 
 void ParameterServer::apply_stale_gradients() {
-    std::lock_guard<std::mutex> slock(stale_mtx_);
+    // BUGFIX (bug census): lock-order inversion — this took stale_mtx_ THEN
+    // global_mtx_, while process_gradient takes global_mtx_ THEN stale_mtx_
+    // (:730-736) = classic ABBA deadlock. Global order is now: global_mtx_
+    // before stale_mtx_, everywhere.
     std::lock_guard<std::mutex> glock(global_mtx_);
+    std::lock_guard<std::mutex> slock(stale_mtx_);
     for (auto& sg : stale_queue_) {
         auto it = params_.find(sg.name);
         if (it == params_.end()) continue;
@@ -834,18 +838,22 @@ int ParameterServer::stale_gradient_count() const {
 }
 
 void ParameterServer::flush_async() {
+    // BUGFIX (bug census): held global_mtx_ + async_mtx_ then called
+    // process_gradient (takes global_mtx_) = SELF-DEADLOCK. Drain the queue
+    // under async_mtx_ only, release, then process each op (which takes
+    // global_mtx_ itself). Same global lock order as everywhere else.
+    std::queue<AsyncOp> pending;
     {
-        std::lock_guard<std::mutex> lock(global_mtx_);
-        // Process remaining items synchronously
         std::lock_guard<std::mutex> alock(async_mtx_);
-        while (!async_queue_.empty()) {
-            auto& op = async_queue_.front();
-            if (op.is_grad)
-                process_gradient(op.name, op.data.data(), op.data.size(), op.lr);
-            else if (op.is_push)
-                process_push(op.name, op.data.data(), op.data.size());
-            async_queue_.pop();
-        }
+        pending.swap(async_queue_);
+    }
+    while (!pending.empty()) {
+        auto& op = pending.front();
+        if (op.is_grad)
+            process_gradient(op.name, op.data.data(), op.data.size(), op.lr);
+        else if (op.is_push)
+            process_push(op.name, op.data.data(), op.data.size());
+        pending.pop();
     }
     apply_stale_gradients();
 }

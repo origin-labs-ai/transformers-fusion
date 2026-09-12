@@ -1,8 +1,9 @@
-#include "quant/model.h"
+﻿#include "quant/model.h"
 #include "quant/tokenizer.h"
 #include "quant/trainer.h"
 #include "quant/finetune.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -30,13 +31,13 @@ static FTArgs parse_args(int argc, char** argv) {
         else if (strcmp(argv[i], "--output") == 0 && i + 1 < argc)
             args.output_path = argv[++i];
         else if (strcmp(argv[i], "--lr") == 0 && i + 1 < argc)
-            args.learning_rate = std::stof(argv[++i]);
+            args.learning_rate = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--epochs") == 0 && i + 1 < argc)
-            args.num_epochs = std::stoi(argv[++i]);
+            args.num_epochs = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--batch-size") == 0 && i + 1 < argc)
-            args.batch_size = std::stoi(argv[++i]);
+            args.batch_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--seq-length") == 0 && i + 1 < argc)
-            args.seq_length = static_cast<int>(std::stoll(argv[++i]));
+            args.seq_length = static_cast<int>(quant::cli_parse::parse_ll(argv[i-1], argv[++i]));
         else if (strcmp(argv[i], "--optimizer") == 0 && i + 1 < argc)
             args.optimizer_name = argv[++i];
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -71,20 +72,31 @@ int main(int argc, char** argv) {
 
     quant::BPETokenizer tokenizer;
 
-    quant::FineTuner finetuner(&model, &tokenizer);
-    quant::FineTuneConfig ft_cfg;
-    ft_cfg.learning_rate = args.learning_rate;
-    ft_cfg.num_epochs = args.num_epochs;
-    ft_cfg.batch_size = args.batch_size;
-    ft_cfg.seq_length = args.seq_length;
-    ft_cfg.log_interval = args.log_interval;
-    ft_cfg.save_interval = args.save_interval;
-    ft_cfg.output_path = args.output_path;
-    ft_cfg.optimizer_name = args.optimizer_name;
-    finetuner.configure(ft_cfg);
-
-    finetuner.fine_tune(args.data_path);
-    finetuner.save(args.output_path);
+    // L073: single entry — finetune CLI delegates to UnifiedTrainer
+    // (FineTuner::configure field-maps 1:1 to UnifiedTrainArgs; FineTuner
+    // remains for API compat, CLI uses the unified path).
+    quant::UnifiedTrainArgs uargs;
+    uargs.kind = quant::UnifiedTrainerKind::FineTune;
+    uargs.learning_rate = args.learning_rate;
+    uargs.num_epochs = args.num_epochs;
+    uargs.batch_size = args.batch_size;
+    uargs.seq_length = args.seq_length;
+    uargs.log_interval = args.log_interval;
+    uargs.save_interval = args.save_interval;
+    uargs.output_path = args.output_path;
+    uargs.data_path = args.data_path;
+    uargs.optimizer_name = args.optimizer_name;
+    quant::UnifiedTrainer trainer(&model, &tokenizer);
+    std::string cfg_err;
+    if (!trainer.configure(uargs, &cfg_err)) {
+        std::cerr << "Error: " << cfg_err << std::endl;
+        return 1;
+    }
+    std::string run_err;
+    if (!trainer.run(&run_err)) {
+        std::cerr << "Error: " << run_err << std::endl;
+        return 1;
+    }
 
     std::cout << "Fine-tuning complete. Saved to " << args.output_path << std::endl;
     return 0;

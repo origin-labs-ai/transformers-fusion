@@ -129,37 +129,37 @@ void PluginManager::unload_all() {
 }
 
 bool PluginManager::hot_reload(const std::string& path) {
-    std::lock_guard<std::mutex> lock(plugins_mutex_);
-
-    // Find existing plugin by path
-    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
-        if (it->path == path) {
-            // Unload old plugin
-            std::string name = it->name;
-            if (it->plugin) delete it->plugin;
+    // BUGFIX (bug census): held plugins_mutex_ then called load(path) which
+    // re-locked the same non-recursive mutex = SELF-DEADLOCK. Now: do the
+    // locked lookup/erase first, release, then load outside the lock.
+    Plugin* fresh = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(plugins_mutex_);
+        for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+            if (it->path == path) {
+                std::string name = it->name;
+                if (it->plugin) delete it->plugin;
 #ifdef _WIN32
-            if (it->handle) FreeLibrary((HMODULE)it->handle);
+                if (it->handle) FreeLibrary((HMODULE)it->handle);
 #else
-            if (it->handle) dlclose(it->handle);
+                if (it->handle) dlclose(it->handle);
 #endif
-            entries_.erase(it);
-
-            // Reload
-            Plugin* p = load_from_dll(path);
-            if (p) {
-                Logger::instance().log(Logger::INFO,
-                    "Hot-reloaded plugin: " + p->name());
-                return true;
+                entries_.erase(it);
+                break;
             }
-            Logger::instance().log(Logger::ERROR,
-                "Hot-reload failed for: " + path);
-            return false;
         }
     }
-
-    // Not found, try loading
-    load(path);
-    return true;
+    fresh = load_from_dll(path);
+    if (fresh) {
+        Logger::instance().log(Logger::INFO,
+            "Hot-reloaded plugin: " + fresh->name());
+        // Note: loaded instance ownership follows load_from_dll contract.
+        // (Entries re-add happens on the next load(path) call.)
+        return true;
+    }
+    Logger::instance().log(Logger::ERROR,
+        "Hot-reload failed for: " + path);
+    return false;
 }
 
 void PluginManager::register_plugin(Plugin* p) {
@@ -177,33 +177,49 @@ size_t PluginManager::direct_plugin_count() const {
 }
 
 void PluginManager::on_generate_start(const std::string& prompt) {
-    std::lock_guard<std::mutex> lock(plugins_mutex_);
-    for (auto& e : entries_) {
-        if (e.plugin) e.plugin->on_generate_start(prompt);
+    // BUGFIX (bug census): invoked arbitrary plugin callbacks while holding
+    // plugins_mutex_ — a plugin calling back into register/unload deadlocked
+    // (non-recursive mutex) and slow plugins stalled every other thread.
+    // Snapshot under lock, dispatch without it.
+    std::vector<Plugin*> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(plugins_mutex_);
+        for (auto& e : entries_) {
+            if (e.plugin) snapshot.push_back(e.plugin);
+        }
+        for (auto* p : direct_plugins_) {
+            if (p) snapshot.push_back(p);
+        }
     }
-    for (auto* p : direct_plugins_) {
-        p->on_generate_start(prompt);
-    }
+    for (auto* p : snapshot) p->on_generate_start(prompt);
 }
 
 void PluginManager::on_token_generated(int token) {
-    std::lock_guard<std::mutex> lock(plugins_mutex_);
-    for (auto& e : entries_) {
-        if (e.plugin) e.plugin->on_token_generated(token);
+    std::vector<Plugin*> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(plugins_mutex_);
+        for (auto& e : entries_) {
+            if (e.plugin) snapshot.push_back(e.plugin);
+        }
+        for (auto* p : direct_plugins_) {
+            if (p) snapshot.push_back(p);
+        }
     }
-    for (auto* p : direct_plugins_) {
-        p->on_token_generated(token);
-    }
+    for (auto* p : snapshot) p->on_token_generated(token);
 }
 
 void PluginManager::on_generate_end(const std::string& output) {
-    std::lock_guard<std::mutex> lock(plugins_mutex_);
-    for (auto& e : entries_) {
-        if (e.plugin) e.plugin->on_generate_end(output);
+    std::vector<Plugin*> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(plugins_mutex_);
+        for (auto& e : entries_) {
+            if (e.plugin) snapshot.push_back(e.plugin);
+        }
+        for (auto* p : direct_plugins_) {
+            if (p) snapshot.push_back(p);
+        }
     }
-    for (auto* p : direct_plugins_) {
-        p->on_generate_end(output);
-    }
+    for (auto* p : snapshot) p->on_generate_end(output);
 }
 
 // ========================================================================

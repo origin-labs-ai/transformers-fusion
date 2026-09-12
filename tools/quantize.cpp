@@ -1,4 +1,4 @@
-#include "quant/quant_format.h"
+﻿#include "quant/quant_format.h"
 #include "quant/quant_engines.h"
 #include "quant/codebook.h"
 #include "quant/kernel.h"
@@ -6,6 +6,7 @@
 #include "quant/tensor.h"
 #include "quant/block_codec.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -27,16 +28,16 @@ static Format parse_format(const std::string& s) {
     if (s == "q16" || s == "Q16") return Format::Q16;
     if (s == "q24" || s == "Q24") return Format::Q24;
     if (s == "q32" || s == "Q32" || s == "fp32" || s == "FP32") return Format::Q32;
-    if (s == "q1_g" || s == "Q1_G" || s == "q1_grp" || s == "Q1_G") return Format::Q1_G;
-    if (s == "q2_g" || s == "Q2_G" || s == "q2_grp" || s == "Q2_G") return Format::Q2_G;
-    if (s == "q3_g" || s == "Q3_G" || s == "q3_grp" || s == "Q3_G") return Format::Q3_G;
-    if (s == "q4_g" || s == "Q4_G" || s == "q4_grp" || s == "Q4_G") return Format::Q4_G;
-    if (s == "q6_g" || s == "Q6_G" || s == "q6_grp" || s == "Q6_G") return Format::Q6_G;
-    if (s == "q8_g" || s == "Q8_G" || s == "q8_grp" || s == "Q8_G") return Format::Q8_G;
-    if (s == "q12_g" || s == "Q12_G" || s == "q12_grp" || s == "Q12_G") return Format::Q12_G;
-    if (s == "q16_g" || s == "Q16_G" || s == "q16_grp" || s == "Q16_G") return Format::Q16_G;
-    if (s == "q24_g" || s == "Q24_G" || s == "q24_grp" || s == "Q24_G") return Format::Q24_G;
-    if (s == "quad_3_5" || s == "QUAD_MIX_3_5") return Format::MXQ_3_5_G;
+    if (s == "q1_g" || s == "QG1" || s == "q1_grp" || s == "QG1") return Format::QG1;
+    if (s == "q2_g" || s == "QG2" || s == "q2_grp" || s == "QG2") return Format::QG2;
+    if (s == "q3_g" || s == "QG3" || s == "q3_grp" || s == "QG3") return Format::QG3;
+    if (s == "q4_g" || s == "QG4" || s == "q4_grp" || s == "QG4") return Format::QG4;
+    if (s == "q6_g" || s == "QG6" || s == "q6_grp" || s == "QG6") return Format::QG6;
+    if (s == "q8_g" || s == "QG8" || s == "q8_grp" || s == "QG8") return Format::QG8;
+    if (s == "q12_g" || s == "QG12" || s == "q12_grp" || s == "QG12") return Format::QG12;
+    if (s == "q16_g" || s == "QG16" || s == "q16_grp" || s == "QG16") return Format::QG16;
+    if (s == "q24_g" || s == "QG24" || s == "q24_grp" || s == "QG24") return Format::QG24;
+    if (s == "quad_3_5" || s == "QUAD_MIX_3_5") return Format::QG_MX_3_5;
     std::cerr << "Warning: unknown format '" << s << "' — defaulting to Q8\n";
     return Format::Q8;
 }
@@ -64,7 +65,7 @@ static QuantArgs parse_args(int argc, char** argv) {
         } else if (strcmp(argv[i], "--per-layer") == 0 && i + 1 < argc)
             args.per_layer_format = argv[++i];
         else if (strcmp(argv[i], "--num-bits") == 0 && i + 1 < argc)
-            args.num_bits = std::stoi(argv[++i]);
+            args.num_bits = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_quantize --input model.quant --output quantized.quant [options]\n";
             std::cout << "Options:\n";

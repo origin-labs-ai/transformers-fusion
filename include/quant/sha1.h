@@ -63,18 +63,27 @@ struct SHA1_CTX {
     }
 
     static void update(SHA1_CTX* ctx, const uint8_t* data, size_t len) {
+        // BUGFIX (bug census): short updates (len < 64-idx) fell through to
+        // the tail memcpy with a WRONG source offset: `data + (len-(len-idx)%64)`
+        // pointed past the input when len < part, causing OOB read + wrong
+        // digest. Correct incremental logic: fill the partial block, and only
+        // copy the remainder (len % 64) from the tail.
+        if (!ctx || (!data && len > 0)) return;
         size_t idx = ctx->count & 63;
         ctx->count += len;
         size_t part = 64 - idx;
+        size_t i = 0;
         if (len >= part) {
             memcpy(ctx->buffer + idx, data, part);
             process_block(ctx, ctx->buffer);
-            for (size_t i = part; i + 63 < len; i += 64)
+            i = part;
+            for (; i + 63 < len; i += 64)
                 process_block(ctx, data + i);
             idx = 0;
         }
-        memcpy(ctx->buffer + idx, data + (len - (len - idx) % 64),
-               (len - idx) % 64);
+        size_t rem = len - i;
+        if (rem > 0)
+            memcpy(ctx->buffer + idx, data + i, rem);
     }
 
     static void final(SHA1_CTX* ctx, uint8_t out[20]) {

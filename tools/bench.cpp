@@ -1,10 +1,11 @@
-#include "quant/kernel.h"
+﻿#include "quant/kernel.h"
 #include "quant/model.h"
 #include "quant/tokenizer.h"
 #include "quant/generator.h"
 #include "quant/tensor.h"
 #include "quant/math.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -28,7 +29,7 @@ static BenchArgs parse_args(int argc, char** argv) {
             args.kernel = argv[++i];
             args.run_kernels = true;
         } else if (strcmp(argv[i], "--size") == 0 && i + 1 < argc) {
-            args.size = std::stoi(argv[++i]);
+            args.size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         } else if (strcmp(argv[i], "--inference") == 0) {
             args.run_inference = true;
         } else if (strcmp(argv[i], "--model") == 0 && i + 1 < argc) {

@@ -1,8 +1,9 @@
-#include "quant/model.h"
+﻿#include "quant/model.h"
 #include "quant/qwen35_tokenizer.h"
 #include "quant/generator.h"
 #include "quant/production_socket.h"
 #include "quant/http_parse.h"
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -51,17 +52,17 @@ static QuantServerArgs parse_args(int argc, char** argv) {
         else if (strcmp(argv[i], "--model-dir") == 0 && i + 1 < argc)
             args.model_dir = argv[++i];
         else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc)
-            args.port = std::stoi(argv[++i]);
+            args.port = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--workers") == 0 && i + 1 < argc)
-            args.num_workers = std::stoi(argv[++i]);
+            args.num_workers = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--max-tokens") == 0 && i + 1 < argc)
-            args.max_tokens = std::stoi(argv[++i]);
+            args.max_tokens = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--temperature") == 0 && i + 1 < argc)
-            args.temperature = std::stof(argv[++i]);
+            args.temperature = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--top-k") == 0 && i + 1 < argc)
-            args.top_k = std::stoi(argv[++i]);
+            args.top_k = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "--top-p") == 0 && i + 1 < argc)
-            args.top_p = std::stof(argv[++i]);
+            args.top_p = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_server --model model.quant [options]\n";
             std::cout << "Options:\n";

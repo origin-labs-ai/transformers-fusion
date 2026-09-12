@@ -25,18 +25,6 @@ BUILD_DIR="${1:-${PROJECT_ROOT}/build/Release}"
 OUTPUT_DIR="${2:-${PROJECT_ROOT}/release/v1.1.0}"
 VERSION="1.1.0"
 
-# Authenticode signing certificate (ORIGIN LABS).
-# P1 fix: the signing password MUST come from the environment — a hardcoded
-# default password in a tracked script is a leaked secret. Fail loud instead.
-AUTHENTICODE_CERT="${AUTHENTICODE_CERT:-dist/signing_cert.pfx}"
-if [[ -z "${AUTHENTICODE_PASSWORD:-}" ]]; then
-    error "AUTHENTICODE_PASSWORD is not set (refusing to sign with a default password)"
-fi
-
-# GPG key ID for signing
-GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSCENDER2026KEY}"
-GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -45,6 +33,20 @@ NC='\033[0m'
 log()   { echo -e "${GREEN}[SIGN]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+
+# Authenticode signing certificate (ORIGIN LABS).
+# P1 fix: the signing password MUST come from the environment — a hardcoded
+# default password in a tracked script is a leaked secret. Fail loud instead.
+# (BUGFIX: log/warn/error moved ABOVE first use — error() at old line 33 ran
+# before its definition and aborted the script on every invocation.)
+AUTHENTICODE_CERT="${AUTHENTICODE_CERT:-dist/signing_cert.pfx}"
+if [[ -z "${AUTHENTICODE_PASSWORD:-}" ]]; then
+    error "AUTHENTICODE_PASSWORD is not set (refusing to sign with a default password)"
+fi
+
+# GPG key ID for signing
+GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSCENDER2026KEY}"
+GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
 
 # ─── Validate build directory ───────────────────────────────────────
 

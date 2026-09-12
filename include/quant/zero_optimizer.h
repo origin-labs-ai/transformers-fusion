@@ -125,9 +125,24 @@ private:
     GradHook grad_hook_;
     ForwardPreHook forward_hook_;
 
-    // Shared-memory communication helpers (reuse DistributedContext pattern)
+    // Shared-memory communication helpers (reuse DistributedContext pattern).
+    // BUGFIX (bug census): the zero_barrier rendezvous state is shared here
+    // (was static thread_local = never rendezvous). One instance per process
+    // is the supported shape; concurrent instances share the statics, matching
+    // the pre-existing comm_buffer_ design.
+    // NOTE: comm_* are public so the TU-local zero_barrier() helper in
+    // zero_optimizer_core.cpp can rendezvous on them.
+public:
     static std::mutex comm_mutex_;
     static std::vector<float> comm_buffer_;
+    struct ZeroBarrierState {
+        std::mutex mtx;
+        std::condition_variable cv;
+        int count = 0;
+        int gen = 0;
+    };
+    static ZeroBarrierState comm_barrier_;
+private:
 
     // Partition logic
     bool is_param_owned(int global_idx) const;

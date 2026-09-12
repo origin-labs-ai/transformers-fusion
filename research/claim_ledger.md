@@ -2,34 +2,47 @@
 
 > Anti-fake audit register (TRANSCRIPT.md PART-C). Verdicts: VERIFIED / FAKE / MISSING / PARTIAL.
 > Rule: "DONE" only with evidence file:line + fresh command output. Zero assumed-DONE.
+>
+> **SCOPE — read this first.** Every *undated* table in this file (the C-series table below,
+> and the A-series follow-up table further down) is a **historical audit snapshot**, kept
+> verbatim on purpose. Many of those rows have since been re-verified, fixed, or retired in the
+> dated round sections; the ones already reconciled carry a `SUPERSEDED` marker, and more are
+> stale without one. **Do not quote an undated table as current state.** Current state = the
+> *last* dated round section in this file. When an undated row and a dated round disagree, the
+> dated round wins — and a dated round with a fresh command output beats both.
+>
+> Known-stale examples (verified against the tree on 2026-09-12): C-03 `init_prefetcher` **does**
+> exist (`src/model/moe_model.cpp:702`); A-01 BPW violations are **0** (`test_format_audit`
+> passes with `actual <= claim + 1e-3`); A-05 MLA was **purged** (see the C-16 retirement).
+> Reconciling the remaining undated rows is open work.
 
 | # | Claim | Verify How | Verdict | Evidence |
 |---|---|---|---|---|
 | C-01 | All 37 formats mapped to Q-series + GRP + QUAD/TWI MIX | types.h + format_registry.h enum audit; CSV formats vs registry | **VERIFIED (superseded spec)** | types.h:22-67 FORMAT_COUNT=105 v3 (no TWI by design); format_registry.h:165-187 full mapping; CSV 105 InNova names == registry; TWI removed: format_registry.cpp:73-76 empty |
 | C-02 | Adafactor configured across Trainer/MoETrainer/Autograd | grep adafactor in trainer_core.cpp, moe files, autograd_engine.cpp | **PARTIAL** | optimizer.cpp:333-398 real factorized 2nd moment; trainer_core.cpp:94-123 + moe_trainer.cpp:69-78 wired; AUTOGRAD leg MISSING (0 hits in autograd_*); zero direct tests |
-| C-03 | MoE 64% speedup verified (page-lock+async prefetch+sync bypass) | expert_prefetch.cpp impl review; benchmark repro | **PARTIAL** | expert_prefetch.cpp:89-106,268-356 pinned+async+LRU real + test_expert_prefetch.cpp:9-41; BUT init_prefetcher() declared moe_model.h:61-70 has NO impl → prefetcher never constructed → call site moe_model.cpp:211 dead; get_expert_weights() 0 external callers; 64% number has NO source (TRANSCRIPT:535 UNVERIFIED) |
+| C-03 | MoE 64% speedup verified (page-lock+async prefetch+sync bypass) | expert_prefetch.cpp impl review; benchmark repro | **PARTIAL** -> **SUPERSEDED - see the round sections below** | expert_prefetch.cpp:89-106,268-356 pinned+async+LRU real + test_expert_prefetch.cpp:9-41; BUT init_prefetcher() declared moe_model.h:61-70 has NO impl → prefetcher never constructed → call site moe_model.cpp:211 dead; get_expert_weights() 0 external callers; 64% number has NO source (TRANSCRIPT:535 UNVERIFIED) |
 | C-04 | CompressedReplayBuffer overflow fixed | continual_engine.cpp capacity math review | **VERIFIED** (code-level) | continual_engine.cpp:91-100 importance-based eviction at capacity; packing :20-76; NO test inserts past capacity (test_continual_anticollapse covers other buffer) |
 | C-05 | thread_local RNG entropy floor fixed | reward.h / trainer_rl.cpp RNG audit | **VERIFIED** (in scope) | trainer_rl.cpp:42 thread_local mt19937(random_device); reward.cpp:27 entropy-seeded; residual: seed-42 hardcoded in continual_engine.cpp:532, inference_opt.cpp:175, ddp.cpp:332, image.cpp:56 (out of claim scope) |
-| C-06 | Zero-dep dynamic loaders CPU/CUDA/Vulkan/Metal/SYCL/HIP verified | gpu_compute_*.cpp dlopen/load logic + fallback correctness | **PARTIAL** | loaders real: gpu_compute_cuda.cpp:707-722, vulkan:255-266, metal:166-170, sycl:204-216, hip:23-33; backend.cpp:1091-1111 probe+fallback tested test_gpu.cpp:22-25; runtime verification of all 6 on one OS impossible; only CUDA probe exercised |
-| C-07 | 42 tests pass | ctest full run on this machine | **FAKE (stale)** | suite is 56 tests (tests/CMakeLists.txt 27-227); last full run 2 FAILED (LastTestsFailed.log: test_quant_mix, test_fuzz_codec) and is stale vs post-v3 tree; fixed this session: test_format.cpp FORMAT_COUNT==105 green 0.15s, test_format_registry_complete twi-empty green 0.81s; fresh FULL green run still owed |
-| C-08 | 90+ build targets | cmake --build target count | **VERIFIED** | CMakeLists.txt: 26 libs (:38-509) + 14 tools (:336-388) + 12 benches (:432-468) + 4 sops/gle (:494-523) + 56 tests via add_subdirectory(:400) ≈ 111 targets materialized as .vcxproj in build/ |
+| C-06 | Zero-dep dynamic loaders CPU/CUDA/Vulkan/Metal/SYCL/HIP verified | gpu_compute_*.cpp dlopen/load logic + fallback correctness | **PARTIAL** (Vulkan leg now genuinely exercised, 2026-09-12) | loaders real: gpu_compute_cuda.cpp:707-722, vulkan:255-266, metal:166-170, sycl:204-216, hip:23-33; backend.cpp:1091-1111 probe+fallback tested test_gpu.cpp:22-25. Vulkan moved from "loader only" to real compute: with the T4 fixes in place the AMD Radeon(TM) iGPU runs relu/gelu/silu/add/mul end-to-end and all five match the CPU reference (relu 0, gelu 1.58e-07, silu 9.89e-08, add 0, mul 0 max-abs-err), and `test_gpu_capability` exercises the live dispatch by default. Still PARTIAL because CUDA/Metal/SYCL/HIP cannot be runtime-verified on this one Windows host (no CUDA device; Metal is non-Apple by construction) |
+| C-07 | 42 tests pass | ctest full run on this machine | **FAKE (stale)** -> **SUPERSEDED - see the round sections below** | suite is 56 tests (tests/CMakeLists.txt 27-227); last full run 2 FAILED (LastTestsFailed.log: test_quant_mix, test_fuzz_codec) and is stale vs post-v3 tree; fixed this session: test_format.cpp FORMAT_COUNT==105 green 0.15s, test_format_registry_complete twi-empty green 0.81s; fresh FULL green run still owed |
+| C-08 | 90+ build targets | cmake --build target count | **VERIFIED** -> **SUPERSEDED - see the round sections below** | CMakeLists.txt: 26 libs (:38-509) + 14 tools (:336-388) + 12 benches (:432-468) + 4 sops/gle (:494-523) + 56 tests via add_subdirectory(:400) ≈ 111 targets materialized as .vcxproj in build/ |
 | C-09 | RLL PPO implemented | clipped surrogate+GAE+KL verified in code | **VERIFIED** | src/trainer_rl.cpp:29-210 + tests/test_grpo.cpp |
 | C-10 | GRPO implemented | per-sample adv weighting fixed in-graph; MoE param collection added; was grad-scale hack before | **VERIFIED** (post-fix) | src/trainer_rl.cpp:533-640 + tests/test_grpo.cpp |
 | C-11 | Reward modeling integrated | reward.h forward + KL penalty wiring check | **VERIFIED** (zero test coverage flagged) | reward.cpp:46-82 MLP forward, :111-130 Bradley-Terry loss, :132-292 train_step; KL wired trainer_rl.cpp:131-158,243 (+DPO :382-385); RLHFPipeline consumes trainer_rl_ops.cpp:77,151,322; ZERO tests touch RewardModel/RLHFPipeline |
 | C-12 | EWC implemented | fisher information matrix code search | **VERIFIED** (behaviorally untested) | continual_engine.cpp:232-266 ECCState fisher EMA+anchor+regularize; trainer_core.cpp:388-406 gradient injection, :414-432 on_step, :451-458 loss term; API trainer_core.cpp:797,829; no test exercises ECCState path |
 | C-13 | LoRA/DoRA adapters | fine_tuning.h / finetune.h rank-delta audit | **PARTIAL** | LoRA-equivalent REAL+tested: fine_tuning.h:131-195 RankAdapterEngine, fine_tuning.cpp:542-652 in-graph ΔW=B·A, test_fine_tuning.cpp:104-122; DoRA MISSING (0 code hits; CHANGELOG admits removed 0.1.02); name is QUANT-Rank not LoRA |
 | C-14 | Flash Attention present | flash_attention.h impl vs declaration reality | **VERIFIED** | flash_attention.cpp:38-191 tiled online softmax (rescale :124-126, accumulate :128-164); dispatched transformer.cpp:322-331 for seq>64; numeric parity <1e-3 vs naive: test_protected.cpp:118-173 |
-| C-15 | Speculative decoding works | speculative_decoder.cpp end-to-end trace | **PARTIAL** | Variant A unusable: DraftModel/TargetModel pure-virtual with 0 impls tree-wide; KV checkpoint/rewind FAKE (speculative_decoder.cpp:67-77 rewind never called); Variant B acceptance bug: inference_opt.cpp:240 p_draft=1/vocab hardcoded → accepts everything (verify_tokens correct but uncalled :145-158); SpeculativeDecoderV2 ghost decl inference_opt.h:262-298 zero defs; zero consumers; test sham (test_inference_opt.cpp:18-29 vocab equality only) |
-| C-16 | MLA (DeepSeek V4 Flash) support | search multi-head latent attention / kv compression | **PARTIAL** | projection algebra real: mla_attention.cpp:16-103 + hybrid_block.cpp:12-21 wiring + test_mla.cpp exists; BUT forward delegates to full-recompute naive — latent NEVER cached (mla_attention.h:47-51 discards cache), "savings" are static formulas :105-106; T3 finiteness-only (test_mla.cpp:41) |
-| C-17 | MTP (multi-token prediction) | mtp head + loss search | **PARTIAL** | heads allocated model.cpp:25-28, mtp_forward :395-420, mtp_loss :422-435 + trainer_core.cpp:742 + MTPHeadTrainer adapters/src/mtp_head_trainer.cpp:53-321; ZERO call sites (no loop invokes), ZERO tests |
+| C-15 | Speculative decoding works | speculative_decoder.cpp end-to-end trace | **PARTIAL** -> **SUPERSEDED - see the round sections below** | Variant A unusable: DraftModel/TargetModel pure-virtual with 0 impls tree-wide; KV checkpoint/rewind FAKE (speculative_decoder.cpp:67-77 rewind never called); Variant B acceptance bug: inference_opt.cpp:240 p_draft=1/vocab hardcoded → accepts everything (verify_tokens correct but uncalled :145-158); SpeculativeDecoderV2 ghost decl inference_opt.h:262-298 zero defs; zero consumers; test sham (test_inference_opt.cpp:18-29 vocab equality only) |
+| C-16 | MLA (DeepSeek V4 Flash) support | search multi-head latent attention / kv compression | **PARTIAL** -> **SUPERSEDED - see the round sections below** | projection algebra real: mla_attention.cpp:16-103 + hybrid_block.cpp:12-21 wiring + test_mla.cpp exists; BUT forward delegates to full-recompute naive — latent NEVER cached (mla_attention.h:47-51 discards cache), "savings" are static formulas :105-106; T3 finiteness-only (test_mla.cpp:41) |
+| C-17 | MTP (multi-token prediction) | mtp head + loss search | **PARTIAL** -> **SUPERSEDED - see the round sections below** | heads allocated model.cpp:25-28, mtp_forward :395-420, mtp_loss :422-435 + trainer_core.cpp:742 + MTPHeadTrainer adapters/src/mtp_head_trainer.cpp:53-321; ZERO call sites (no loop invokes), ZERO tests |
 | C-18 | FP8 E4M3/E5M2 support | fp8 type/conversion kernels search | **VERIFIED** | math.cpp:564-646 bit-exact kernels+GEMM, AVX2 math_avx2.cpp:660-668; quant_engines_fp.cpp:17-280 tensor APIs; consumers kv_cache.cpp:15-36,137-139, inference_opt.cpp:690-765, ddp.cpp:216-242; tests test_quant_engines.cpp:107-171,239-249 roundtrip+gemm parity |
-| C-19 | Frontier-MoE aux load-balance loss | auxiliary loss term in moe_trainer/moe_model | **PARTIAL** | LB/z-loss real per-forward: moe_trainer.cpp:269-276,292-295 from moe_variants.cpp:140 etc.; BUT aux_loss fed DUMMY {1,1} tensors moe_trainer.cpp:285-287 (constant ≈1.0), f_i formula wrong (:477 unnormalized exps vs own Switch comment :451-455), gradient coupling = scalar overwrite hack :300-301; tests shallow |
+| C-19 | Frontier-MoE aux load-balance loss | auxiliary loss term in moe_trainer/moe_model | **PARTIAL** -> **SUPERSEDED - see the round sections below** | LB/z-loss real per-forward: moe_trainer.cpp:269-276,292-295 from moe_variants.cpp:140 etc.; BUT aux_loss fed DUMMY {1,1} tensors moe_trainer.cpp:285-287 (constant ≈1.0), f_i formula wrong (:477 unnormalized exps vs own Switch comment :451-455), gradient coupling = scalar overwrite hack :300-301; tests shallow |
 | C-20 | Lossless KV cache offload (RAM/NVMe) | kv_cache offload async pipeline search | **PARTIAL** | lossless fp32 disk paging real: kv_cache.cpp:443-463 evict_to_disk, :466-497 load_from_disk, LRU :475-514, RAM budget ctor kv_cache.h:76-78; round-trip tested paged_kv_4m_test.cpp:65-74; NO async pipeline (only 2 mutexes :113,:178, sync I/O hot path), NO NVMe-specific tiering |
-| C-21 | YARN/NTK long-context scaling | rope scaling interpolation search | **PARTIAL** | Linear/NTK/YARN freq math real: transformer.cpp:155-175 wired into attention :236-244, enum types.h:15; BUT yarn_attn_factor/mscale DISCARDED via (void) :138,176 → attention-scale correction absent; ZERO tests (docs/GOOD_FIRST_ISSUES.md:49 still open ADV-07) |
-| C-22 | DDP/FSDP/ZeRO functional | distributed.cpp single-node-only note audit | **PARTIAL** | research/claims/audit_infra.md + src/distributed.cpp:26-53,106-141,177-179,212-215,276 + src/fsdp.cpp:49-186,229-273,508-543; shared-memory barrier deadlocks for ws>1, NCCL MISSING, zero tests/consumers |
-| C-23 | Multimodal (vision/audio/video/OCR) working | multimodal*.cpp real pipeline vs skeleton | **PARTIAL** | research/claims/audit_infra.md + src/multimodal.cpp:18-118,202-230,400-414,459,674-682 + src/multimodal_fusion.cpp:43-101; T2I UNet proxy, encode_image returns constants, tests only all_finite + 5× TEST_CHECK(true) |
-| C-24 | HTTP server production-ready | quant_server.cpp hardening audit (B-4) | **PARTIAL** | research/claims/audit_infra.md + tools/quant_server.cpp:489-524,209-215; L017 caps present (8KB→414,64KB→413) but status-text 413/414="Unknown", single-recv body no Content-Length |
-| C-25 | Charts auto-generated from measured data | scripts/plot_comparison_charts.py input source check | **FIXED → VERIFIED** | tools/generate_comparison_visuals.cpp REWRITTEN to parse bench_format_comparison.csv (0 hardcoded numbers; errors out if CSV missing) and emit docs/COMPARISON_CHARTS.md with real SVGs + computed head-to-head table; verified run: "224 CSV rows read"; faithful GGUF Q4_K ref added at exact 4.5 BPW (1152 bits/superblock) |
+| C-21 | YARN/NTK long-context scaling | rope scaling interpolation search | **PARTIAL** -> **SUPERSEDED - see the round sections below** | Linear/NTK/YARN freq math real: transformer.cpp:155-175 wired into attention :236-244, enum types.h:15; BUT yarn_attn_factor/mscale DISCARDED via (void) :138,176 → attention-scale correction absent; ZERO tests (docs/GOOD_FIRST_ISSUES.md:49 still open ADV-07) |
+| C-22 | DDP/FSDP/ZeRO functional | distributed.cpp single-node-only note audit | **PARTIAL** -> **SUPERSEDED - see the round sections below** | research/claims/audit_infra.md + src/distributed.cpp:26-53,106-141,177-179,212-215,276 + src/fsdp.cpp:49-186,229-273,508-543; shared-memory barrier deadlocks for ws>1, NCCL MISSING, zero tests/consumers |
+| C-23 | Multimodal (vision/audio/video/OCR) working | multimodal*.cpp real pipeline vs skeleton | **PARTIAL** -> **SUPERSEDED - see the round sections below** | research/claims/audit_infra.md + src/multimodal.cpp:18-118,202-230,400-414,459,674-682 + src/multimodal_fusion.cpp:43-101; T2I UNet proxy, encode_image returns constants, tests only all_finite + 5× TEST_CHECK(true) |
+| C-24 | HTTP server production-ready | quant_server.cpp hardening audit (B-4) | **PARTIAL** -> **SUPERSEDED - see the round sections below** | research/claims/audit_infra.md + tools/quant_server.cpp:489-524,209-215; L017 caps present (8KB→414,64KB→413) but status-text 413/414="Unknown", single-recv body no Content-Length |
+| C-25 | Charts auto-generated from measured data | scripts/plot_comparison_charts.py input source check | **FIXED → VERIFIED** -> **SUPERSEDED - see the round sections below** | tools/generate_comparison_visuals.cpp REWRITTEN to parse bench_format_comparison.csv (0 hardcoded numbers; errors out if CSV missing) and emit docs/COMPARISON_CHARTS.md with real SVGs + computed head-to-head table; verified run: "224 CSV rows read"; faithful GGUF Q4_K ref added at exact 4.5 BPW (1152 bits/superblock) |
 
 ## FULL AUDIT ADDENDUM — 2026-08-26 (research/audit_full_20260825.md)
 
@@ -37,23 +50,47 @@ Fresh zero-trust audit (solo + fresh build + full ctest + probe test). Key re-ve
 
 | # | Claim | Fresh Verdict | Evidence |
 |---|---|---|---|
-| A-01 | BPW ironclad respected | **FAKE — 31 violations** | tests/test_format_audit.cpp probe output: Q2_G 2.625 vs 2.0 … MXQ_12.5_G 12.66 vs 12.5; TRANSCRIPT PART-AD "zero violations" contradicted by its own tables. OWNER DECISION queued |
-| A-02 | Q8_G beats GGUF Q8_0 (W2, CSV) | **NOT REPRODUCIBLE** | bench tool stale post-v3 (TWI rows, 43-format list); fresh run 50.23 vs speed1 CSV 58.88 vs direct probe 46.41 @σ0.1; harness needs migration before any W-claim re-measurement |
-| A-03 | C-03 prefetcher | CONFIRMED PARTIAL→worse: init_prefetcher now has ZERO definition AND zero call-sites | moe_model.h:65 only hit tree-wide |
-| A-04 | C-15 spec-decode | CONFIRMED PARTIAL (p_draft=1/vocab :240; V2 ghost decl inference_opt.h:262; rewind_kv zero callers) | grep+read verified |
-| A-05 | C-16 MLA cache | CONFIRMED (void)cache discard | mla_attention.h:48-49 |
-| A-06 | C-17 MTP | CONFIRMED zero callers | model.cpp defs; trainer_core.cpp:742 wrapper unused |
-| A-07 | C-19 aux loss | CONFIRMED dummy tensors fed | moe_trainer.cpp:281-295 |
-| A-08 | C-22/C-23/C-24 | UNCHANGED from ledger verdicts (no new work) | — |
-| A-09 | C-07 tests pass | UPDATED: was 7 fails on stale binaries; after auditor's 3 build-breaker fixes + 6 test migrations → 52/56-class pass; 3 remaining documented in workbench Blockers | /tmp/innova_ctest9.log |
-| A-10 | MoE routing grad chain | CONFIRMED broken: moe_variants.cpp (1730L) has zero autograd references | grep |
-| A-11 | DPO/PPO-policy training | CONFIRMED shells: DPO steps optimizer without ever producing grads (:342-394); PPO trains critic head only (:160-297) | read verified |
-| A-12 | Continuous batching mask | CONFIRMED built-then-unused | inference_opt.cpp:333-334 |
-| A-13 | encode_image {30000} / AGI 32 templates / YARN discard / loss-scale-128x | First three CONFIRMED alive (multimodal.cpp:674-676; agi_flywheel.cpp:808-840; transformer.cpp:138,166,176); loss-scale NOT reproduced — current math correct | grep+read |
+| A-01 | BPW ironclad respected | **FAKE — 31 violations** | tests/test_format_audit.cpp probe output: Q2_G 2.625 vs 2.0 … MXQ_12.5_G 12.66 vs 12.5; TRANSCRIPT PART-AD "zero violations" contradicted by its own tables. OWNER DECISION queued -> **SUPERSEDED - see the round sections below** |
+| A-02 | Q8_G beats GGUF Q8_0 (W2, CSV) | **NOT REPRODUCIBLE** | bench tool stale post-v3 (TWI rows, 43-format list); fresh run 50.23 vs speed1 CSV 58.88 vs direct probe 46.41 @σ0.1; harness needs migration before any W-claim re-measurement -> **SUPERSEDED - see the round sections below** |
+| A-03 | C-03 prefetcher | CONFIRMED PARTIAL→worse: init_prefetcher now has ZERO definition AND zero call-sites | moe_model.h:65 only hit tree-wide -> **SUPERSEDED - see the round sections below** |
+| A-04 | C-15 spec-decode | CONFIRMED PARTIAL (p_draft=1/vocab :240; V2 ghost decl inference_opt.h:262; rewind_kv zero callers) | grep+read verified -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-05 | C-16 MLA cache | CONFIRMED (void)cache discard | mla_attention.h:48-49 -> **SUPERSEDED - see the round sections below** |
+| A-06 | C-17 MTP | CONFIRMED zero callers | model.cpp defs; trainer_core.cpp:742 wrapper unused -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-07 | C-19 aux loss | CONFIRMED dummy tensors fed | moe_trainer.cpp:281-295 -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-08 | C-22/C-23/C-24 | UNCHANGED from ledger verdicts (no new work) | — -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-09 | C-07 tests pass | UPDATED: was 7 fails on stale binaries; after auditor's 3 build-breaker fixes + 6 test migrations → 52/56-class pass; 3 remaining documented in workbench Blockers | /tmp/innova_ctest9.log -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-10 | MoE routing grad chain | CONFIRMED broken: moe_variants.cpp (1730L) has zero autograd references | grep -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-11 | DPO/PPO-policy training | CONFIRMED shells: DPO steps optimizer without ever producing grads (:342-394); PPO trains critic head only (:160-297) | read verified -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-12 | Continuous batching mask | CONFIRMED built-then-unused | inference_opt.cpp:333-334 -> **SUPERSEDED (re-verified 2026-09-12)** |
+| A-13 | encode_image {30000} / AGI 32 templates / YARN discard / loss-scale-128x | First three CONFIRMED alive (multimodal.cpp:674-676; agi_flywheel.cpp:808-840; transformer.cpp:138,166,176); loss-scale NOT reproduced — current math correct | grep+read -> **SUPERSEDED (re-verified 2026-09-12)** |
 
 Build-truth fixes applied by auditor (uncommitted): see audit file §A/§D —
 bpw_150 CMake ref, tensor→AutogradEngine layering hook, orphan hybrid_expert,
 codebook magics, reader format-id coercion, paged-KV append extent.
+
+### A-table reconciliation — 2026-09-12 (every row re-checked against the tree)
+
+All thirteen A-rows were re-verified against the current source. **Every one is stale** — the
+A-table is a 2026-08-26 snapshot and nothing in it survived. Evidence per row:
+
+| Row | A-table said | Tree says now |
+|---|---|---|
+| A-01 | 31 BPW violations | **0** — `test_format_audit` passes (`actual <= claim + 1e-3`) |
+| A-02 | Q8_G W2 not reproducible | bench harness migrated; fresh v3 CSV re-measured in the 2026-09-11 round |
+| A-03 | `init_prefetcher` zero definition, zero call-sites | **defined** `src/model/moe_model.cpp:702` (+ `wire_prefetcher_sources`) |
+| A-04 | `p_draft = 1/vocab` at `inference_opt.cpp:240`; `rewind_kv` zero callers | `p_draft` gone from `inference_opt.cpp`; `rewind_kv` **has** a caller (`speculative_decoder.cpp:122-123`) |
+| A-05 | MLA cache discarded | MLA **purged** (C-16 retirement) |
+| A-06 | MTP zero callers | **wired** — `trainer_core.cpp:216,242,625-629` (`mtp_loss_weight_`) |
+| A-07 | aux loss fed dummy tensors | no dummy `{1,1}` tensors remain in `moe_trainer.cpp` |
+| A-08 | C-22/C-23/C-24 unchanged | all three closed in rounds 7-8 |
+| A-09 | 52/56-class pass | **72/72** (`ctest -C Release`) |
+| A-10 | `moe_variants.cpp` zero autograd references | **30** autograd/backward/grad references |
+| A-11 | DPO shells, PPO critic-only | DPO **wired** — `trainer_rl_ops.cpp:419` calls `dpo.train_step(chosen, rejected, ...)` |
+| A-12 | continuous-batching mask built-then-unused | no `mask` symbol remains in `inference_opt.cpp` |
+| A-13 | `encode_image {30000}`, AGI 32 templates, YARN discard | `encode_image` is content-dependent (patch-mean hash, `multimodal.cpp:882-901`); YARN fixed (C-21) |
+
+**Nothing in the A-table should be cited.** Reconciling the undated C-table rows that are still
+unmarked (C-02, C-04, C-05, C-09..C-14, C-18, C-20) is the remaining open bookkeeping.
 
 ## FAKE → Rebuild Backlog Map
 
@@ -213,7 +250,7 @@ intact); (6) `LatentKVAttention` is standalone (not yet spliced into
 | P0-7 | Unchecked checkpoint/expert/reward fread (`moe_enhance.cpp:177-188`, `trainer_core.cpp:899-930`, `reward.cpp:320-345`): silent corrupt resume | All reads validated; corrupt file keeps in-memory state (reward: temp-load then commit) |
 | P0-8 | `IGPUSharedBackend::allocate` aliasing (same base ptr every call) + `memory_free` lying | Bump allocator w/ 64B align + `heap_used` cursor; honest free-bytes |
 | P0-9 | `MultiGPUManager::detect_devices` pushed 8 phantom 8GiB GPUs | Only verified devices reported (CPU until real EnumAdapters lands) |
-| T4 | `test_gpu_capability` SEGFAULT: AMD iGPU reports Vulkan INITIALIZED+compute_ready but real relu dispatch kills the driver (exit -1073741819); probe isolated to `be2->relu` | Live-dispatch leg opt-in behind `TRANSCENDER_TEST_LIVE_GPU=1` (default: honest skip + fail-loud asserts); probe PASSED; full suite green |
+| T4 | `test_gpu_capability` SEGFAULT: AMD iGPU reports Vulkan INITIALIZED+compute_ready but real relu dispatch kills the driver (exit -1073741819); probe isolated to `be2->relu` | **ROOT-CAUSED + FIXED 2026-09-12** — the 2026-09-11 "driver/shader-binary defect" verdict was WRONG; all three causes were in our own Vulkan layer: (1) all 10 embedded SPIR-V blobs were malformed (instruction stream broke at word 13, `OpExtInstImport` decoded as `b'CLSLr'`) and hung `vkCreateShaderModule` — regenerated from real GLSL via `@webgpu/glslang`; (2) `VkWriteDescriptorSet` in `include/quant/vulkan_types.h` omitted `pImageInfo` (48 bytes vs 64) so the driver read `pBufferInfo` past the end of the struct — segfault location varied run to run; (3) `VK_PIPELINE_BIND_POINT_COMPUTE` was 0, which is **GRAPHICS**, so compute pipelines were bound at the wrong bind point — plus 7 wrong sType values and `ssi.sType=0x5` (→18). Live leg now runs **by default** and passes; out-of-tree probe on the AMD iGPU: relu 0, gelu 1.58e-07, silu 9.89e-08, add 0, mul 0 (max-abs-err vs CPU). Escape hatch is now `TRANSCENDER_TEST_SKIP_LIVE_GPU=1` (opt-out), replacing the old opt-in var |
 | P1-1 | `scripts/sign_release.sh` hardcoded `AUTHENTICODE_PASSWORD` default | Env-required, fail-loud when unset |
 | P1-2 | `tools/run_tests.ps1` / `run_all_tests.ps1` hardcoded dev-machine path (+typo), stale 16/16, no exit-1 | Derive from `$PSScriptRoot`, dynamic count, exit codes |
 | P1-3 | `scripts/build_moe_gs{,_full}.bat` referenced `src/*.cpp` paths that no longer exist | Deleted (CMake targets are the build) |
@@ -296,3 +333,128 @@ The new `test_all` subsystem-5 (single-host shared-context all_reduce) caught **
 |---|---|---|
 | C-23 multimodal | **SCOPED: pipelines REAL, generative quality PLACEHOLDER.** Encoders/tokenizers/fusion real + tested (23/23 encoders, 18+ fusion asserts); `encode_image`/`encode_audio` content-dependent (bit-mix patch hash, `multimodal.cpp:882-925`) — old "{30000} constants" wound is FIXED. T2I DDIM pipeline structurally real (schedule + conditioning + decode, `:595-694`) but noise predictor is a local-smoothing proxy, not a trained UNet — no quality claim stands. New `test_multimodal.cpp` MM9 pins the honest contract: shape + finite + deterministic + prompt-sensitive (22/22 pass) | `test_multimodal` 22/22, `test_multimodal_encoders` 23/23 |
 | C-24 server | **VERIFIED (live proof).** Was PARTIAL (413/414 Unknown, single-recv). Fixed round-1 (C-24) + P0 (stoll/stoi/race). New live smoke over a REAL socket on an ephemeral port: `GET /health` → 200 OK + status, 9KB request-line → **414 URI Too Long**, unknown path → 404, clean stop — all green | `test_server_contract` **42/42, exit 0** (was 35/35) |
+
+## Round 9 — 2026-09-12 (Adafactor silently no-ops on every non-2-D parameter)
+
+Found while reconciling the undated tables. C-02's original complaint ("AUTOGRAD leg MISSING")
+was a **false alarm** — the optimizer is owned by `Trainer`/`UnifiedTrainer`, not by the autograd
+engine, and Adafactor *is* wired there (`trainer_core.cpp:1258-1266` constructs `Adafactor` and
+compiles the trainer with it; `optimizer.cpp:333-398` is a real factorized implementation with
+relative step + update clipping). The real defect was one line down.
+
+| # | Bug | Fix | Evidence |
+|---|---|---|---|
+| C-02-real | `Adafactor::step()` sized its column factor with `param->dim(1)` unconditionally. `Shape` zero-fills `dims` beyond `rank`, so a **rank-1** parameter (any bias) gave `d1 == 0`; the row loop then computed `row_sum / (float)d1` = `0.0f/0.0f` = **NaN**, `r_mean` came out NaN, and the existing NaN guard hit `continue`. Net effect: **Adafactor silently did nothing** for every parameter that was not exactly 2-D — all biases and all conv weights never trained. Rank ≥ 3 was wrong for the same reason (`d0*d1 != numel`, so the row/col indexing was garbage). No crash, no warning, no failing test: `test_optimizer.cpp` only ever exercised a 4x4 tensor. | `src/trainer/optimizer.cpp`: factorization is now gated on `param->rank() == 2`; anything else is treated as a single column (`d0 = numel`, `d1 = 1`), i.e. the standard non-factorized Adafactor fallback | Pre-fix (reverted one line, rebuilt, ran): `adafactor 1-D bias: loss 4.000000 -> 4.000000` **FAIL**, `adafactor 3-D conv: loss 4.000000 -> 4.000000` **FAIL**, `60 tests, 2 failures`. Post-fix: `1-D bias 4.000000 -> 3.924428`, `3-D conv 4.000000 -> 3.924428`, `60 tests, 0 failures` |
+| T14 | No regression coverage for non-2-D parameters | New `test_adafactor_rank_safety()` in `tests/test_optimizer.cpp` runs the converging quadratic on `Shape{8}` and `Shape{2,2,2}` | `test_optimizer` 60/60, exit 0 |
+
+Latent hazard noted but **not** observed: with `d1 == 0` the update loop would also evaluate
+`i / d1`, an integer division by zero. It never trapped only because the NaN guard bailed first —
+the same line is now unreachable for non-2-D shapes.
+
+Also worth knowing: `Tensor::dim(i)` is `noexcept` and does **no** bounds check
+(`tensor.h:38`), so it silently returns the zero-filled slot instead of failing. Any new code
+that indexes `dim()` past `rank()` will get a plausible-looking 0. Prefer `rank()`-gated access.
+
+## Round 10 — 2026-09-12 (C-13: DoRA implemented)
+
+C-13 was PARTIAL for one reason: the LoRA-equivalent path (`RankAdapterEngine`) was real and
+tested, but **DoRA did not exist** (zero `dora` hits anywhere in `src/` or `include/`). That is
+now implemented.
+
+| # | Item | State |
+|---|---|---|
+| C-13 | DoRA (weight-decomposed low-rank adaptation) | **IMPLEMENTED + VERIFIED.** `W' = m ⊙ (W0 + B·A) / ‖W0 + B·A‖_c`, with `m` a trainable per-output magnitude vector initialised to the base column norms `‖W0[:,o]‖_c`. Opt-in via `RankAdapterConfig::use_dora`. `LayerAdapter` gained a `magnitude` tensor; `merge_into_base()` renormalises when DoRA is on and is unchanged when it is off; `dora_param_count()` reports the magnitude scalars; `.nrad` gained **version 2** (v1 files still load, v2 carries the magnitude as raw fp32 because it is a norm-like quantity that must survive exactly) |
+| C-13 magnitude training | `RankAdapterEngine::magnitude_step(dL_dW, lr)` applies the exact analytic gradient `dL/dm[o] = Σ_k dL/dW'[k,o] · V[k,o] / ‖V[:,o]‖` at the current factors. It is an **explicit call**, not folded into the autograd graph, because the engine has no norm/div op to carry the renormalisation through. That gap is stated here rather than papered over |
+| T15 | No DoRA coverage | New DoRA block in `tests/test_fine_tuning.cpp` pinning the three defining invariants |
+
+Verification (`test_fine_tuning`, 30/30, exit 0) — the numbers that matter:
+
+| Invariant | Measured |
+|---|---|
+| `m` initialised to `‖W0[:,o]‖_c` | max abs err **2.94e-08** |
+| Zero-delta merge reproduces the base exactly (i.e. DoRA reduces to LoRA when `m` is frozen) | max abs diff **1.49e-08** |
+| `magnitude_step` matches the analytic gradient | max abs err **3.03e-08** |
+| **After a real merge, every output column has L2 norm exactly `m[o]`** — this is DoRA's defining property | max abs err **7.82e-09** |
+
+Note for future rounds: `test_fine_tuning` now runs 30 tests (was 29).
+
+## Round 11 — 2026-09-12 (CRITICAL: 26 test files were passing vacuously in Release)
+
+Found while adding the C-20 async test. **This is the most serious finding in the ledger**, because
+it invalidates the evidence value of every prior "ctest green" claim.
+
+**What was wrong.** `CMAKE_CXX_FLAGS_RELEASE` is CMake's MSVC default `/O2 /Ob2 /DNDEBUG`
+(verified in `build/CMakeCache.txt`). Every test that checked anything with bare `assert()` was
+therefore compiled with `assert(expr)` expanding to `((void)0)` — the checks were **not in the
+binary at all**. 27 test files used `assert()`; **zero** of them had an `#undef NDEBUG` guard.
+26 of those files contained **no `TEST_CHECK` at all**, so they had no other checking mechanism:
+they could not fail, no matter what the code did.
+
+| Measure | Value |
+|---|---|
+| Test files using `assert()` with no NDEBUG guard | **27** |
+| Of those, containing **no** live check (`TEST_CHECK`) — i.e. fully vacuous | **26** |
+| `assert()` calls compiled out of the Release build | **318** |
+| Proof | `build/CMakeCache.txt`: `CMAKE_CXX_FLAGS_RELEASE:STRING=/O2 /Ob2 /DNDEBUG`; the Release binaries contained **no** `_wassert` import and no assertion machinery |
+
+The vacuous set included `test_paged_kv_4m` (86 asserts — the very file cited as C-20's round-trip
+evidence), `test_format` (40), `test_kv_cache_quant4` (28), `test_transformer` (27),
+`test_sampler` (23), `test_tokenizer` (18), `test_ops` (14), `test_grp_quality_proof` (11),
+`test_format_registry_complete` (10), `test_inference_opt` (10), `test_ste_codebook` (10), and
+14 more.
+
+**Fix.** `#undef NDEBUG` inserted ahead of the first include in each affected file, with a comment
+explaining why. `assert` is a macro whose definition is fixed at the point `<cassert>` is included,
+so this restores the checks without touching build flags.
+
+| Check | Result |
+|---|---|
+| `#undef NDEBUG` actually works under `/DNDEBUG` | Isolated probe: `assert(1==2)` compiled with `/O2 /MD /DNDEBUG` **aborts** (exit 2) |
+| Asserts live again | 25 of 25 real-assert test binaries now import `_wassert` (the 2 remaining files' only "assert" hits were in comments — `test_all.cpp`/`test_trainer.cpp` already used `SYS_CHECK`; the prepend was reverted there) |
+| **Do the newly-live asserts pass?** | **Yes.** Full suite with all 318 asserts executing: **71/72**, the single failure being the known agent-sandbox artifact (`test_sha256_corrupt`, 13/13 outside). Nothing was hiding behind the dead asserts |
+| Non-test impact | none — `bench_hardware` (`tests/test_bench.cpp`) also gained a live assert |
+
+⚠️ **Consequence for every earlier round in this file:** "ctest green" before 2026-09-12 meant
+*the `TEST_CHECK`-based suites* were green. The 26 assert-only suites proved nothing. Any claim
+whose only evidence was one of those files must be re-derived from a live check — the re-run above
+shows they do pass, but that had never actually been measured until now.
+
+## Round 12 — 2026-09-12 (C-20: real async KV-cache offload pipeline)
+
+| # | Item | State |
+|---|---|---|
+| C-20 | Lossless KV offload had fp32 disk paging + LRU but **no async pipeline** — `append()` called `load_from_disk()` inline and blocked the attention path on `fread` | **IMPLEMENTED.** A background worker thread now owns every block load. Callers use `prefetch(layer, block_id)` (fire-and-forget), `prefetch_range(layer, start, end)` (warm ahead of an access) and `ensure_resident(layer, block_id, timeout_ms)` (correctness path — waits for that one block). `append()` goes through `ensure_resident()`, so the hot path only pays a wait when no prefetch got there first. Introspection: `async_worker_running()`, `async_loads_completed()`, `async_queue_depth()`. The worker drains on destruction (no detached threads) |
+| Threading | The cache keeps its original single-caller contract; the worker never touches a block while the caller can reach it, because the caller waits for the in-flight request to complete. Bookkeeping is guarded by one mutex + two condition variables (`async_mtx_`, `async_cv_` to wake the worker, `async_done_cv_` to wake waiters). A failed load still leaves `on_disk == true`, and `ensure_resident()` re-checks the block rather than trusting the request to have drained |
+| T16 | No coverage | New async block in `tests/paged_kv_4m_test.cpp` (S15/S16) |
+
+Verification — `test_paged_kv_4m`, exit 0, with asserts live (see round 11):
+
+| Check | Result |
+|---|---|
+| Worker started, queue empty at rest | `async_worker_running()`, `async_queue_depth() == 0` |
+| `prefetch_range()` drives a real load off the calling thread | queue drains, `async_loads_completed()` increments, `num_disk_blocks()` 2 → 1, memory back to exactly one block |
+| Contents survive the async reload | byte-for-byte match against the original `kd` |
+| `append()` rides the pipeline | parked block returns via `ensure_resident()`, `num_disk_blocks()` 2 → 1, data intact |
+| Console evidence | `S15 async` → `S16 async ok, loads=2` |
+
+Still NOT done for C-20 (stated, not hidden): NVMe-specific tiering (the pipeline is
+device-agnostic), and eviction is still synchronous on the alloc path — only the blocking **load**
+was moved off the attention path.
+
+## 1000-bug sweep round 1 — 2026-09-12 (census: ~230 defects + 88 warnings)
+
+Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tests-docs).
+25 test files already carry `#undef NDEBUG` (round 11). Fixed this round (rebuild clean, 72/72):
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| M1 | SHA1 `update()` short-update OOB read + wrong digest (`sha1.h:65-78`) | Correct incremental fill/remainder logic |
+| M2 | `convert.cpp` GGUF: `n_dims` stack overflow, tail-block 32-float overwrite ×3, unchecked reads ×6, `tellg` -1 huge-alloc | `n_dims<=4` gate, count-bounded dequant, stream checks, 1MiB name cap |
+| C1 | `PluginManager::hot_reload` self-deadlock (lock + `load()` re-lock) | Split locked-erase / unlocked-load |
+| C2 | Plugin callbacks under `plugins_mutex_` (reentrancy deadlock + stalls) | Snapshot-then-dispatch ×3 handlers |
+| C3 | `ParameterServer` ABBA deadlock (`apply_stale` vs `process_gradient`) + `flush_async` self-deadlock | Global lock order (global→stale); drain-then-process |
+| C4 | `zero_barrier` thread_local never-rendezvous + reset-counter flaw | Shared `comm_barrier_` with generation |
+| T1 | All 7 tools' CLI `stoi/stof/stoll` uncaught terminate | `detail/cli_parse.h` + exit(2) w/ message (verified live: `--batch-size abc` → exit 2) |
+| S1 | `sign_release.sh` `error()` used before definition (aborted every run) | Helpers moved above first use |
+| T2 | Flaky fixed sleeps (prefetch 20ms, server 400ms) | Poll-with-deadline |
+| Warnings | 86× C4244 + C4267 + C4018 inventoried (mostly `int64_t`→`int` narrowing in GPU/bench code; pre-existing, no errors) | Full rebuild: 0 errors |
