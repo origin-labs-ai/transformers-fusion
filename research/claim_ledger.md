@@ -476,3 +476,11 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | K5 | **Nested-lock abort (0xc0000409) in J5-eviction_stress**: `load_from_disk` → `evict_lru` → `evict_to_disk` re-locked the non-recursive `async_mtx_` (my round-3 locks exposed it) | Split `*_locked` internals (lock assumed) + public locking wrappers; all 17 internal call-sites rerouted; decls in `kv_cache.h:172-181` |
 | S2 | SYCL 11× silent `return` on uninitialized (hid failure) | All → `throw_no_sycl_kernel` fail-loud |
 | Suite | Rebuild 0 errors; J5-eviction_stress ok; full ctest green | 72/72 |
+
+## 1000-bug sweep round 4 — 2026-09-12 (RPC scalars + C4244 CUDA wave)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| R1-R3 | RPC silently dropped `alpha`/`beta` (gemm), `axis` (softmax), `eps` (rms_norm) off-wire — callers got wrong results with no error | Non-default scalars now throw until the protocol carries them |
+| W1 | `gpu_compute_cuda.cpp` ~30× C4244 (`int64_t`→`uint32_t`/grid-dims, silent 4G wrap) | `checked_u32()` range-guarded narrow; file now **0 warnings** |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
