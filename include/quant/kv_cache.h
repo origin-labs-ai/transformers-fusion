@@ -6,6 +6,10 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <deque>
+#include <set>
+#include <thread>
+#include <condition_variable>
 
 namespace quant {
 
@@ -95,6 +99,34 @@ public:
     void flush_to_disk();
     void load_from_disk();
     void clear();
+    // Drop all resident blocks to disk but keep the block map, disk files and
+    // positions, so a later load_from_disk() restores contents. Unlike clear()
+    // (full wipe incl. disk files), this is the correct flush→reload sequence. P19.
+    void unload_memory();
+
+    // ---- Async disk pipeline (C-20) ----------------------------------------
+    // Before this, every disk read happened inline on the attention path:
+    // append() called load_from_disk() and blocked on fread. A single background
+    // worker now owns block loads, and callers talk to it through:
+    //   prefetch()        — enqueue a load, never blocks (fire and forget)
+    //   prefetch_range()  — warm every block covering [start, end)
+    //   ensure_resident() — wait until the block is in RAM (correctness path)
+    // The worker serialises requests, so overlapping prefetches cannot race on
+    // the same block, and the hot path only pays a wait when no prefetch got
+    // there first. Correctness is unchanged: a block is either resident or the
+    // caller waits for it.
+    //
+    // Threading contract: the cache keeps its original single-caller contract
+    // (one thread drives append/get_range). The worker is the only other thread
+    // and it never touches a block while the caller can reach it — the caller
+    // waits for the in-flight request to complete before proceeding, so no
+    // block-level lock is needed on the data itself.
+    void prefetch(int layer, int64_t block_id) const;
+    void prefetch_range(int layer, int64_t start, int64_t end) const;
+    bool ensure_resident(int layer, int64_t block_id, int timeout_ms = 5000) const;
+    bool async_worker_running() const;
+    uint64_t async_loads_completed() const;
+    size_t async_queue_depth() const;
 
     int context_len() const;
     int64_t block_size() const { return block_size_; }
@@ -140,8 +172,35 @@ protected:
     void evict_lru(int layer) const;
     void evict_to_disk(int layer, int64_t block_id) const;
     void load_from_disk(int layer, int64_t block_id) const;
+    // Internal: caller MUST hold async_mtx_ (the mutex is non-recursive;
+    // nested locking is UB — MSVC aborts 0xc0000409). Public wrappers above
+    // lock + delegate; internal callers (evict_lru, alloc paths, flush,
+    // load_from_disk's own evict loop) use these.
+    void evict_lru_locked(int layer) const;
+    void evict_to_disk_locked(int layer, int64_t block_id) const;
+    void load_from_disk_locked(int layer, int64_t block_id) const;
     std::string block_disk_path(int layer, int64_t block_id) const;
     int64_t tokens_per_block() const;
+
+    // Async worker plumbing. All of it is guarded by async_mtx_; async_cv_ wakes
+    // the worker, async_done_cv_ wakes callers waiting in ensure_resident().
+    struct AsyncRequest {
+        int layer = -1;
+        int64_t block_id = -1;
+        bool evict = false;
+    };
+    void async_worker_loop();
+    bool block_is_resident(int layer, int64_t block_id) const;
+    bool enqueue_async(int layer, int64_t block_id, bool evict) const;
+
+    mutable std::mutex async_mtx_;
+    mutable std::condition_variable async_cv_;
+    mutable std::condition_variable async_done_cv_;
+    mutable std::deque<AsyncRequest> async_queue_;
+    mutable std::set<std::pair<int, int64_t>> async_inflight_;
+    mutable bool async_stop_ = false;
+    mutable uint64_t async_loads_ = 0;
+    std::thread async_worker_;
 };
 
 // ===========================================================================

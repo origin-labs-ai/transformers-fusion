@@ -467,3 +467,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | B2 | `JsonValue` untyped accessors (union garbage on mismatch) + lenient `operator[](size_t)` OOB→null | `*_checked()` strict variants; `operator[]` throws, `at_or_null()` for probing |
 | B3 | Server `/v1/completions` untyped JSON reads (bool from STRING, int from garbage) | `is_*` gate + checked accessors on all 6 params; `p.arr[0]` type-checked |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 3 — 2026-09-12 (locks, stub-throws, nested-lock abort)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| K1-K4 | KV-cache missing-lock races: `evict_to_disk`, `load_from_disk`, `block_is_resident`, `context_len`×2, `size_bytes` | Serialized on `async_mtx_`/`mutex_` |
+| K5 | **Nested-lock abort (0xc0000409) in J5-eviction_stress**: `load_from_disk` → `evict_lru` → `evict_to_disk` re-locked the non-recursive `async_mtx_` (my round-3 locks exposed it) | Split `*_locked` internals (lock assumed) + public locking wrappers; all 17 internal call-sites rerouted; decls in `kv_cache.h:172-181` |
+| S2 | SYCL 11× silent `return` on uninitialized (hid failure) | All → `throw_no_sycl_kernel` fail-loud |
+| Suite | Rebuild 0 errors; J5-eviction_stress ok; full ctest green | 72/72 |
