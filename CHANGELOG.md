@@ -1,11 +1,32 @@
 # Changelog
 
-All notable changes to InNova will be documented in this file.
+All notable changes to Transcender will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
+## [R0001.01] - Unreleased
+
+### Changed
+- Format naming unified to QG prefix: Q1_G→QG1, Q1_K_L_G→QG_1_K_L, Q_G_1.5→QG_1.5, MXQ_4.5→Q_MX_4.5, MXQ_4.5_G→QG_MX_4.5 (105 formats, values unchanged)
+- Hybrid attention unified to standard Attention
+- Fuzz coverage expanded to all 105 formats, no gap slots
+
+### Fixed
+- STE per-tensor codebook training (was static, cross-layer contamination)
+- BitWriter budget overflow now throws instead of silent truncation
+- Affine bits 1/6 encode/decode grid mismatch
+- YARN mscale + attn_factor now applied to attention scale
+- GPU_VULKAN explicit CPU fallback warning (was silent)
+- Multimodal patch tokens content-dependent (were constants)
+- PPO advantage shape-aware indexing, model loader strict (corrupt .quant throws)
+- MTP weights loaded, expert prefetcher wired, AVX2 engine helpers shared
+- k3_convert fails loudly without sample (was fake-valid placeholder)
+- CI Dockerfile no longer masks test failures (`|| true` removed)
+- KVCache::truncate() exact rewind for speculative decoding (rewind_kv no longer wipes cache via resize); speculative accept/reject/generate paths covered by real tests
+- bench_format_comparison.csv recommitted fresh (v3 names, 224 rows); COMPARISON_CHARTS.md regenerated, zero stale names
 
 ## [0.1.02] - 2026-07-26
 
@@ -73,10 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.01] - 2026-07-24
 
 ### Added
-- Initial public release of InNova
+- Initial public release of Transcender
 - Core QUANT format system: QUANT2, QUANT4, QUANT8, QUANT16, QUANT32
-- QUANT_Q0, QUANT_Q1, Binary, Ternary formats
-- GRP (Grouped) variants: QUANT2_G, QUANT4_G, QUANT_Q1_G
+- Q1_5, QUANT_Q1, Binary, Ternary formats
+- GRP (Grouped) variants: QG2, QUANT4_G, QUANT_Q1_G
 - Lloyd-Max vector quantization codebook system
 - Sub-block grouping for lossless quantization at low BPW
 - Vulkan compute backend (dynamic loading, no SDK required)

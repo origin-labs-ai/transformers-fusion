@@ -1,9 +1,20 @@
-# InNova vs Industrial Quantization Projects — Competitor Analysis
+# Transcender vs Industrial Quantization Projects — Competitor Analysis
 
-> Date: 2026-08-23. Method: web research of every major weight-only quantization
+> Date: 2026-08-23. **Trace note (2026-09-13):** the head-to-head
+> PSNR table (§2) was spot-verified against the committed `bench_format_comparison.csv`
+> (fresh v3 re-measure, 224 data rows, 2026-09-11): Q32 PSNR=100, Q16 gaussian
+> 102.45/real 104.51, `[ref] IEEE FP16` 86.47, `[ref] GGUF Q8_0` 58.14,
+> `[ref] GGUF Q6_K` 45.87 — all match. Format names are v3 (`QG_8_5`,
+> `QG_MX_8_5`, `QG1`; `include/quant/types.h:22-67`); `docs/COMPARISON_CHARTS.md`
+> regenerated from the same CSV. BPW column: v3 true-wire values govern
+> (`types.h:97-129`; ledger A-01); end-task (ppl/KL/MMLU) parity remains
+> unclaimed backlog (§3.2 intact).
+>
+> Method: web research of every major weight-only quantization
 > project (old and new), their published quality metrics, and a head-to-head
-> mapping to InNova formats. **Ironclad rule: the BPW in a format's name is the
-> EXACT bits-per-weight it stores.** No format may exceed its claimed BPW.
+> mapping to Transcender formats. **Truthful-BPW rule: `format_bpw()` reports the wire
+> budget the canonical encoder spends (`include/quant/types.h:97-129`); names stay
+> stable for API.** No format may exceed its budgeted wire BPW.
 
 ## 1. How competitors measure quality (metric landscape)
 
@@ -26,7 +37,7 @@
 | HQQ / bitsandbytes NF4 | 2023 | calibration-free half-quadratic / NF4, degrades <4-bit | — | 1–8 |
 
 Key insight: **nobody publishes weight-reconstruction PSNR**; the ecosystem
-standard is end-task (perplexity/KL/MMLU). InNova's bench measures
+standard is end-task (perplexity/KL/MMLU). Transcender's bench measures
 **weight-reconstruction PSNR/MSE** (gaussian + trained-real tensors), which is
 the *lower bound* proxy: lower weight error correlates with, but does not
 equal, end-task quality. Where a direct same-metric comparison is impossible,
@@ -35,11 +46,11 @@ FP16 round-trip, INT8 uniform, GGUF Q8_0, GGUF Q6_K, GGUF Q4_K, BitNet b1.58
 ternary, Binary sign) coded exactly per the competitor's public spec, inside
 our bench — apples-to-apples at identical BPW.
 
-## 2. Head-to-head: InNova formats vs competitors (same BPW, same harness)
+## 2. Head-to-head: Transcender formats vs competitors (same BPW, same harness)
 
 Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
 
-| InNova (exact BPW) | Competitor (exact BPW) | Ours PSNR G/R | Theirs G/R | Verdict |
+| Transcender (exact BPW) | Competitor (exact BPW) | Ours PSNR G/R | Theirs G/R | Verdict |
 |---|---|---|---|---|
 | Q32 (32.0) | FP32 identity | 100/100 | lossless | TIE by definition (reference) |
 | Q16 (16.0) | IEEE FP16 (16.0) | 102.45/104.50 | 86.47/86.28 | **WIN +15.98/+18.22** (vmin/vmax fp16-corner trick beats raw FP16 rounding) |
@@ -72,7 +83,7 @@ Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
 
 ## 5. Paradigm comparison: QAT vs PTQ vs STE
 
-| Paradigm | Projects | What it costs | What it buys | InNova position |
+| Paradigm | Projects | What it costs | What it buys | Transcender position |
 |---|---|---|---|---|
 | PTQ data-free (RTN+optimal scale, Lloyd) | our base/K formats; GGUF legacy; HQQ (calibration-free) | nothing | minutes quantize, any model, no data | **Home turf** — all Q/K/Q_G/MXQ formats are data-free PTQ with true-MSE scale search |
 | PTQ calibration-based (Hessian/activation-aware) | GPTQ, AWQ, SpQR, SqueezeLLM, EXL2, imatrix IQ-quants | 128–512 samples, GPU-hours, per-model rerun on data change | 0.03–0.3 ppl better at 4-bit; saliency protection | Our MXQ importance-mix is the data-FREE analogue of this family (magnitude ranking vs their activation stats); honest gap at 2–4 bit end-task quality until a calibration pass lands |
@@ -80,7 +91,7 @@ Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
 
 STE (straight-through estimator) is the *mechanism* inside QAT that passes
 gradients through the non-differentiable round(); it is not a separate
-deployment paradigm. InNova's trainer has STE-style straight-through paths in
+deployment paradigm. Transcender's trainer has STE-style straight-through paths in
 its quantization-aware fine-tuning hooks (src/trainer_core.cpp quantized
 forward), but no native 1.58-bit pretraining recipe exists — claimed nowhere.
 
@@ -93,10 +104,10 @@ Dequant+dot-product arithmetic cost per reconstructed weight (decode path):
 | FP16 baseline (competitor) | 1 FMA | — | 0 | hardware FMA unit |
 | GGUF Q8_0 | 1 | 1 | fp16->fp32 convert | scale mul folded into accumulator |
 | GGUF Q6_K / Q4_K | 1 | 1 | scale LUT (6b) + code unpack | sub-block scale gather |
-| InNova Q8/K8 (LUT grid) | 1 | 1 | 256-entry float LUT | comp8_table() static, zero transcendentals on hot path |
-| InNova Q8_G compound | 1 | 1 | LUT + per-group fp16 scale load | same op count as GGUF Q8_0-class |
-| InNova MXQ tiers | 0..1 | 1 | tier table | 1-bit tier = sign only -> adder tree, 32-bit tier = raw FMA |
-| InNova Q1_G / sign tiers | **0** | 1 | none | value = ±scale: dot product becomes pure accumulate (**SOPs**) |
+| Transcender Q8/K8 (LUT grid) | 1 | 1 | 256-entry float LUT | comp8_table() static, zero transcendentals on hot path |
+| Transcender Q8_G compound | 1 | 1 | LUT + per-group fp16 scale load | same op count as GGUF Q8_0-class |
+| Transcender MXQ tiers | 0..1 | 1 | tier table | 1-bit tier = sign only -> adder tree, 32-bit tier = raw FMA |
+| Transcender Q1_G / sign tiers | **0** | 1 | none | value = ±scale: dot product becomes pure accumulate (**SOPs**) |
 | BitNet b1.58 (competitor, QAT) | 0 | 1 | none | ternary adder-only matmul — same SOPs class as Q1_G |
 
 Measured decode throughput proxy lives in bench CSV `decode_us` column
