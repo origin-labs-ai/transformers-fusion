@@ -199,7 +199,22 @@ static void test_mobile_wasm() {
         TEST_CHECK(!android, "android deploy returns false (no SDK configured)");
 
     bool ios = MobileDeploy::deploy_ios("test.xcarchive");
-    TEST_CHECK(!ios, "ios deploy returns false (not on macOS)");
+    // Environment-coupled contract (same CI lesson as android above,
+    // macOS runners 2026-09-13): macOS CI hosts ship the Xcode toolchain,
+    // so deploy_ios() returns true there and false on bare/foreign boxes.
+    // Contract per production_api.cpp: true iff __APPLE__ AND `xcodebuild`
+    // runs (exit 0). Mirror it portably: on Apple, probe xcodebuild the
+    // same way (exit 0 = present); elsewhere expect false.
+#ifdef __APPLE__
+    int xcr = std::system("xcodebuild -version > /dev/null 2>&1");
+    bool ios_expect = (xcr == 0);
+#else
+    bool ios_expect = false;
+#endif
+    TEST_CHECK(ios == ios_expect,
+               "ios deploy result matches toolchain-detectability (env-coupled)");
+    if (!ios_expect)
+        TEST_CHECK(!ios, "ios deploy returns false (not on macOS)");
 
     bool wasm = WASMDeploy::compile_to_wasm("test.cpp");
     TEST_CHECK(!wasm, "wasm compile returns false (emcc not installed)");
