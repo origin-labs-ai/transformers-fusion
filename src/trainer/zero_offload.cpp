@@ -20,10 +20,10 @@ namespace quant {
 // GradientCheckpointManager
 // ============================================================================
 
-bool GradientCheckpointManager::active_ = false;
-int64_t GradientCheckpointManager::saved_count_ = 0;
-int64_t GradientCheckpointManager::recompute_count_ = 0;
-int64_t GradientCheckpointManager::saved_bytes_ = 0;
+std::atomic<bool> GradientCheckpointManager::active_{false};
+std::atomic<int64_t> GradientCheckpointManager::saved_count_{0};
+std::atomic<int64_t> GradientCheckpointManager::recompute_count_{0};
+std::atomic<int64_t> GradientCheckpointManager::saved_bytes_{0};
 
 void GradientCheckpointManager::begin_checkpoint() { active_ = true; }
 void GradientCheckpointManager::end_checkpoint() { active_ = false; }

@@ -550,3 +550,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | P1-P3 | Prefetch: `schedule`/`get` unchecked indices, `initialize` unchecked malloc | Bounds-check + fail-closed nullptr + null-check |
 | P4 | **Own goal caught by tests**: my return-snapshot `lock_guard` inside already-locked miss path = nested-lock abort (0xc0000409, test_all + test_expert_prefetch) | Reverted to in-lock return + honest note (fully safe API needs page ref-counts) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 12 — 2026-09-13 (tensor/data/checkpoint races)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| T1 | `offset_to_flat` missed `ix<0` + arity (stale-stride OOB) | Both checked; `dim()` documented (Round 9 C-02-real) |
+| G1 | `generate_random_text` discarded `vocab_size` | Alphabet clamped to min(vocab,36) |
+| C1 | `GradientCheckpointManager` plain statics (race/lost stats) | Atomic active_/counts_/bytes_ |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

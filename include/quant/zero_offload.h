@@ -22,6 +22,7 @@
 #include <vector>
 #include <deque>
 #include <cstdint>
+#include <atomic>
 #include <functional>
 #include <memory>
 
@@ -50,10 +51,12 @@ public:
     static void reset_stats();
 
 private:
-    static bool active_;
-    static int64_t saved_count_;
-    static int64_t recompute_count_;
-    static int64_t saved_bytes_;
+    // BUGFIX (bug census): plain statics updated without locks (race/lost
+    // stats). Atomics now.
+    static std::atomic<bool> active_;
+    static std::atomic<int64_t> saved_count_;
+    static std::atomic<int64_t> recompute_count_;
+    static std::atomic<int64_t> saved_bytes_;
 };
 
 // ============================================================================

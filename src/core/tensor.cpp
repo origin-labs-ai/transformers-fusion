@@ -292,10 +292,13 @@ Tensor Tensor::arange(int64_t n) {
 }
 
 int64_t Tensor::offset_to_flat(const std::initializer_list<int64_t>& indices) const {
+    // BUGFIX (bug census): checked only ix<dim — missed ix<0 AND arity
+    // (fewer indices than rank read stale strides; negative ix wrapped OOB).
+    QUANT_CHECK((int)indices.size() == shape_.rank, "index arity mismatch");
     int64_t idx = 0;
     int i = 0;
     for (auto ix : indices) {
-        QUANT_CHECK(ix < shape_.dims[i], "index out of bounds");
+        QUANT_CHECK(ix >= 0 && ix < shape_.dims[i], "index out of bounds");
         idx += ix * strides_[i];
         i++;
     }

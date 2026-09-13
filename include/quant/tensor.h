@@ -35,6 +35,10 @@ public:
     ~Tensor() noexcept;
 
     const Shape& shape() const noexcept { return shape_; }
+    // BUGFIX (bug census): unchecked dims[i] read — callers indexing past
+    // rank get zero-filled slots that look plausible (see ledger Round 9
+    // C-02-real). noexcept kept (hot path); gate on rank(), and prefer
+    // at()/offset_to_flat() (checked) for untrusted indices.
     int64_t dim(int i) const noexcept { return shape_.dims[i]; }
     int rank() const noexcept { return shape_.rank; }
     int64_t numel() const noexcept { return shape_.numel(); }
