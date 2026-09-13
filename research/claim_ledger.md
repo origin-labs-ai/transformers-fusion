@@ -906,3 +906,10 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | M2 | `forward()` H==0 div-zero + D%H truncation (wrong head math) | Positive-multiple guard (throws) |
 | M3 | Fusion pooled/combined all-zero (dead sum loop, `(void)count`) — function returned zeros always | Real mean-pool over present modalities |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 48 — 2026-09-13 (multimodal generate fusion)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| G1 | `generate()` ran cross-attention fusion then discarded it (`(void)fused` — image never influenced output) | Fused output feeds next-step embedding |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

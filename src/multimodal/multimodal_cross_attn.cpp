@@ -926,8 +926,18 @@ std::string MultimodalCrossAttention::generate_caption(const Tensor& image, int 
                     (size_t)(Ti * config.shared_hidden) * sizeof(float));
 
         if (fusion.shared_fusion_layers.size() > 0) {
+            // BUGFIX (bug census): fused was (void)-discarded — the whole
+            // cross-attention fusion ran then its output was thrown away
+            // (generate used raw text_emb only). Feed fusion back: project
+            // the fused output as the next-step text embedding.
             Tensor fused = fusion.shared_fusion_layers[0].forward(q, kv);
-            (void)fused;
+            if (fused.numel() == q.numel() && fused.data<float>()) {
+                text_emb = fused;
+                Tt = text_emb.dim(0);
+                q = Tensor({Tt, config.shared_hidden});
+                std::memcpy(q.data<float>(), text_emb.data<float>(),
+                            (size_t)(Tt * config.shared_hidden) * sizeof(float));
+            }
         }
 
         int next = (int)(impl_->rng() % (unsigned)V);
