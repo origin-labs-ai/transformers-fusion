@@ -32,10 +32,10 @@ RUN cmake -B build -G Ninja \
 # - test_training: long training loop (600s TIMEOUT), nightly-full-asan only.
 # - test_native_quant: long training-linked quant test, ASAN-heavy/slow.
 # - test_moe_training: distributed MoE training test, heavy/flaky, nightly only.
-# - paged_kv_1t_test: paged_kv family (covers test_paged_kv_4m); large-memory cache test, slow in image build.
+# - test_paged_kv_4m: large-memory 256MiB cache test, slow in image build.
 # NOTE: full suite with NO excludes runs in the weekly docker-full-test workflow (separate workflow file).
 RUN ctest --test-dir build --output-on-failure --timeout 120 \
-    --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
+    --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m"
 
 FROM ubuntu:24.04
 

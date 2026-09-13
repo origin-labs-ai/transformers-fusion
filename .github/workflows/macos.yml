@@ -56,7 +56,7 @@ jobs:
         working-directory: build
         run: >
           ctest --output-on-failure --timeout 120
-          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
+          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m"
 
       - name: Upload build artifacts
         if: always()

@@ -849,7 +849,9 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | L-skew | `is_avx2/avx512_available()` returned the CPU flag even in scalar builds → auto-select picked dead CPU_AVX2 → benchmark 0.0 → T5 FAIL (probe/build skew, invisible on MSVC-forced-AVX2 Windows) | **FIXED.** Availability now requires compiled support AND CPU flag (also fixes the reverse: AVX2 binary on pre-AVX2 CPU no longer claims support) |
 | L-select | Auto-select preferred PARTIAL Vulkan (no GEMM) over full CPU_SCALAR → T5 gemm contract FAIL | **FIXED.** PARTIAL Vulkan is opt-in only (`BackendType::GPU_VULKAN`); default is always FULL/gemm-capable |
 | L-suite | Full Linux suite (CI PR-gate exclusion set) | **64/64 PASSED, 0 failed** (`ctest -E 'test_protected\|test_gpu\|test_training\|test_native_quant\|test_moe_training\|paged_kv_1t_test'` — same exclusions CI uses; `test_gpu*`/`test_training*` substring-matched). Windows Release still **72/72 green** |
-| Owed | Excluded heavies (protected/training/native_quant/moe_training/paged_kv_1t) = nightly set per CI design; macOS still pending (no runner here) | Linux CI workflow files unchanged and now plausible (tree compiles on GCC) |
+| L-full | Nightly heavies on Linux (this round) | **FULL 71/71 GREEN.** `test_training` + `test_native_quant` + `test_moe_training` + `test_native_quant_moe` + `test_training_features` (substring set): 5/5 in 77.62s; `test_protected` + `test_paged_kv_4m`: 2/2 in 0.08s. Only `test_gpu` absent (WIN32-only by design). Zero code changes needed — heavies passed as-is on first run |
+| L-ci | Stale `paged_kv_1t_test` exclusion (no such test; real name `test_paged_kv_4m`) + undocumented substring side-effects | **FIXED** in `.github/workflows/ci_full.yml` (Quick/ASAN/Coverage), `Dockerfile`, `.github/workflows/macos.yml`: regex now names `test_paged_kv_4m`; Quick-step comment documents the substring exclusions (`test_gpu*`, `test_training*`, `test_native_quant*`) |
+| Owed | macOS still pending (no runner here); GitHub-hosted CI run itself (needs push) | Linux CI workflow files now accurate and locally proven |
 
 ## 1000-bug sweep round 41 — 2026-09-13 (zDNN stub)
 

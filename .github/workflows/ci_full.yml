@@ -124,12 +124,15 @@ jobs:
           # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes):
           # - test_protected: heavy integrity/monolith test linking many libs (300s TIMEOUT), too slow for PR gate.
           # - test_gpu: requires GPU/CUDA hardware (WIN32-only quant_gpu); no GPU on Linux CI runners.
+          #   NOTE: substring also excludes test_gpu_capability (runs in nightly).
           # - test_training: long training loop (600s TIMEOUT), too slow/flaky for PR gate.
+          #   NOTE: substring also excludes test_training_features (runs in nightly).
           # - test_native_quant: long training-linked quant convergence test (300s TIMEOUT), ASAN-heavy/slow.
+          #   NOTE: substring also excludes test_native_quant_moe and test_native_weight (nightly).
           # - test_moe_training: distributed MoE training test (300s TIMEOUT), heavy/flaky, nightly only.
-          # - paged_kv_1t_test: paged_kv family (covers test_paged_kv_4m); large-memory 256MiB cache test, slow/OOM-prone under sanitizers in PR.
+          # - test_paged_kv_4m: large-memory 256MiB cache test, slow/OOM-prone under sanitizers in PR.
           ctest --test-dir build --output-on-failure --timeout 120 \
-            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
+            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m"
 
       - name: ASAN/UBSAN build (Linux GCC)
         if: runner.os == 'Linux' && matrix.asan
@@ -141,15 +144,11 @@ jobs:
             -DQUANT_BUILD_TESTS=ON \
             -DQUANT_AVX2=ON
           cmake --build build-asan --parallel 2>&1
-          # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes):
-          # - test_protected: heavy integrity/monolith test linking many libs (300s TIMEOUT), too slow for PR gate.
-          # - test_gpu: requires GPU/CUDA hardware (WIN32-only quant_gpu); no GPU on Linux CI runners.
-          # - test_training: long training loop (600s TIMEOUT), too slow/flaky for PR gate.
-          # - test_native_quant: long training-linked quant convergence test (300s TIMEOUT), ASAN-heavy/slow.
-          # - test_moe_training: distributed MoE training test (300s TIMEOUT), heavy/flaky, nightly only.
-          # - paged_kv_1t_test: paged_kv family (covers test_paged_kv_4m); large-memory 256MiB cache test, slow/OOM-prone under sanitizers in PR.
+          # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes).
+          # See the Quick-tests step above for what each pattern covers
+          # (test_gpu/test_training/test_native_quant are substring patterns).
           ctest --test-dir build-asan --output-on-failure --timeout 120 \
-            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test" 2>&1
+            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m" 2>&1
 
       - name: Code coverage (Linux Clang)
         if: runner.os == 'Linux' && matrix.coverage
@@ -161,15 +160,11 @@ jobs:
             -DQUANT_BUILD_TESTS=ON \
             -DQUANT_AVX2=ON
           cmake --build build-cov
-          # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes):
-          # - test_protected: heavy integrity/monolith test linking many libs (300s TIMEOUT), too slow for PR gate.
-          # - test_gpu: requires GPU/CUDA hardware (WIN32-only quant_gpu); no GPU on Linux CI runners.
-          # - test_training: long training loop (600s TIMEOUT), too slow/flaky for PR gate.
-          # - test_native_quant: long training-linked quant convergence test (300s TIMEOUT), ASAN-heavy/slow.
-          # - test_moe_training: distributed MoE training test (300s TIMEOUT), heavy/flaky, nightly only.
-          # - paged_kv_1t_test: paged_kv family (covers test_paged_kv_4m); large-memory 256MiB cache test, slow/OOM-prone under sanitizers in PR.
+          # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes).
+          # See the Quick-tests step above for what each pattern covers
+          # (test_gpu/test_training/test_native_quant are substring patterns).
           ctest --test-dir build-cov --output-on-failure --timeout 120 \
-            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
+            --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m"
           llvm-profdata merge -sparse build-cov/**/*.profraw -o coverage.profdata 2>/dev/null || true
 
       - name: Performance benchmarks
@@ -267,6 +262,6 @@ jobs:
         timeout-minutes: 90
         run: |
           # No --exclude-regex here: nightly covers test_protected, test_gpu,
-          # test_training, test_native_quant, test_moe_training, paged_kv_1t_test.
+          # test_training, test_native_quant, test_moe_training, test_paged_kv_4m.
           ctest --test-dir build-asan-full --output-on-failure --timeout 600 \
             -R "${{ matrix.ctest_regex }}"
