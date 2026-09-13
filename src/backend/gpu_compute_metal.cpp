@@ -151,6 +151,16 @@ struct GPUComputeMetal::Impl {
     SEL sel_waitUntilCompleted;
     SEL sel_contents;
     SEL sel_didModifyRange;
+
+    // Apple-Clang fix (2026-09-13, macOS CI): dispatch_kernel was a free
+    // function taking GPUComputeMetal::Impl* — Impl is a PRIVATE nested
+    // struct, so naming it in a free-function signature is ill-formed and
+    // Apple Clang rejects it (MSVC/GCC accept it). As a static member the
+    // same signature is well-formed; all 11 member-function call sites keep
+    // working unqualified.
+    static void dispatch_kernel(Impl* impl, id pipeline, MTLSize grid, MTLSize block,
+        const std::vector<std::pair<id, size_t>>& buffers,
+        const std::vector<std::pair<const void*, size_t>>& bytes_args);
     
     Class cls_NSString;
 
@@ -293,7 +303,7 @@ void GPUComputeMetal::download(void* src, Tensor& dst) {
 }
 
 #if defined(__APPLE__)
-static void dispatch_kernel(GPUComputeMetal::Impl* impl, id pipeline, MTLSize grid, MTLSize block,
+void GPUComputeMetal::Impl::dispatch_kernel(Impl* impl, id pipeline, MTLSize grid, MTLSize block,
     const std::vector<std::pair<id, size_t>>& buffers,
     const std::vector<std::pair<const void*, size_t>>& bytes_args)
 {
