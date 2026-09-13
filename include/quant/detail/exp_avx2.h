@@ -2,7 +2,8 @@
 // detail/exp_avx2.h — single home for the AVX2 exp approximation.
 //
 // DEDUP (2026-09-11): was triplicated byte-identical in math_avx2.cpp,
-// math_avx2_tensor.cpp, math_avx2_tiled.cpp ("kept self-contained" drift
+// math_avx2_tiled.cpp (plus deleted duplicate math_avx2_tensor.cpp,
+// removed 2026-09-13) ("kept self-contained" drift
 // risk — three copies of polynomial constants). Include under
 // #if defined(QUANT_AVX2) after <immintrin.h>.
 #if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || \

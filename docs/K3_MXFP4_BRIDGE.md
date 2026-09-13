@@ -15,7 +15,7 @@
 | # | Assumption | If Wrong, Fix |
 |---|---|---|
 | A1 | MXFP4 block = 32, E8M0 shared exp, 4b per value S1E2M1 (OCP). | Swap E2M2 variant, re-run probe on 1 block vs Python `mx` lib |
-| A2 | Expert weight tensors named `layers.*.moe.experts.*.*.weight` | Adapt glob in `src/adapters/k3_converter.cpp` |
+| A2 | Expert weight tensors named `layers.*.moe.experts.*.*.weight` | Adapt glob in the future `k3_convert` tool |
 | A3 | QAT scale folded into MXFP4 mantissa, no extra per-block BF16 | If extra scale present, dequant adds `* block_scale` factor |
 
 ## 3. Bridge Pipeline (.quant)
@@ -28,7 +28,7 @@ HF shard (MXFP4 block) --E8M0 dequant--> FP32 block (32 values)
 
 - Dequant: `fp32 = ldexp((mantissa / 8.0) , shared_exp - 2)` for E2M1 variant; probe both S1E2M1 vs S1E1M2 on first block vs Python reference.
 - Re-quant to Q4: reuse existing `codebook` + `block_codec` Lloyd-Max paths; Q4_G not needed for experts (already grouped by MoE sharding).
-- Converter skeleton: `tools/k3_convert.cpp` (not yet landed) will stream shards, dequant on the fly, and emit `.quant` with preserved `num_experts/top_k` in model header.
+- Converter: `tools/k3_convert.cpp` skeleton was removed (2026-09-13, unwired — never built). Recreate it when a real K3 sample lands: stream shards, dequant on the fly, emit `.quant` with preserved `num_experts/top_k` in model header.
 
 ## 4. Validation Plan (When Weights Drop)
 

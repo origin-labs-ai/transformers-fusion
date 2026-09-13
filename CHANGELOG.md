@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multimodal patch tokens content-dependent (were constants)
 - PPO advantage shape-aware indexing, model loader strict (corrupt .quant throws)
 - MTP weights loaded, expert prefetcher wired, AVX2 engine helpers shared
-- k3_convert fails loudly without sample (was fake-valid placeholder)
+- k3_convert skeleton removed (was unwired, never built; recreate when K3 sample lands)
 - CI Dockerfile no longer masks test failures (`|| true` removed)
 - KVCache::truncate() exact rewind for speculative decoding (rewind_kv no longer wipes cache via resize); speculative accept/reject/generate paths covered by real tests
 - bench_format_comparison.csv recommitted fresh (v3 names, 224 rows); COMPARISON_CHARTS.md regenerated, zero stale names
