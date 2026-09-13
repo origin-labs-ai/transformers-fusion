@@ -989,3 +989,14 @@ changes). Status + fixes, all verified via the Actions REST API:
 | Full-Quick | `ci_full.yml` Ubuntu legs: Quick tests exit code 8 (tests failed) after successful build | **ROOT-CAUSED + FIXED (commit `87917a7`, pushed).** CI log (owner-provided) showed **61/62 pass on BOTH GCC-13 and Clang-18, single failure `test_production`**: `tests/test_production.cpp:174` asserted `deploy_android()` returns false, but GitHub-hosted `ubuntu-latest` runners preinstall the Android SDK AND export `ANDROID_HOME`/`ANDROID_SDK_ROOT`, so the impl (correctly) returns true. Classic environment-coupled test: green on bare dev boxes, red on CI. Fix pins the CONTRACT (`result == SDK-detectability`: POSIX = `ANDROID_HOME` set; Win32 = env + `<sdk>/tools/bin/gradlew` exists) instead of the bare-machine value. Verified all paths: Windows no-SDK **35/35**, Windows fake-SDK-no-gradlew **35/35**, Windows fake-SDK-with-gradlew **34/34**, Linux no-SDK **35/35**, Linux `ANDROID_HOME` set (CI sim) **34/34** | Open |
 
 Local evidence re-confirmed this round: Windows MSVC Release **72/72** (`build-prod`), Linux WSL GCC 15.2 PR-speed **62/62** + heavies **7/7** (`build-prod-linux`), BPW violations **0**, `cmake --install` verified. None of the CI failures contradict local evidence — all three are runner-environment issues (generator discovery, 0s-tool failure, runner-specific test env), not source regressions: every one of them fails identically on the pre-round-4 commit.
+
+## Fresh full-suite re-verification — 2026-09-13 (all round-4/5/CI fixes in)
+
+After the P0 codec changes + P6b regression + `test_production` android-contract
+fix + `exp_avx2.h` Apple guard, a clean Windows MSVC Release tree
+(`build-verify/`) was rebuilt from scratch and the FULL suite re-run:
+
+| # | Check | Result |
+|---|---|---|
+| F-72 | `ctest --test-dir build-verify -C Release --timeout 600` | **100% tests passed, 0 failed out of 72** (Total Test time 176.89s) |
+| F-note | Stale `build/` dir (CMakeCache from another machine) is NOT evidence — superseded by `build-verify/` + `build-prod/` fresh configures | Old `build/Testing/` logs must not be cited |
