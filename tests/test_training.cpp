@@ -201,7 +201,8 @@ static void test_grad_noise() {
         printf("  Step %d: loss=%.4f (noise eta=0.0)\n", step + 3, loss);
     }
     TEST_CHECK(!has_nan, "No NaN after disabling gradient noise");
-    TEST_CHECK(true, "Gradient noise test completed without crash");
+    // BUGFIX (bug census): was trailing TEST_CHECK(true) — vacuous.
+    // The two !has_nan asserts above ARE the crash-freedom proof.
 }
 
 int main() {

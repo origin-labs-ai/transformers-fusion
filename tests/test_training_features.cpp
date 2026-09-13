@@ -56,15 +56,19 @@ static void test_gradient_noise_injection() {
     AdamW optimizer(1e-3f);
     trainer.compile(&optimizer);
 
-    // Inject gradient noise at various step values
+    // Inject gradient noise at various step values.
+    // BUGFIX (bug census): trailing TEST_CHECK(true) passed even when the
+    // catch above recorded a failure. Count clean steps instead.
+    int clean_steps = 0;
     for (int step = 1; step <= 10; step++) {
         try {
             trainer.inject_gradient_noise(step);
+            clean_steps++;
         } catch (...) {
             TEST_CHECK(false, "gradient noise injection no crash");
         }
     }
-    TEST_CHECK(true, "gradient noise injection runs without crash");
+    TEST_CHECK(clean_steps == 10, "all 10 noise injections clean");
 
     // Verify inject_gradient_noise is callable with eta=0.1 (config setting)
     TrainConfig tcfg;

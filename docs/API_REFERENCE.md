@@ -1,6 +1,6 @@
 # API Reference
 
-> **Complete C++ API Documentation for InNova**
+> **Complete C++ API Documentation for Transcender**
 
 ---
 
@@ -31,7 +31,7 @@
 
 ### Namespace
 
-All InNova APIs are in the `quant` namespace:
+All Transcender APIs are in the `quant` namespace:
 
 ```cpp
 namespace quant {
@@ -47,18 +47,34 @@ using namespace quant; // Recommended for simplicity
 
 Supported quantization formats:
 
+> **Phase 24 sync (2026-09-07, docs-only):** the `Format` enum table below is the
+> **v1/v2 naming and is STALE**. One-truth is the v3 enum in `include/quant/types.h:22-67`
+> (`FORMAT_COUNT=105`: base10 Q1..Q32 + K×27 + GRP×9 `QG*` + K_G×27 `QG_*_K_*` + half×9
+> + half-GRP×9 + 14 mixes `Q_MX_*`/`QG_MX_*`; no TWI by design) with the true-wire BPW
+> table `format_bpw()` (`include/quant/types.h:97-129`, e.g. QG2=2.625, QG8=8.5).
+> `format_name()` returns dot names (`Q1.5`, `Q_MX_3.5`). A full rewrite of this section
+> to all 105 enumerators is owed — until then use `types.h` as canonical.
+
+```cpp
+// STALE v1/v2 snapshot — see include/quant/types.h:22-67 for the v3 truth (105 formats).
+> **STALE SNAPSHOT (bug census):** the enum below is v1 (15 formats).
+> One-truth is the v3 Q-series: 105 formats, `FORMAT_COUNT=105`
+> (`include/quant/types.h:22-67`; no TWI by design). `QUANT_Q1`/`QUANT_Q1_G`
+> no longer exist (replaced by `Q_MX_*`/`QG_MX_*` 4-variant mixes). Regenerate
+> from `format_name()`/`format_bpw()` before trusting any row here.
+
 ```cpp
 enum class Format : uint8_t {
     QUANT1            = 0,  // 0.5 BPW stored FP16 block means; 1.0 is the documented conservative cap
-    QUANT_Q0        = 1,  // 1.50 BPW, sign + shared FP16 scale (lossy)
+    Q1_5        = 1,  // 1.50 BPW, sign + shared FP16 scale (lossy)
     QUANT2            = 2,  // 2.00 BPW, 4 centroids Lloyd-Max (lossy)
     QUANT4            = 3,  // 4.00 BPW, 16 centroids Lloyd-Max (lossy)
     QUANT8            = 4,  // 8.00 BPW, 256 centroids Lloyd-Max (lossy)
     QUANT16           = 5,  // 16.00 BPW, FP16 storage (lossy)
     QUANT32           = 6,  // 32.00 BPW, FP32 identity (lossless)
-    QUANT1_G        = 7,  // 1.0 BPW, block FP16 scale + sign bits (no per-64 zp/scale)
-    QUANT_Q0_G    = 8,  // 1.5 BPW, block FP16 scale + sign + refinement
-    QUANT2_G        = 9,  // 2.5 BPW, 2-bit lattice + per-64-group FP16 zp/scale
+    QG1        = 7,  // 1.0 BPW, block FP16 scale + sign bits (no per-64 zp/scale)
+    QG_1_5    = 8,  // 1.5 BPW, block FP16 scale + sign + refinement
+    QG2        = 9,  // 2.5 BPW, 2-bit lattice + per-64-group FP16 zp/scale
     QUANT4_G        = 10, // 4.5 BPW, 4-bit lattice + per-64-group FP16 zp/scale
     QUANT8_G        = 11, // 8.5 BPW, 8-bit lattice + per-64-group FP16 range/zp
     QUANT16_G       = 12, // 16.0 BPW, FP16 storage (same as QUANT16; no grouping at 16 BPW)
@@ -120,7 +136,7 @@ enum class Precision : uint8_t {
 
 ## 🎯 Tensor
 
-The fundamental data structure in InNova.
+The fundamental data structure in Transcender.
 
 ### Class: Tensor
 
@@ -791,7 +807,7 @@ public:
 
 ## 💾 QUANT Format
 
-Binary format for model storage.
+`.quant` container format for model storage (TranscenderIDX index magic — `src/codec/quant_format.cpp:546,585-588`).
 
 ### Class: QUANTReader
 

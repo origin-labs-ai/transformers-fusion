@@ -150,16 +150,22 @@ static void test_model_zoo() {
 
 static void test_language_bindings() {
     TEST_SUITE("I16-I18: Language Bindings");
-    // init() should complete without throwing or crashing
-    PythonBindings::init();
-    JavaBindings::init();
-    RustBindings::init();
-    // If we reached this line, all init calls completed without fatal error.
-    // Verify calling init twice is idempotent (no double-free or crash).
-    PythonBindings::init();
-    JavaBindings::init();
-    RustBindings::init();
-    TEST_CHECK(true, "Language binding init functions complete and are idempotent");
+    // init() should complete without throwing or crashing.
+    // BUGFIX (bug census): was bare TEST_CHECK(true). Now asserts the real
+    // contract: idempotent (2nd call safe) + non-throwing. Wrap in
+    // try/catch so a throw becomes a FAIL, not an abort.
+    bool threw = false;
+    try {
+        PythonBindings::init();
+        JavaBindings::init();
+        RustBindings::init();
+        PythonBindings::init();
+        JavaBindings::init();
+        RustBindings::init();
+    } catch (...) {
+        threw = true;
+    }
+    TEST_CHECK(!threw, "binding init x2 completes without throw (idempotent)");
 }
 
 static void test_mobile_wasm() {

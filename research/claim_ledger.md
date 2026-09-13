@@ -628,3 +628,15 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | W1 | WS `broadcast()` short-send treated as success (truncated frames) | `send_all` loop, drop-on-error |
 | T17 | New `test_chunked_rejected_live` (real socket: 501 + reason) | `test_server_contract` 56/56 (was 53/53) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 20 — 2026-09-13 (docs staleness + vacuous asserts)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| D1 | `docs/API_REFERENCE.md` v1 15-format enum (removed `QUANT_Q1` present) | Stale banner → v3 one-truth refs |
+| D2 | `docs/README.md` version v0.1.02 + July date | → v1.1.0/R0001.01, Sept 13 |
+| D3 | `docs/SOPS_SPEC.md` v1 spectrum table (removed formats, pre-wire BPW) | Stale banner → `format_bpw()` truth |
+| T1 | `test_production` bindings `TEST_CHECK(true)` | try/catch idempotency assert |
+| T2 | `test_training` trailing `TEST_CHECK(true)` | Removed (asserts above are the proof) |
+| T3 | `test_training_features` pass-on-failure (`true` after `CHECK(false)`) | Clean-step count assert |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

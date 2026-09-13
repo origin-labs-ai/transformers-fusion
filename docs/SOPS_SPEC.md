@@ -1,7 +1,7 @@
 # SOPS: Sextillion Operations Per Second
 ## A New Compute Unit for Quantized Model Training on CPU
 ### Version 1.0 — Specification Document
-### InNova Project
+### Transcender Project
 
 ---
 
@@ -21,7 +21,7 @@
 12. [Theoretical Maximum SOPS](#12-theoretical-maximum-sops)
 13. [Gap Analysis: Current PC to ZSOPS](#13-gap-analysis-current-pc-to-zsops)
 14. [Comparison with Existing Metrics](#14-comparison-with-existing-metrics)
-15. [Integration with InNova Training Pipeline](#15-integration-with-InNova-training-pipeline)
+15. [Integration with Transcender Training Pipeline](#15-integration-with-Transcender-training-pipeline)
 16. [Path to 1 SOPS](#16-path-to-1-sops)
 17. [What 1 SOPS Enables](#17-what-1-sops-enables)
 18. [Appendix A: Mathematical Proofs](#appendix-a-mathematical-proofs)
@@ -49,7 +49,7 @@ quantization that FLOPS completely ignores.
 
 Key results:
 - QUANT4 (4-bit) = 8x SOPS advantage over FP32
-- QUANT_Q0 (1.5-bit) = 21.33x SOPS advantage
+- Q1_5 (1.5-bit) = 21.33x SOPS advantage
 - QUANT1 (1.0-bit) = 32x SOPS advantage
 - On a 12-core AVX2 CPU: measured 0.092 pSOPS
 - Gap to 1 ZSOPS: ~10.9 billion x
@@ -111,24 +111,29 @@ density per byte, and SOPS counts that directly.
 
 ### 2.3 The Quantization Spectrum
 
-InNova uses 15 quantization formats, each with different bit-widths:
+> **STALE TABLE (bug census):** v1 15-format snapshot with removed
+> `QUANT_Q1`/`QUANT_Q1_G` rows and pre-true-wire BPW. One-truth: 105 v3
+> formats, `format_bpw()` wire values (`include/quant/types.h:22-129`).
+> SOPS counts density per byte the same way regardless of naming.
+
+Transcender uses 15 quantization formats, each with different bit-widths:
 
   Format             BPW      Bytes/Weight    Weights/Byte
   --------           ----     ------------    ------------
   QUANT1               1.0      0.125           8
-  QUANT_Q0           1.5      0.1875          5.33
+  Q1_5           1.5      0.1875          5.33
   QUANT_Q1       2.0      0.25            4
   QUANT2               2.0      0.25            4
   QUANT4               4.0      0.5             2
   QUANT8               8.0      1.0             1
   QUANT16              16.0     2.0             0.5
   QUANT32              32.0     4.0             0.25
-  QUANT1_G           1.0      0.125           8
-  QUANT2_G           2.5      0.3125          3.2
+  QG1           1.0      0.125           8
+  QG2           2.5      0.3125          3.2
   QUANT4_G           4.5      0.5625          1.78
   QUANT8_G           8.5      1.0625          0.94
   QUANT16_G          16.0     2.0             0.5
-  QUANT_Q0_G       1.5      0.1875          5.33
+  QG_1_5       1.5      0.1875          5.33
   QUANT_Q1_G   2.0      0.25            4
 
 FLOPS cannot distinguish between any of these. SOPS can.
@@ -262,7 +267,7 @@ Property 4: IW × bytes_per_weight = 4 (constant)
 
 ### 5.1 Base Formats (RegFormat enum)
 
-The InNova codebase defines 15 quantization formats (1 lossless QUANT32 + 14 lossy):
+The Transcender codebase defines 15 quantization formats (1 lossless QUANT32 + 14 lossy):
 
 Format #0: QUANT1
   BPW: 1.0
@@ -273,7 +278,7 @@ Format #0: QUANT1
   Packing: 8 elements per byte
   Use case: Maximum compression
 
-Format #1: QUANT_Q0
+Format #1: Q1_5
   BPW: 2.0
   Info Weight: 16.000x
   Values: Sign-bit quantized with FP16 scale
@@ -341,7 +346,7 @@ Format #8: QUANT32
 Format       BPW     Info Weight    Weights/Byte    FP32-equivalent ops/byte
 --------     ----    -----------    ------------    -----------------------
 QUANT1         1.0     32.000x        8.0             256.0
-QUANT_Q0     1.5     21.333x        5.33            113.78
+Q1_5     1.5     21.333x        5.33            113.78
 QUANT_Q1 2.0     16.000x        4.0             64.0
 QUANT2         2.0     16.000x        4.0             64.0
 QUANT4         4.0     8.000x         2.0             16.0
@@ -371,16 +376,16 @@ QUANT1         8 MB           2.048B ops      32.0x
 
 ### 6.1 Two-Tier Mixes
 
-InNova supports mixing two formats at specified ratios:
+Transcender supports mixing two formats at specified ratios:
 
 Mix Format          Eff BPW    IW        Tier1       Tier2
 ----------------    -------    ------    ---------   ---------
-QUANT8+QUANT1_1_99      1.07       29.907    QUANT8(1%)    QUANT1(99%)
-QUANT8+QUANT2_1_99      1.08       29.630    QUANT8(1%)    QUANT2(99%)
+QUANT8+Q1_1_99      1.07       29.907    QUANT8(1%)    QUANT1(99%)
+QUANT8+Q2_1_99      1.08       29.630    QUANT8(1%)    QUANT2(99%)
 QUANT8+QUANT4_5_95      4.20       7.619     QUANT8(5%)    QUANT4(95%)
-QUANT4+QUANT1_5_95      1.15       27.826    QUANT4(5%)    QUANT1(95%)
-QUANT4+QUANT2_10_90     2.30       13.913    QUANT4(10%)   QUANT2(90%)
-QUANT8+QUANT2_10_90     2.60       12.308    QUANT8(10%)   QUANT2(90%)
+QUANT4+Q1_5_95      1.15       27.826    QUANT4(5%)    QUANT1(95%)
+QUANT4+Q2_10_90     2.30       13.913    QUANT4(10%)   QUANT2(90%)
+QUANT8+Q2_10_90     2.60       12.308    QUANT8(10%)   QUANT2(90%)
 QUANT+QUANT8_5_95     7.62       4.199     QUANT(5%)   QUANT8(95%)
 QUANT16+QUANT4_1_99     4.16       7.692     QUANT16(1%)   QUANT4(99%)
 QUANT16+QUANT8_5_95     8.40       3.810     QUANT16(5%)   QUANT8(95%)
@@ -399,8 +404,8 @@ format B (BPW_b, ratio r_b):
 
 Mix Format                    Eff BPW    IW
 ----------------------------  -------   ------
-QUAD_QUANT1_QUANT2_QUANT4_QUANT8     1.88       17.021
-QUAD_QUANT2_QUANT4_QUANT8_QUANT16    2.92       10.959
+QUAD_Q1_Q2_QUANT4_QUANT8     1.88       17.021
+QUAD_Q2_QUANT4_QUANT8_QUANT16    2.92       10.959
 QUAD_QUANT4_QUANT8_QUANT16_QUANT32   5.84       5.479
 
 ### 6.4 Mix Format SOPS
@@ -481,7 +486,7 @@ bandwidth advantage beyond the raw BPW ratio.
 
 ### 8.1 SIMD Lanes per Format
 
-ISA          FP32    FP16    QUANT8    QUANT4    QUANT1      QUANT_Q0
+ISA          FP32    FP16    QUANT8    QUANT4    QUANT1      Q1_5
 --------     ----    ----    ----    ----    ----      --------
 SSE4 (128)   4       8       16      32      128       64
 AVX2 (256)   8       16      32      64      256       128
@@ -610,7 +615,7 @@ Gap to 1 SOPS: ~10.9 billion x
 
 Index   Format       BPW     IW
      0       QUANT1         1.0     32.0
-     1       QUANT_Q0     1.5     21.33
+     1       Q1_5     1.5     21.33
      2       QUANT_Q1 2.0     16.0
      3       QUANT2         2.0     16.0
      4       QUANT4         4.0     8.0
@@ -891,7 +896,7 @@ and FP32 (IW=1x).
 
 ---
 
-## 15. Integration with InNova Training Pipeline
+## 15. Integration with Transcender Training Pipeline
 
 ### 15.1 Training Loop Integration
 
@@ -1244,8 +1249,8 @@ struct SopsFormat {
 ## Document Information
 
   Title:    SOPS Specification v1.0
-  Project:  InNova
-  Author:   InNova Team
+  Project:  Transcender
+  Author:   Transcender Team
   Date:     2026-07-25
   Status:   DRAFT
   Lines:    1024

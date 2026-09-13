@@ -1,4 +1,4 @@
-# InNova Documentation
+# Transcender Documentation
 
 > **M**ixed-format **Y**our-own **T**ensor **H**andcrafted **O**ptimized **S**ystem
 
@@ -8,7 +8,7 @@
 
 ## 📚 Documentation Overview
 
-Welcome to the comprehensive documentation for InNova. This documentation is structured to help you understand, use, and contribute to the project.
+Welcome to the comprehensive documentation for Transcender. This documentation is structured to help you understand, use, and contribute to the project.
 
 ### 🗂️ Documentation Structure
 
@@ -63,7 +63,7 @@ wiki/                          # Per-file documentation (repo-wiki style)
 
 ## 🚀 Quick Start
 
-If you're new to InNova, start here:
+If you're new to Transcender, start here:
 
 1. **[BUILD.md](BUILD.md)** - Get the project compiled on your machine
 2. **[USAGE.md](USAGE.md)** - Learn how to use the tools and APIs
@@ -78,7 +78,7 @@ If you're new to InNova, start here:
 | [ARCHITECTURE.md](ARCHITECTURE.md) | High-level system design, component relationships | Developers, Architects |
 | [API_REFERENCE.md](API_REFERENCE.md) | Complete API documentation for all public interfaces | Developers, Users |
 | [BUILD.md](BUILD.md) | Step-by-step build instructions for all platforms | Everyone |
-| [USAGE.md](USAGE.md) | How to use InNova for inference and training | Users |
+| [USAGE.md](USAGE.md) | How to use Transcender for inference and training | Users |
 | [RESEARCH.md](RESEARCH.md) | Research papers and algorithms that inspired the design | Researchers |
 
 ---
@@ -120,7 +120,7 @@ See **[MODULES/](MODULES/)** for detailed documentation on each component.
 
 ## 🔬 Research & Innovation
 
-InNova is built on a foundation of peer-reviewed research:
+Transcender is built on a foundation of peer-reviewed research:
 
 - **BitNet b1.58** - Ternary weights that match FP16 quality
 - **AWQ** - Activation-aware weight quantization
@@ -133,7 +133,7 @@ See **[RESEARCH.md](RESEARCH.md)** for a complete list of research papers and ho
 
 ## 🛠️ Development
 
-Want to contribute or extend InNova?
+Want to contribute or extend Transcender?
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributing
 - **[INTERNAL/](INTERNAL/)** - Internal design documents
@@ -163,14 +163,14 @@ Want to contribute or extend InNova?
 | Training | ✅ Stable | ✅ | ⏳ |
 | Inference | ✅ Stable | ✅ | ⏳ |
 
-**Last Updated:** July 26, 2026
-**Version:** v0.1.02
+**Last Updated:** September 13, 2026
+**Version:** v1.1.0 / R0001.01 (was v0.1.02 — stale; one-truth: `CMakeLists.txt:3`, `include/quant/version.h:6`)
 
 ---
 
 ## 📄 License
 
-InNova is an open-source project licensed under the Apache License 2.0. See the [LICENSE](../LICENSE) and the main [README](../README.md) for details.
+Transcender is an open-source project licensed under the Apache License 2.0. See the [LICENSE](../LICENSE) and the main [README](../README.md) for details.
 
 
-© 2026 InNova Contributors
+© 2026 Transcender Contributors
