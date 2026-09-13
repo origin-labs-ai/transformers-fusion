@@ -35,7 +35,8 @@ int detect_cpu_isa() {
         if (cpuInfo7[1] & (1 << 5)) return 2; // AVX2
     }
     return 1;
-#elif defined(__GNUC__) || defined(__clang__)
+#elif (defined(__GNUC__) || defined(__clang__)) && \
+    (defined(__i386__) || defined(__x86_64__))
     if (__builtin_cpu_supports("avx2")) return 2;
     if (__builtin_cpu_supports("sse4.1")) return 1;
     return 0;
