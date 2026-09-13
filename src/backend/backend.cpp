@@ -1492,49 +1492,38 @@ public:
     const char* name() const override { return "GPU_VIRTGPU"; }
     // REAL ONLY verdict UNAVAILABLE on non-Linux/no-/dev/dri hosts: low-level
     // gemm is a CPU triple loop + malloc, NOT virgl/venus ioctls. Fail loud.
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!vg_ || !vg_->is_initialized()) throw_unavailable("GPU_VIRTGPU", "gemm", "no virgl/venus render node on this host");
         throw_unavailable("GPU_VIRTGPU", "gemm", "VirtGPU GEMM is a CPU triple-loop stub (no virgl command stream)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "gemv", "no VirtGPU GEMV kernel (stub backend)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("GPU_VIRTGPU", "softmax", "no VirtGPU softmax kernel (stub backend)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "layer_norm", "no VirtGPU layer_norm kernel (stub backend)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "rms_norm", "no VirtGPU rms_norm kernel (stub backend)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "relu", "no VirtGPU relu kernel (stub backend)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "gelu", "no VirtGPU gelu kernel (stub backend)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "silu", "no VirtGPU silu kernel (stub backend)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "add", "no VirtGPU add kernel (stub backend)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "mul", "no VirtGPU mul kernel (stub backend)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_VIRTGPU", "scale", "no VirtGPU scale kernel (stub backend)");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }
@@ -1565,49 +1554,38 @@ public:
     const char* name() const override { return "GPU_WEBGPU"; }
     // REAL ONLY verdict UNAVAILABLE (no Dawn/wgpu lib + no WGSL shaders):
     // low-level gemm is a CPU triple loop + malloc. Fail loud.
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!wg_ || !wg_->is_initialized()) throw_unavailable("GPU_WEBGPU", "gemm", "no WebGPU runtime (Dawn/wgpu) on this host");
         throw_unavailable("GPU_WEBGPU", "gemm", "WebGPU WGSL GEMM shader not implemented (CPU stub only)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "gemv", "no WebGPU GEMV shader (stub backend)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("GPU_WEBGPU", "softmax", "no WebGPU softmax shader (stub backend)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "layer_norm", "no WebGPU layer_norm shader (stub backend)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "rms_norm", "no WebGPU rms_norm shader (stub backend)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "relu", "no WebGPU relu shader (stub backend)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "gelu", "no WebGPU gelu shader (stub backend)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "silu", "no WebGPU silu shader (stub backend)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "add", "no WebGPU add shader (stub backend)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "mul", "no WebGPU mul shader (stub backend)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("GPU_WEBGPU", "scale", "no WebGPU scale shader (stub backend)");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }
@@ -2465,9 +2443,13 @@ static inline void quant_cpuidex(int info[4], int leaf, int sub) {
 }
 
 bool is_avx2_available() {
-#if defined(QUANT_AVX2)
-    return true;
-#elif defined(__aarch64__) || defined(__arm__)
+#if defined(__aarch64__) || defined(__arm__)
+    return false;
+#elif !defined(QUANT_AVX2)
+    // Binary was built without AVX2 code paths: the CPU flag alone is not
+    // enough (selecting CPU_AVX2 would pick a backend whose is_available()
+    // is false and whose kernels throw). Found via the WSL/Linux bring-up:
+    // AVX2 CPU + scalar build auto-selected an unusable backend.
     return false;
 #else
     int cpu_info[4] = {0};
@@ -2482,9 +2464,10 @@ bool is_avx2_available() {
 }
 
 bool is_avx512_available() {
-#if defined(QUANT_AVX512)
-    return true;
-#elif defined(__aarch64__) || defined(__arm__)
+#if defined(__aarch64__) || defined(__arm__)
+    return false;
+#elif !defined(QUANT_AVX512)
+    // Same binary-vs-CPU skew guard as AVX2 above.
     return false;
 #else
     int cpu_info[4] = {0};

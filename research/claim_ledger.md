@@ -810,3 +810,10 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 | D1-D2 | Dead `m_size`/`local_rows` `(void)`-discarded (slice bounds already encode) | Removed + noted |
 | Note | Transient C2062 in `expert_parallel.cpp` (parallel external POSIX-socket WIP saved mid-build); clean on rebuild, not my file | Full suite green after |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 38 — 2026-09-13 (VirtGPU + WebGPU stubs)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U22 | `GPU_VIRTGPUBackend` + `GPU_WEBGPUBackend` fail-loud stubs: 22 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
