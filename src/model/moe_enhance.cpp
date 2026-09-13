@@ -82,11 +82,16 @@ Tensor DenseToMoEPruner::prune_ffn(const Tensor& gate, const Tensor& up, const T
 
     // Concatenate gate+up weights as the combined FFN input projection
     int64_t expert_size = d_model * ffn_dim; // gate weights per expert
-    Tensor experts({n_experts_, expert_size});
-
+    // BUGFIX (bug census): int64 multiply can overflow on absurd dims, and
+    // the expert tensor alloc below is unchecked (d_model*ffn_dim*n_experts).
+    if (d_model <= 0 || ffn_dim <= 0 || expert_size / d_model != ffn_dim ||
+        expert_size > ((int64_t)1 << 34) / std::max<int64_t>(1, n_experts_))
+        throw Error("DenseToMoEPruner: dims overflow/unreasonable");
     const float* gd = gate.data<float>();
     const float* ud = up.data<float>();
     const float* dd = down.data<float>();
+    if (!gd || !ud || !dd) throw Error("DenseToMoEPruner: null weight data");
+    Tensor experts({n_experts_, expert_size});
 
     std::mt19937 rng(42);
     std::normal_distribution<float> noise_dist(0, 0.01f);

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -94,9 +95,16 @@ public:
         int64_t data_start = hdr["data_offsets"][1].as_int() + hdr["data_offsets"][0].as_int() - hdr["data_offsets"][0].as_int();
         data_start = 8 + (int64_t)hdr_json_len_[si];
         int64_t byte_off = ti.off0 + elem_offset * 2;
-        FILE* f = fopen((dir_ + "\\" + ti.shard).c_str(), "rb");
+        // BUGFIX (bug census): "\\" separator breaks POSIX + unchecked fseek
+        // (wrong offset → silent bad comparison). filesystem join + fseek check.
+        std::filesystem::path shard_path = std::filesystem::path(dir_) / ti.shard;
+        FILE* f = fopen(shard_path.string().c_str(), "rb");
         if (!f) { fprintf(stderr, "refcheck: can't open shard %s\n", ti.shard.c_str()); return false; }
-        fseek(f, data_start + byte_off, SEEK_SET);
+        if (fseek(f, data_start + byte_off, SEEK_SET) != 0) {
+            fprintf(stderr, "refcheck: seek failed\n");
+            fclose(f);
+            return false;
+        }
         std::vector<uint16_t> raw((size_t)count);
         size_t rd = fread(raw.data(), 2, (size_t)count, f);
         fclose(f);
@@ -118,7 +126,9 @@ public:
 
 private:
     bool parse_shard_header(int si) {
-        FILE* f = fopen((dir_ + "\\" + shards_[si]).c_str(), "rb");
+        // BUGFIX (bug census): same "\\" join breakage as read().
+        std::filesystem::path shard_path = std::filesystem::path(dir_) / shards_[si];
+        FILE* f = fopen(shard_path.string().c_str(), "rb");
         if (!f) return false;
         uint64_t len;
         if (fread(&len, 8, 1, f) != 1) { fclose(f); return false; }

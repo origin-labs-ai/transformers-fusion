@@ -1,4 +1,4 @@
-// quant_chat.cpp — terminal chat with Ornith-1.0-9B @ 2 BPW (QUANT_Q1_G) QUANT model
+// quant_chat.cpp — terminal chat with Ornith-1.0-9B @ 2 BPW (Q2) QUANT model
 #include "quant/qwen35_engine.h"
 #include "quant/qwen35_tokenizer.h"
 #include <cstdio>
@@ -29,10 +29,33 @@ int main(int argc, char** argv) {
     const char* trace_out = nullptr;
     const char* h_out = nullptr;
     for (int i = 3; i < argc; i++) {
-        if (std::strcmp(argv[i], "--temp") == 0 && i + 1 < argc) temp = (float)std::atof(argv[++i]);
-        else if (std::strcmp(argv[i], "--topk") == 0 && i + 1 < argc) topk = std::atoi(argv[++i]);
-        else if (std::strcmp(argv[i], "--max-new") == 0 && i + 1 < argc) max_new = std::atoi(argv[++i]);
-        else if (std::strcmp(argv[i], "--raw") == 0) raw = true;
+        // BUGFIX (bug census): atoi/atof fail-open (garbage → 0, silent).
+        // Validated parse with range clamps; bad values exit(2).
+        if (std::strcmp(argv[i], "--temp") == 0 && i + 1 < argc) {
+            char* end = nullptr;
+            double v = std::strtod(argv[++i], &end);
+            if (!end || *end != '\0' || !(v >= 0.0) || !(v <= 10.0)) {
+                std::fprintf(stderr, "Error: --temp needs a number in [0,10]\n");
+                return 2;
+            }
+            temp = (float)v;
+        } else if (std::strcmp(argv[i], "--topk") == 0 && i + 1 < argc) {
+            char* end = nullptr;
+            long v = std::strtol(argv[++i], &end, 10);
+            if (!end || *end != '\0' || v < 1 || v > 100000) {
+                std::fprintf(stderr, "Error: --topk needs an integer in [1,100000]\n");
+                return 2;
+            }
+            topk = (int)v;
+        } else if (std::strcmp(argv[i], "--max-new") == 0 && i + 1 < argc) {
+            char* end = nullptr;
+            long v = std::strtol(argv[++i], &end, 10);
+            if (!end || *end != '\0' || v < 1 || v > 1000000) {
+                std::fprintf(stderr, "Error: --max-new needs an integer in [1,1000000]\n");
+                return 2;
+            }
+            max_new = (int)v;
+        } else if (std::strcmp(argv[i], "--raw") == 0) raw = true;
         else if (std::strcmp(argv[i], "--trace-out") == 0 && i + 1 < argc) trace_out = argv[++i];
         else if (std::strcmp(argv[i], "--h-out") == 0 && i + 1 < argc) h_out = argv[++i];
     }
@@ -84,17 +107,21 @@ int main(int argc, char** argv) {
         if (trace_out && ids.size() == 1) {
             FILE* f = std::fopen(trace_out, "wb");
             if (f) {
-                std::fwrite(eng.trace(0), 4, 4096, f);
-                std::fclose(f);
-                std::fprintf(stderr, "[trace0 written: %s]\n", trace_out);
+                // BUGFIX (bug census): fwrite/fclose unchecked yet printed
+                // confirmation. Verify item count + close status.
+                bool ok = std::fwrite(eng.trace(0), 4, 4096, f) == 4096;
+                ok = (std::fclose(f) == 0) && ok;
+                std::fprintf(stderr, ok ? "[trace0 written: %s]\n" : "[trace0 WRITE FAILED: %s]\n",
+                             trace_out);
             }
         }
         if (h_out) {
             FILE* f = std::fopen(h_out, "wb");
             if (f) {
-                std::fwrite(eng.last_h().data(), 4, 4096, f);
-                std::fclose(f);
-                std::fprintf(stderr, "[h written: %s]\n", h_out);
+                bool ok = std::fwrite(eng.last_h().data(), 4, 4096, f) == 4096;
+                ok = (std::fclose(f) == 0) && ok;
+                std::fprintf(stderr, ok ? "[h written: %s]\n" : "[h WRITE FAILED: %s]\n",
+                             h_out);
             }
         }
 

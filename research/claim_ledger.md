@@ -559,3 +559,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | G1 | `generate_random_text` discarded `vocab_size` | Alphabet clamped to min(vocab,36) |
 | C1 | `GradientCheckpointManager` plain statics (race/lost stats) | Atomic active_/counts_/bytes_ |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 13 — 2026-09-13 (adapters IO + MoE alloc)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| Q1-Q2 | `quant_chat` atoi/atof fail-open + unchecked fwrite/fclose confirmations | strtod/strtol validated + range clamps (exit 2); write+close verified |
+| Q3-Q4 | `quant_refcheck` `"\\"` path join (POSIX break) + unchecked fseek | `std::filesystem::path` join; fseek checked (both sites) |
+| E1 | `DenseToMoEPruner` int64 overflow + unchecked expert alloc + null data | Overflow/alloc guards + null checks |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
