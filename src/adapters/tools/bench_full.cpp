@@ -33,6 +33,9 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#else
+#include <sys/stat.h>
+#include <dirent.h>
 #endif
 
 using namespace quant::adapters;
