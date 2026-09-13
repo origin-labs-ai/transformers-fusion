@@ -1,4 +1,4 @@
-// Proof: Mixed-precision (quantized forward + FP32 master weights) matches FP32 quality
+﻿// Proof: Mixed-precision (quantized forward + FP32 master weights) matches FP32 quality
 #include "quant/model.h"
 #include "quant/trainer.h"
 #include "quant/optimizer.h"
@@ -15,6 +15,21 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+
+// HONESTY NOTE (2026-09-12): this test used to print every measurement and then
+// `return 0` unconditionally, so it could never fail. It printed "BELOW FP32
+// QUALITY" and passed anyway. Everything below now checks the numbers it
+// measures and the process exits non-zero on any failure.
+static int g_failures = 0;
+#define CHECK(cond, msg)                                                        \
+    do {                                                                        \
+        if (cond) {                                                             \
+            std::printf("  [ok]   %s\n", (msg));                                \
+        } else {                                                                \
+            std::printf("  [FAIL] %s\n", (msg));                                \
+            ++g_failures;                                                       \
+        }                                                                       \
+    } while (0)
 
 static double now_sec() {
     auto t = std::chrono::high_resolution_clock::now();
@@ -41,7 +56,7 @@ static TrainResult train_fp32(int64_t hidden, int64_t num_layers, int64_t seq_le
     cfg.max_seq_len = seq_len;
     cfg.activation = quant::Activation::SiLU;
     quant::DenseModel model(cfg);
-    model.init_weights();
+    model.init_weights(1234); // same seed both arms (round-14 flaky fix)
 
     quant::AdamW opt(lr, 0.9f, 0.999f, 1e-8f, 0.0f);
 
@@ -104,7 +119,7 @@ static TrainResult train_quant8_mixed(int64_t hidden, int64_t num_layers, int64_
     cfg.max_seq_len = seq_len;
     cfg.activation = quant::Activation::SiLU;
     quant::DenseModel model(cfg);
-    model.init_weights();
+    model.init_weights(1234); // same seed both arms (round-14 flaky fix)
 
     quant::AdamW opt(lr, 0.9f, 0.999f, 1e-8f, 0.0f);
     std::vector<quant::Tensor*> params;
@@ -206,12 +221,17 @@ static void test_quant_noise_analysis() {
     printf("  Stochastic (temperature=0.5) quantize:\n");
     printf("    MSE = %.6e  Bias = %.6e  SNR = %.2f dB\n", mse_stoch, bias_stoch, snr_stoch);
     
-    // The bias should be near zero for both, but stochastic has theoretically
-    // zero-mean noise while deterministic has systematic bias toward codebook entries
-    bool stoch_unbiased = std::abs(bias_stoch) < std::abs(bias_det);
-    printf("  Stochastic has lower bias: %s\n", stoch_unbiased ? "YES" : "NO");
-    printf("  Bias reduction: %.2f%%\n",
-           (1.0 - std::abs(bias_stoch) / std::max(1e-30, std::abs(bias_det))) * 100.0);
+    // A single-run |bias| comparison is the wrong criterion — argmin can win one
+    // run by luck while still being systematically biased. The property that
+    // actually defines stochastic rounding is that its noise is zero-mean over
+    // many draws, which is measured below across 20 codebook draws.
+    printf("  Single-run |bias|: deterministic %.3e vs stochastic %.3e\n",
+           std::abs(bias_det), std::abs(bias_stoch));
+    CHECK(std::isfinite(snr_det) && snr_det > 20.0, "deterministic QUANT8 SNR > 20 dB");
+    CHECK(std::isfinite(snr_stoch) && snr_stoch > 20.0, "stochastic QUANT8 SNR > 20 dB");
+    // Stochastic sampling must not be materially worse than argmin. Before the
+    // 2026-09-12 fix this ratio was ~99x (MSE 4.55e-01 vs 4.59e-03).
+    CHECK(mse_stoch < 4.0 * mse_det, "stochastic MSE within 4x of deterministic argmin");
     
     // Run multiple seeds to confirm zero-mean property
     printf("\n--- Zero-mean noise verification (multiple seeds) ---\n");
@@ -231,10 +251,9 @@ static void test_quant_noise_analysis() {
         printf("    trial %2d: bias = %.6e\n", t, bias);
     }
     mean_bias /= trials;
-    printf("  Mean bias across %d trials: %.6e (should be near 0)\n",
+    printf("  Mean bias across %d trials: %.6e (must be < 1e-4)\n",
            trials, mean_bias);
-    printf("  Stochastic rounding produces zero-mean noise: %s\n",
-           std::abs(mean_bias) < 1e-4 ? "YES" : "APPROXIMATELY");
+    CHECK(std::abs(mean_bias) < 1e-4, "stochastic rounding noise is zero-mean across trials");
 }
 
 int main() {
@@ -289,6 +308,17 @@ int main() {
     printf("  Perplexity ratio (QUANT8/FP32): %.4f", ppl_ratio);
     if (ppl_ratio < 1.05f) printf(" — WITHIN 5%% OF FP32");
     printf("\n");
+
+    // These are the claims the header makes ("mixed-precision matches FP32
+    // quality"), so they are now actually checked. Bounds are deliberately
+    // looser than the verdict thresholds printed above because the training run
+    // is not seeded — it must not go flaky. Before the 2026-09-12 stochastic-
+    // rounding fix this pair measured delta 0.3939 / ratio 1.4827 and would
+    // have failed here, which is the point.
+    CHECK(std::isfinite(fp32_res.final_loss), "FP32 training loss finite");
+    CHECK(std::isfinite(quant8_res.final_loss), "QUANT8 mixed training loss finite");
+    CHECK(final_delta < 0.25f, "QUANT8 mixed final loss within 0.25 of FP32");
+    CHECK(ppl_ratio < 1.15f, "QUANT8 mixed perplexity within 15% of FP32");
     
     // Part 3: Format comparison
     printf("\n=== Format Quality Comparison (theoretical SNR) ===\n");
@@ -308,6 +338,9 @@ int main() {
     printf("  QUANT8 matches FP32 quality for training (proof above).\n");
     printf("  QUANT4 is best for PEFT/parameter-efficient fine-tuning.\n");
     printf("  QUANT/QUANT1 excels for extreme compression inference.\n");
-    
-    return 0;
+    printf("\nNOTE: the table above is THEORETICAL (nominal SNR per bit width), not a\n"
+           "measurement. The measured numbers are the ones checked earlier in this run.\n");
+
+    printf("\n=== %d check(s) failed ===\n", g_failures);
+    return g_failures > 0 ? 1 : 0;
 }

@@ -1,4 +1,4 @@
-#define NOMINMAX
+﻿#define NOMINMAX
 #include "quant/zero_optimizer.h"
 #include "quant/math.h"
 #include <algorithm>
@@ -9,6 +9,8 @@
 #include <windows.h>
 #undef min
 #undef max
+#else
+#include <sys/mman.h>
 #endif
 
 #if defined(QUANT_AVX2) || defined(__AVX2__)
@@ -395,12 +397,29 @@ void CPUOffloadEngine::deallocate_cpu(void* ptr) {
 }
 
 void CPUOffloadEngine::pin_memory(void* ptr, int64_t size_bytes) {
-    (void)ptr; (void)size_bytes;
-    // On systems with real CUDA, this would call cudaHostRegister
+    // BUGFIX (bug census): silent no-op — callers believed memory was pinned
+    // for async DMA. Best-effort real pin: VirtualLock/mLOCK where available;
+    // throws on null/bad size so misuse fails loud instead of pretending.
+    if (!ptr) throw quant::Error("CPUOffloadEngine::pin_memory: null pointer");
+    if (size_bytes <= 0) throw quant::Error("CPUOffloadEngine::pin_memory: bad size");
+#ifdef _WIN32
+    if (!VirtualLock(ptr, (SIZE_T)size_bytes))
+        throw quant::Error("CPUOffloadEngine::pin_memory: VirtualLock failed");
+#else
+    if (mlock(ptr, (size_t)size_bytes) != 0)
+        throw quant::Error("CPUOffloadEngine::pin_memory: mlock failed");
+#endif
+    // NOTE: cudaHostRegister stays future work (needs CUDA driver); the OS
+    // page-lock above is what prevents swap-out on CPU-only hosts.
 }
 
 void CPUOffloadEngine::unpin_memory(void* ptr) {
-    (void)ptr;
+    if (!ptr) return;
+#ifdef _WIN32
+    VirtualUnlock(ptr, 0);
+#else
+    munlock(ptr, 0);
+#endif
 }
 
 void CPUOffloadEngine::offload_params(const std::vector<float*>& params,

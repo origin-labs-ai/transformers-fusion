@@ -39,6 +39,12 @@ public:
     int64_t vocab_size() const override;
 
     void init_weights();
+    // Seeded variant (BUGFIX bug census round-14): init_weights() used
+    // std::random_device, so every call produced different weights — the
+    // convergence test compared FP32 vs QUANT8 from DIFFERENT inits and went
+    // flaky (delta 0.19 one run, 0.42 the next). seed=0 keeps legacy entropy;
+    // tests pass an explicit seed for identical inits.
+    void init_weights(uint64_t seed);
     void get_parameters(std::vector<Tensor*>& params);
 
     // MTP: forward returning per-head logits (head 0 = next-token, head 1+ = future tokens)

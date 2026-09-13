@@ -568,3 +568,13 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Q3-Q4 | `quant_refcheck` `"\\"` path join (POSIX break) + unchecked fseek | `std::filesystem::path` join; fseek checked (both sites) |
 | E1 | `DenseToMoEPruner` int64 overflow + unchecked expert alloc + null data | Overflow/alloc guards + null checks |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 14 — 2026-09-13 (DPO docs, stream validation, pin_memory, flaky seed)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| D1 | `DPOTrainer::train_step` `(void)` logits looked like a stub-discard | Documented-unused (fresh in-graph forwards win; signature stability) |
+| G4 | `stream_synchronize` discarded index (synced wrong stream silently) | Range validation throw |
+| Z2 | `pin_memory` silent no-op (callers believed DMA-pinned) | Real VirtualLock/mlock + throws |
+| F1 | **Flaky `test_quant_convergence`**: `init_weights()` used `random_device` — FP32 vs QUANT8 arms started from DIFFERENT inits (delta 0.19 vs 0.42 across runs) | `init_weights(seed)` overload; test pins 1234 both arms → 3/3 delta 0.0000, exit 0 |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

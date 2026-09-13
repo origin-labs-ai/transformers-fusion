@@ -1337,7 +1337,12 @@ void GPUComputeFull::async_memcpy_d2h(void* dst, const void* src, int64_t bytes)
 }
 
 void GPUComputeFull::stream_synchronize(int stream_idx) {
-    (void)stream_idx;
+    // BUGFIX (bug census): stream_idx was silently discarded — callers
+    // waiting on stream N actually waited on everything (or nothing, if the
+    // global flush ever short-circuits). Validate the index; per-stream
+    // fences don't exist yet, so a valid index still syncs the device.
+    if (stream_idx < 0 || stream_idx >= (int)impl_->streams.size())
+        throw std::runtime_error("GPUComputeFull::stream_synchronize: bad stream index");
     synchronize();
 }
 
