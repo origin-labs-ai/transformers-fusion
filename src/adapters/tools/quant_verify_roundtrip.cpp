@@ -185,7 +185,18 @@ int main(int argc, char** argv) {
     }
     std::string dir = argv[1];
     std::string quant_path = argv[2];
-    int limit = argc >= 4 ? std::atoi(argv[3]) : 5;
+    // BUGFIX (bug census): bare atoi fail-open (garbage → 0 → checks nothing,
+    // exits 0 = fake pass). Validated; garbage exits 2.
+    int limit = 5;
+    if (argc >= 4) {
+        char* end = nullptr;
+        long v = std::strtol(argv[3], &end, 10);
+        if (!end || *end != '\0' || v < 0 || v > 1000000) {
+            std::printf("ERROR: tensors_to_check needs 0..1000000, got '%s'\n", argv[3]);
+            return 2;
+        }
+        limit = (int)v;
+    }
     std::string filter = argc >= 5 ? argv[4] : "";
 
     // name -> shard, from index.json

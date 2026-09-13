@@ -5,6 +5,7 @@
 #include "quant/codebook.h"
 #include "quant/block_codec.h"
 
+#include "quant/detail/cli_parse.h"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -32,9 +33,15 @@ static ConvertArgs parse_args(int argc, char** argv) {
             args.output_path = argv[++i];
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc)
             args.input_fmt = argv[++i];
-        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc)
-            args.target_bpw = (float)std::atof(argv[++i]);
-        else if (strcmp(argv[i], "--verbose") == 0)
+        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) {
+            // BUGFIX (bug census): bare atof fail-open (garbage → 0.0 =
+            // silent no-compression). Validated + range-checked.
+            args.target_bpw = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
+            if (!(args.target_bpw >= 0.0f) || args.target_bpw > 32.0f) {
+                std::cerr << "Error: --bpw needs 0..32\n";
+                exit(2);
+            }
+        } else if (strcmp(argv[i], "--verbose") == 0)
             args.verbose = true;
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_convert --input <file> --output <model.quant> [options]\n";

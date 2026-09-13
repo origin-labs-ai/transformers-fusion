@@ -668,3 +668,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | T1 | Whole-data-file slurp into one string (OOM on large corpora) | 64MiB capped chunked sample + warning; training streams from disk |
 | T2 | `--config` dead flag (stored, never opened) | Honest note (hyperparams from CLI) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 24 — 2026-09-13 (convert/ptq/verify CLI)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| C1 | `convert --bpw` bare atof fail-open (garbage → 0.0 silent no-compression) | cli_parse + 0..32 range (verified live exit 2) |
+| P1-P2 | `quant_ptq --bpw/--block-size` bare atof/atoi fail-open | cli_parse + ranges (exit 2) |
+| V1 | `quant_verify_roundtrip` bare atoi (garbage → 0 → checks nothing, exit 0 fake pass) | strtol validated 0..1000000 |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

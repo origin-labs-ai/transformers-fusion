@@ -9,6 +9,7 @@
 #include "adapters/adapter_core.h"
 #include "adapters/gguf_bridge.h"
 #include "adapters/safetensors_bridge.h"
+#include "quant/detail/cli_parse.h"
 
 #include <iostream>
 #include <cstring>
@@ -26,9 +27,9 @@ int main(int argc, char** argv) {
             "  --format <f>        Input format (default: auto-detect by magic)\n"
             "                      raw_fp32 | raw_fp16 | raw_fp8_e4m3 | raw_fp8_e5m2\n"
             "                      gguf | safetensors | quant\n"
-            "  --bpw <float>       Target bits-per-weight (default: 1.50 = QUANT_Q0)\n"
-            "                      1.00 = all quant1, 1.50 = all quant, 4.0 = all quant4,\n"
-            "                       8.0 = all quant8, 16.0 = fp16, 32.0 = fp32\n"
+            "  --bpw <float>       Target bits-per-weight (default: 1.50 = Q1_5)\n"
+            "                      1.00 = all Q1, 1.50 = all Q1_5, 4.0 = all Q4,\n"
+            "                       8.0 = all Q8, 16.0 = fp16, 32.0 = fp32\n"
             "  --block-size <N>    Block size for mixed allocation (default: 256)\n"
             "  --verbose           Print per-tensor stats\n"
             "  -h, --help          Show this help\n\n"
@@ -51,11 +52,21 @@ int main(int argc, char** argv) {
             cfg.output_path = argv[++i];
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc)
             fmt_str = argv[++i];
-        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc)
-            cfg.target_bpw = (float)std::atof(argv[++i]);
-        else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc)
-            cfg.block_size = std::atoi(argv[++i]);
-        else if (strcmp(argv[i], "--verbose") == 0)
+        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) {
+            // BUGFIX (bug census): bare atof fail-open (garbage → 1.5 default
+            // silently kept... actually garbage → 0.0). Validated.
+            cfg.target_bpw = quant::cli_parse::parse_float(argv[i-1], argv[++i]);
+            if (!(cfg.target_bpw > 0.0f) || cfg.target_bpw > 32.0f) {
+                std::fprintf(stderr, "Error: --bpw needs 0(exclusive)..32\n");
+                return 2;
+            }
+        } else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc) {
+            cfg.block_size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
+            if (cfg.block_size <= 0 || cfg.block_size > (1 << 20)) {
+                std::fprintf(stderr, "Error: --block-size needs 1..1048576\n");
+                return 2;
+            }
+        } else if (strcmp(argv[i], "--verbose") == 0)
             cfg.verbose = true;
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             // Already printed help above.
