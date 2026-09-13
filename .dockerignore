@@ -1,0 +1,25 @@
+# Docker build context hygiene — keep the image build fast and hermetic.
+# The final image only needs sources + CMake; test/build artifacts,
+# reference snapshots and session dumps must not enter the context.
+.git/
+.github/
+bar/
+build*/
+build-*.txt
+build-*.log
+install_test/
+dist/
+repo/state/telemetry/
+research/telemetry/
+SESSION-*.jsonl
+*.jsonl
+.vs/
+.idea/
+.kilo/
+.llama/
+.bitnet/
+publication/
+graphify-out/
+*.bak
+*_out.txt
+*_err.txt
