@@ -255,12 +255,17 @@ float MoETrainer::train_step(const Tensor& input_ids, const Tensor& labels) {
 
     if (expert_parallel_ && config_.use_expert_parallel) {
         expert_parallel_->sync_gradients(model_);
-        for (auto& l : model_->layers) {
-            for (auto& e : l.moe->experts) {
-                if (e.gate_proj.weight.has_grad()) {
-                    int64_t n = e.gate_proj.weight.numel();
-                    float* gd = e.gate_proj.weight.grad().data<float>();
-                    for (int64_t i = 0; i < n; i++) gd[i] /= (float)config_.num_expert_parallel_ranks;
+        // BUGFIX (bug census): div-by-zero when num_expert_parallel_ranks==0
+        // (default config) — grads became inf/NaN silently. Guard + null check.
+        if (config_.num_expert_parallel_ranks > 1) {
+            for (auto& l : model_->layers) {
+                for (auto& e : l.moe->experts) {
+                    if (e.gate_proj.weight.has_grad()) {
+                        int64_t n = e.gate_proj.weight.numel();
+                        float* gd = e.gate_proj.weight.grad().data<float>();
+                        if (!gd) continue;
+                        for (int64_t i = 0; i < n; i++) gd[i] /= (float)config_.num_expert_parallel_ranks;
+                    }
                 }
             }
         }
@@ -312,12 +317,16 @@ float MoETrainer::train_step(DataLoader& loader, const Tensor& first_input, cons
     }
     if (expert_parallel_ && config_.use_expert_parallel) {
         expert_parallel_->sync_gradients(model_);
-        for (auto& l : model_->layers) {
-            for (auto& e : l.moe->experts) {
-                if (e.gate_proj.weight.has_grad()) {
-                    int64_t n = e.gate_proj.weight.numel();
-                    float* gd = e.gate_proj.weight.grad().data<float>();
-                    for (int64_t i = 0; i < n; i++) gd[i] /= (float)config_.num_expert_parallel_ranks;
+        // BUGFIX (bug census): same div-by-zero guard as train_step above.
+        if (config_.num_expert_parallel_ranks > 1) {
+            for (auto& l : model_->layers) {
+                for (auto& e : l.moe->experts) {
+                    if (e.gate_proj.weight.has_grad()) {
+                        int64_t n = e.gate_proj.weight.numel();
+                        float* gd = e.gate_proj.weight.grad().data<float>();
+                        if (!gd) continue;
+                        for (int64_t i = 0; i < n; i++) gd[i] /= (float)config_.num_expert_parallel_ranks;
+                    }
                 }
             }
         }

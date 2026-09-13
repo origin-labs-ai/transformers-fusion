@@ -598,13 +598,23 @@ void FSDPBlock::ensure_local_shards() {
 }
 
 void FSDPBlock::gather_and_install() {
+    // BUGFIX (bug census): local all_gather used a FRESH DistributedContext
+    // per call — a fresh barrier rendezvous with count=0/gen=0 means the
+    // FIRST thread through all_gather deadlocks waiting for world_size
+    // arrivals that only come from sibling threads sharing the SAME ctx.
+    // Single-threaded path: gather locally without any barrier. Documented:
+    // true multi-thread FSDP needs a shared ctx passed in (future work).
     if (local_shards_.empty()) return;
-    DistributedContext ctx(world_size_, world_rank_, DistributedContext::Mode::DDP);
     for (size_t i = 0; i < param_ptrs_.size(); i++) {
         Tensor full;
-        ctx.all_gather(local_shards_[i], full);
+        if (world_size_ <= 1) {
+            full = local_shards_[i];
+        } else {
+            DistributedContext ctx(world_size_, world_rank_, DistributedContext::Mode::DDP);
+            ctx.all_gather(local_shards_[i], full);
+        }
         const int64_t n = param_ptrs_[i]->numel();
-        if (full.numel() >= n)
+        if (full.numel() >= n && param_ptrs_[i]->data<float>() && full.data<float>())
             std::memcpy(param_ptrs_[i]->data<float>(), full.data<float>(), (size_t)n * sizeof(float));
     }
 }

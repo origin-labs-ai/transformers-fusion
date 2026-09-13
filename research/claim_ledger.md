@@ -746,3 +746,21 @@ Verification: `test_inference_opt.exe` → `[KV Truncate Test] Passed.`,
 |---|---|---|
 | F1 | `FineTuner` computed loss then `(void)`-discarded it (training ran blind, zero visibility) | stderr progress log per log_interval |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 80%-production push round 2 — 2026-09-13 (bench CSV committed + charts regen)
+
+The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
+
+| # | Item | State |
+|---|---|---|
+| B-csv | Fresh v3 `bench_format_comparison.csv` (224 data rows) committed | **CLOSED.** Working-tree CSV was already the 2026-09-11 fresh re-measure (v3 `QG_`/`Q_MX_` names, 225 lines incl. header); the old HEAD copy was stale pre-v3. Committed as part of the 80% push |
+| B-charts | `docs/COMPARISON_CHARTS.md` regenerated from the fresh CSV | **REGENERATED.** `build/Release/generate_comparison_visuals.exe` run from repo root → `docs/COMPARISON_CHARTS.md generated (224 CSV rows read)`. Zero stale `Q_G_*`/`MXQ_*` names left (v3 `QG24`, `Q_MX_24.5`, …); banner is clean |
+| B-trace | `docs/COMPETITOR_ANALYSIS.md` trace note updated | Trace note now cites the fresh CSV + regenerated charts; "fresh re-run owed" language removed (end-task parity still honestly unclaimed) |
+
+## 1000-bug sweep round 31 — 2026-09-13 (FSDP barrier + MoE div-zero)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| F1 | `FSDPBlock::gather_and_install` fresh-ctx barrier per call (single-thread deadlock pattern) + null memcpy | Local gather when ws≤1 (documented shared-ctx future); null guards |
+| M1-M2 | MoE expert-parallel grad div-by-zero ×2 (`num_expert_parallel_ranks==0` default → inf/NaN) | `>1` guard + null grad check |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
