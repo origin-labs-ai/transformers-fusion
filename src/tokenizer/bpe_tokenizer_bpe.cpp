@@ -135,22 +135,39 @@ void BPETokenizer::save(const std::string& path) const {
 }
 
 void BPETokenizer::load(const std::string& path) {
+    // BUGFIX (bug census): unvalidated vs/len from file (negative → huge
+    // resize/OOM; short reads → corrupt vocab). Bounds + stream checks.
+    static constexpr int kMaxVocab = 1 << 20, kMaxTokLen = 1 << 16, kMaxMerges = 1 << 24;
     std::ifstream f(path, std::ios::binary);
-    int vs; f.read((char*)&vs, sizeof(vs));
-    vocab_.resize(vs);
+    if (!f) return;
+    int vs = 0;
+    f.read((char*)&vs, sizeof(vs));
+    if (!f || vs < 0 || vs > kMaxVocab) return;
+    std::vector<std::string> vocab((size_t)vs);
     for (int i = 0; i < vs; i++) {
-        int len; f.read((char*)&len, sizeof(len));
-        vocab_[i].resize(len);
-        f.read(&vocab_[i][0], len);
+        int len = 0;
+        f.read((char*)&len, sizeof(len));
+        if (!f || len < 0 || len > kMaxTokLen) return;
+        vocab[(size_t)i].resize((size_t)len);
+        if (len > 0) {
+            f.read(&vocab[(size_t)i][0], len);
+            if (!f) return;
+        }
     }
-    int ms; f.read((char*)&ms, sizeof(ms));
-    merges_.clear();
+    int ms = 0;
+    f.read((char*)&ms, sizeof(ms));
+    if (!f || ms < 0 || ms > kMaxMerges) return;
+    std::map<std::pair<int,int>, int> merges;
     for (int i = 0; i < ms; i++) {
-        int a, b, c; f.read((char*)&a, sizeof(a));
+        int a = 0, b = 0, c = 0;
+        f.read((char*)&a, sizeof(a));
         f.read((char*)&b, sizeof(b));
         f.read((char*)&c, sizeof(c));
-        merges_[{a,b}] = c;
+        if (!f) return;
+        merges[{a,b}] = c;
     }
+    vocab_ = std::move(vocab);
+    merges_ = std::move(merges);
 }
 
 UnigramTokenizer::UnigramTokenizer() {

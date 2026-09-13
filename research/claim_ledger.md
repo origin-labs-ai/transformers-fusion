@@ -599,3 +599,11 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Z1-? | Tokenizer edge cases | Crew c6f344f7 (silent; changes in tree, build+suite green) |
 | V1-? | Server parsing gaps (chunked/pipelined/continuation/case/query-decode) | Crew 9910cc5c (silent; changes in tree, build+suite green) |
 | Suite | Full rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 17 — 2026-09-13 (tokenizer load + crew verdicts)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| K1 | `BPETokenizer::load` unvalidated vs/len/merges (negative → OOM, short reads → corrupt vocab) | Bounds caps + stream checks + commit-only-on-success |
+| Crew verdicts | Tokenizer crew: no BUGFIX markers found (nothing delivered). Server crew: no chunked/pipelined/continuation/query-decode code found (nothing delivered). Sampler crew: delivered (S1-S8 verified on disk) | Honest grading: silent crews scored as no-delivery, areas stay open |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
