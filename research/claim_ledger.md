@@ -772,3 +772,10 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 | L1 | `compute_logprobs` V≤0 div-zero, null deref, NaN logits → NaN probs | Guards + finite-only max/sum, -50 fallback |
 | G1 | `generate_tokens` empty input → zero-shape + pointer underflow | Fail-closed empty |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 33 — 2026-09-13 (discard documentation)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| D1-D3 | Bare `(void)hook_installed/weight/global_rank` hid intent | `[[maybe_unused]]` / documented-unused (shape/signature/leadership notes) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

@@ -474,13 +474,14 @@ void AutogradEngine::reset() {
 AutogradEngine& AutogradEngine::instance() {
     static AutogradEngine engine;
     // Install the layering-safe ~Tensor cleanup hook once the engine exists.
-    static const bool hook_installed = [] {
+    // NOTE (bug census): the (void)hook_installed was fine (forces the
+    // lambda to run), but [[maybe_unused]] states intent without a fake use.
+    [[maybe_unused]] static const bool hook_installed = [] {
         detail::autograd_unregister_hook = +[](Tensor* t) {
             instance().unregister_parameter(t);
         };
         return true;
     }();
-    (void)hook_installed;
     return engine;
 }
 

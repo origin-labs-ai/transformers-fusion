@@ -543,7 +543,10 @@ void RingAllReduce::hierarchical_allreduce(float* data, size_t n, ReduceOp op,
                                             int nodes, int local_rank,
                                             int global_rank,
                                             InterNodeReduce inter_node_fn) {
-    (void)global_rank;
+    // NOTE (bug census): global_rank intentionally unused — node membership
+    // derives from local_rank (rank 0 of each node drives inter-node); the
+    // global id is kept for signature symmetry with the NCCL-style API.
+    (void)global_rank; // documented-unused: leadership is local_rank==0
     if (nodes <= 1 || !inter_node_fn) {
         allreduce(data, n, op);
         return;

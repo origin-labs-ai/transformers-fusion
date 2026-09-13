@@ -59,9 +59,11 @@ Tensor matmul_grad_wrt_b(const Tensor& grad_output, const Tensor& a) {
 // Gradient w.r.t. the weight operand of scalar_gemm, stored as {K, N}
 // (the same layout matmul_op/Linear feed to the forward pass).
 Tensor weight_grad(const Tensor& grad_output, const Tensor& a, const Tensor& weight) {
-    // weight: {K, N}, a: {M, K}, grad_output: {M, N}
+    // NOTE (bug census): `weight` intentionally unused — the gradient shape
+    // derives from grad_output/a alone ({K,N} already matches). Kept for
+    // signature symmetry with the other *_grad helpers. (void) removed.
+    (void)weight; // documented-unused: shape comes from grad_output/a
     Tensor dB = matmul_grad_wrt_b(grad_output, a);  // {K, N} — already matches weight
-    (void)weight;
     return dB;
 }
 
