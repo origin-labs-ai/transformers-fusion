@@ -18,7 +18,7 @@ NC='\033[0m'
 usage() {
   echo "Usage: $0 <windows_build_dir> <linux_build_dir>"
   echo ""
-  echo "Compares binary artifacts between a Windows and Linux build of InNova"
+  echo "Compares binary artifacts between a Windows and Linux build of Transcender"
   echo "to verify bitwise determinism of quantized output files."
   echo ""
   echo "Both directories should point to the CMake build output (e.g. build/Release or build)."
@@ -43,7 +43,7 @@ if [[ ! -d "$LIN_DIR" ]]; then
 fi
 
 echo "=============================================="
-echo " InNova Cross-Platform Determinism Check"
+echo " Transcender Cross-Platform Determinism Check"
 echo "=============================================="
 echo ""
 echo "Windows build dir: $WIN_DIR"
@@ -52,7 +52,7 @@ echo ""
 
 # -------------------------------------------------------------------
 # 1. Collect binary artifacts from both directories
-#    We look for common binary extensions that InNova produces:
+#    We look for common binary extensions that Transcender produces:
 #    executables, static/shared libraries, and QUANT quantized weight files.
 # -------------------------------------------------------------------
 
@@ -175,7 +175,7 @@ echo ""
 if [[ $DIFF_COUNT -eq 0 && $MISMATCH -eq 0 ]]; then
   echo -e "${GREEN}PASS${NC}: All binary artifacts are bitwise identical across platforms."
   echo ""
-  echo "This confirms that InNova produces deterministic output"
+  echo "This confirms that Transcender produces deterministic output"
   echo "regardless of compiler (MSVC vs GCC vs Clang) and OS."
   exit 0
 elif [[ $DIFF_COUNT -eq 0 && $MISMATCH -ne 0 ]]; then

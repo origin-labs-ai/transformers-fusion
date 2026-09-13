@@ -87,7 +87,7 @@ static void quantize_quant4(const float* src, uint8_t* dst,
 }
 
 // ---------------------------------------------------------------------------
-// BitNet b1.58-style ternary {-1, 0, +1} baseline. NOT the canonical QUANT_Q0
+// BitNet b1.58-style ternary {-1, 0, +1} baseline. NOT the canonical Q1_5
 // codec (per-32 FP16 scale + sign bits) — labeled BITNET_158 below.
 // ---------------------------------------------------------------------------
 static void quantize_quant(const float* src, int8_t* dst, int64_t n) {

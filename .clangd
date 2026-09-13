@@ -15,30 +15,30 @@ CompileFlags:
     - -D_CRT_SECURE_NO_WARNINGS
     - -DQUANT_USE_DIRECTX
     - -DQUANT_USE_VULKAN
-    - -IC:/Users/thaku/Downloads/InNova/include
-    - -IC:/Users/thaku/Downloads/InNova/src
-    - -IC:/Users/thaku/Downloads/InNova/src/adapters/include
-    - -IC:/Users/thaku/Downloads/InNova/engines/inference
-    - -IC:/Users/thaku/Downloads/InNova/engines/quant
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/dense
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/vision
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/audio
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/embeddings
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/image
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/ocr
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/text
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/moe/video
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/vision
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/audio
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/embeddings
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/image
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/ocr
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/text
-    - -IC:/Users/thaku/Downloads/InNova/engines/trainer/multimodal/video
-    - -IC:/Users/thaku/Downloads/InNova/sops
-    - -IC:/Users/thaku/Downloads/InNova/build
+    - -IC:/Users/thaku/Downloads/Transcender/include
+    - -IC:/Users/thaku/Downloads/Transcender/src
+    - -IC:/Users/thaku/Downloads/Transcender/src/adapters/include
+    - -IC:/Users/thaku/Downloads/Transcender/engines/inference
+    - -IC:/Users/thaku/Downloads/Transcender/engines/quant
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/dense
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/vision
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/audio
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/embeddings
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/image
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/ocr
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/text
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/video
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/vision
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/audio
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/embeddings
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/image
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/ocr
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/text
+    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/video
+    - -IC:/Users/thaku/Downloads/Transcender/sops
+    - -IC:/Users/thaku/Downloads/Transcender/build
   Remove:
     - -march=*
     - -mavx*

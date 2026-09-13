@@ -1,4 +1,4 @@
-# 💰 Compute & Funding Strategy — InNova Engine
+# 💰 Compute & Funding Strategy — Transcender Engine
 
 > How to get serious GPU time without money. Ordered by speed-to-access.
 > Reality check first: **GB300 NVL72 is frontier-training scale** (multi-crore
@@ -59,7 +59,7 @@ IndiaAI allocation.
 |---|---|
 | 4 Speed War (SIMD codec) | CPU only — free |
 | 3 Quality Gauntlet (PPL, real-model evals) | Kaggle T4s / one A100 burst |
-| 5 Feature completion (FP8/MLA/MTP tests) | Single H100 hourly bursts |
+| 5 Feature completion (FP8/compressed/MTP tests) | Single H100 hourly bursts |
 | 7 CUDA kernels | 4090-class spot instances |
 | RLL self-improvement loops | TRC TPUs (applied-for) |
 

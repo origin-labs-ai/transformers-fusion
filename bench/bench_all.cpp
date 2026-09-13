@@ -41,7 +41,7 @@ double bench_latency() {
 }
 
 void run_all_benchmarks() {
-    std::cout << "=== InNova Benchmarks ===\n\n";
+    std::cout << "=== Transcender Benchmarks ===\n\n";
 
     printf("[GEMM] 256x256x256 FP32...\n");
     double ops = 2.0 * 256 * 256 * 256;

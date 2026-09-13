@@ -1,8 +1,8 @@
 #pragma once
 
-#define QUANT_VERSION_MAJOR 0
+#define QUANT_VERSION_MAJOR 1
 #define QUANT_VERSION_MINOR 1
-#define QUANT_VERSION_PATCH 2
+#define QUANT_VERSION_PATCH 0
 
 #cmakedefine QUANT_AVX2
 #cmakedefine QUANT_AVX512

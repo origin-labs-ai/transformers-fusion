@@ -1,14 +1,23 @@
 # Research Foundation
 
-> **The Science Behind InNova**
+> **The Science Behind Transcender**
+>
+> **Phase 24 sync (2026-09-07, docs-only):** external-paper summaries below (BitNet,
+> VQ-VAE, MoE, …) describe *other projects'* published results, not Transcender
+> measurements — treat their numbers as literature, not bench truth. Transcender-side
+> implementation pointers using flat `src/*.cpp` paths are STALE; truth is
+> `src/{codec,kernel,math,model,tokenizer,trainer,…}/` (see `docs/ARCHITECTURE.md`
+> § Source Layout Truth). Format truth: 105 Q-series formats, no TWI
+> (`include/quant/types.h:67`). Measured numbers live in `bench_format_comparison.csv`
+> + `research/claim_ledger.md`; anything else here is UNVERIFIED.
 
 ---
 
 ## 🎯 Overview
 
-InNova is built on a foundation of **peer-reviewed research** in machine learning, quantization, and systems design. Every major architectural decision is backed by published papers, ensuring that we're using proven, effective techniques.
+Transcender is built on a foundation of **peer-reviewed research** in machine learning, quantization, and systems design. Every major architectural decision is backed by published papers, ensuring that we're using proven, effective techniques.
 
-This document catalogs the research papers that inspired and informed the design of InNova, along with how each paper's findings are implemented in the codebase.
+This document catalogs the research papers that inspired and informed the design of Transcender, along with how each paper's findings are implemented in the codebase.
 
 ---
 
@@ -22,7 +31,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Ternary weights {-1, 0, +1} trained from scratch can match FP16 perplexity and downstream task performance.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `src/kernel_tl.cpp` - Ternary Lookup kernel
 - `include/quant/ste_quantizer.h` - Straight-Through Estimator for ternary training
 - Ternary format support in QUANT format
@@ -43,7 +52,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Element-wise LUT-based matmul (TL) outperforms bit-wise LUT (T-MAC) by **2.32× on x86** and **1.19× on ARM** for ternary inference.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `src/kernel_tl.cpp` - Ternary Lookup Table kernel
 
 **Two Kernels:**
@@ -62,7 +71,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Only **~1% of weights are salient** — identified by activation magnitudes. Protecting these with higher precision recovers nearly all quality loss from quantization.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `src/format_planner.cpp` - FormatPlanner uses AWQ-style importance scoring
 - `include/quant/format_planner.h` - Importance-based format allocation
 
@@ -87,7 +96,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Vector quantization with codebook learning enables discrete representation learning. The codebook is trained with EMA updates and commitment loss.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `include/quant/codebook.h` - Vector quantization codebooks
 - `src/codebook.cpp` - Codebook implementation
 - QUANT8/QUANT4 codebooks use VQ training: k-means initialization + EMA centroid update + straight-through gradient
@@ -111,7 +120,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Different experts in a MoE model need different bit-widths. Routing can also be quantized.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `src/moe_variants.cpp` - Per-expert format allocation
 - `include/quant/moe_variants.h` - MoE with mixed formats
 
@@ -146,7 +155,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Contribution:** The Transformer architecture, which has become the foundation of modern NLP.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `include/quant/transformer.h` - Transformer architecture
 - `src/transformer.cpp` - Transformer implementation
 
@@ -167,7 +176,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Contribution:** MoE layers enable scaling model capacity without proportionally increasing computation.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `include/quant/moe_variants.h` - MoE variants
 - `src/moe_variants.cpp` - MoE implementation
 - **Dense MoE:** All-to-all communication
@@ -189,7 +198,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Contribution:** Rotary Position Embedding (RoPE) provides better extrapolation and relative position understanding than absolute position embeddings.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - Position embedding support in `Attention` class
 - Optional RoPE implementation (planned for future versions)
 
@@ -205,7 +214,7 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Contribution:** Adaptive Moment Estimation (Adam) optimizer that combines the advantages of AdaGrad and RMSProp.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `include/quant/optimizer.h` - Optimizer base class
 - `src/optimizer.cpp` - Adam, AdamW, SGD implementations
 
@@ -219,15 +228,15 @@ This document catalogs the research papers that inspired and informed the design
 
 **Key Finding:** Weight decay should be decoupled from the gradient update in Adam for better regularization.
 
-**Implementation in InNova:**
+**Implementation in Transcender:**
 - `AdamW` class in `src/optimizer.cpp`
 - Proper weight decay implementation separate from gradient scaling
 
 ---
 
-## 💡 InNova Original Research
+## 💡 Transcender Original Research
 
-While InNova is primarily an implementation of existing research, it also introduces novel contributions:
+While Transcender is primarily an implementation of existing research, it also introduces novel contributions:
 
 ### 1. QUANT Format - Mixed-Precision Binary Container
 
@@ -280,7 +289,7 @@ While InNova is primarily an implementation of existing research, it also introd
 | PyTorch | 1000+ Python packages | 1GB+ | Complex |
 | TensorFlow | Similar to PyTorch | 1GB+ | Complex |
 | ONNX Runtime | ~50MB | ~50MB | Moderate |
-| **InNova** | **Zero** | **~2MB** | **Simple** |
+| **Transcender** | **Zero** | **~2MB** | **Simple** |
 
 ---
 
@@ -302,7 +311,7 @@ While InNova is primarily an implementation of existing research, it also introd
 
 1. **Deep Learning** - Ian Goodfellow, Yoshua Bengio, Aaron Courville
    - Comprehensive introduction to deep learning
-   - Covers all fundamentals needed for InNova
+   - Covers all fundamentals needed for Transcender
 
 2. **Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow** - Aurélien Géron
    - Practical guide to ML concepts
@@ -310,7 +319,7 @@ While InNova is primarily an implementation of existing research, it also introd
 
 3. **Effective Modern C++** - Scott Meyers
    - Essential for writing high-quality C++20 code
-   - Covers best practices used in InNova
+   - Covers best practices used in Transcender
 
 4. **C++ Primer** - Stanley Lippman, Josée Lajoie, Barbara E. Moo
    - Comprehensive C++ reference
@@ -320,7 +329,7 @@ While InNova is primarily an implementation of existing research, it also introd
 
 ## 🔬 Research Directions
 
-InNova is designed to be a platform for **research as well as production**. Here are some research directions you can explore:
+Transcender is designed to be a platform for **research as well as production**. Here are some research directions you can explore:
 
 ### 1. New Quantization Formats
 
@@ -362,7 +371,7 @@ InNova is designed to be a platform for **research as well as production**. Here
 
 ## 📊 Performance Targets
 
-Based on research and our own benchmarks, here are the performance targets for InNova:
+Based on research and our own benchmarks, here are the performance targets for Transcender:
 
 | Component | Target | Current | Status |
 |-----------|--------|---------|--------|
@@ -376,16 +385,16 @@ Based on research and our own benchmarks, here are the performance targets for I
 
 ---
 
-## 🎓 How to Cite InNova
+## 🎓 How to Cite Transcender
 
-If you use InNova in your research, please cite it as:
+If you use Transcender in your research, please cite it as:
 
 ```bibtex
-@misc{InNovacpp,
-  author = {InNova Contributors},
-  title = {InNova: A Zero-Dependency C++20 AI Engine with QUANT Format},
+@misc{Transcendercpp,
+  author = {Transcender Contributors},
+  title = {Transcender: A Zero-Dependency C++20 AI Engine with QUANT Format},
   year = {2026},
-  url = {https://github.com/origin-labs-ai/InNova},
+  url = {https://github.com/origin-labs-ai/Transcender},
   note = {Zero-dependency C++20 AI engine with mixed-precision QUANT format}
 }
 ```
@@ -394,7 +403,7 @@ If you use InNova in your research, please cite it as:
 
 ## 🔍 Research Tools
 
-InNova includes several tools for research:
+Transcender includes several tools for research:
 
 1. **Benchmarking:** `quant-bench` - Measure performance of different operations
 2. **Profiling:** Built-in profiling for kernels (planned)
@@ -405,13 +414,13 @@ InNova includes several tools for research:
 
 ## 🤝 Collaboration
 
-We're interested in collaborating on research projects using InNova. Potential collaboration areas:
+We're interested in collaborating on research projects using Transcender. Potential collaboration areas:
 
 - **New quantization techniques:** Implement and evaluate new quantization methods
 - **Architecture exploration:** Build and test new neural network architectures
 - **Hardware optimization:** Optimize for specific hardware platforms
 - **Application-specific models:** Develop models for specific domains
-- **Benchmarking:** Compare InNova with other frameworks
+- **Benchmarking:** Compare Transcender with other frameworks
 
 Contact us if you're interested in collaboration!
 

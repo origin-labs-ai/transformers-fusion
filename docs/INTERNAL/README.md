@@ -6,7 +6,7 @@
 
 ## 📚 Overview
 
-This directory contains **internal design documents** that explain the technical decisions behind InNova's architecture. These documents are intended for:
+This directory contains **internal design documents** that explain the technical decisions behind Transcender's architecture. These documents are intended for:
 
 - **Contributors** who need to understand the "why" behind design choices
 - **Maintainers** who need to understand the system deeply
@@ -141,11 +141,11 @@ Unlike the API documentation (which explains *how* to use the system) or the mod
 
 ## 🎨 Design Principles
 
-The following principles guide InNova's design:
+The following principles guide Transcender's design:
 
 ### 1. Zero Dependencies
 
-**Principle:** InNova should have no external dependencies.
+**Principle:** Transcender should have no external dependencies.
 
 **Rationale:**
 - Eliminates version conflicts and dependency hell

@@ -22,7 +22,7 @@ static bool is_ref(const std::string& f) {
 
 static std::string svg_color(const Row& r) {
     if (is_ref(r.format)) return "#d33";
-    if (r.format.rfind("MXQ", 0) == 0) return "#c6a700";
+    if (r.format.rfind("MXQ", 0) == 0 || r.format.rfind("Q_MX", 0) == 0 || r.format.rfind("QG_MX", 0) == 0) return "#c6a700";
     if (r.format.find("_G") != std::string::npos) return "#083";
     return "#06c";
 }
@@ -51,7 +51,7 @@ int main() {
     std::ofstream f("docs/COMPARISON_CHARTS.md");
     if (!f.is_open()) { std::cerr << "ERROR: cannot open docs/COMPARISON_CHARTS.md\n"; return 3; }
 
-    f << "# InNova vs Industrial Baselines — REAL Measured Charts\n\n";
+    f << "# Transcender vs Industrial Baselines — REAL Measured Charts\n\n";
     f << "> Generated from `bench_format_comparison.csv` by `tools/generate_comparison_visuals.cpp`.\n";
     f << "> Every number below comes from a measured round-trip of the production codec.\n";
     f << "> BPW ironclad: each format stores EXACTLY the BPW in its name.\n\n";
@@ -93,25 +93,25 @@ int main() {
                 f << "<text x='" << (int)X(r.bpw) + 5 << "' y='" << (int)Y(r.psnr) - 4 << "' fill='" << col << "'>" << r.format << "</text>\n";
         }
         f << "<rect x='" << W - 260 << "' y='" << 8 << "' width='252' height='52' fill='#fff' stroke='#ccc'/>\n";
-        f << "<circle cx='" << W - 246 << "' cy='20' r='3' fill='#06c'/><text x='" << W - 238 << "' y='23'>InNova plain</text>\n";
-        f << "<circle cx='" << W - 246 << "' cy='34' r='3' fill='#083'/><text x='" << W - 238 << "' y='37'>InNova GRP/K_G</text>\n";
-        f << "<circle cx='" << W - 246 << "' cy='48' r='3' fill='#c6a700'/><text x='" << W - 238 << "' y='51'>InNova MXQ mix</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='20' r='3' fill='#06c'/><text x='" << W - 238 << "' y='23'>Transcender plain</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='34' r='3' fill='#083'/><text x='" << W - 238 << "' y='37'>Transcender GRP/K_G</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='48' r='3' fill='#c6a700'/><text x='" << W - 238 << "' y='51'>Transcender MXQ mix</text>\n";
         f << "<circle cx='" << W - 140 << "' cy='20' r='4' fill='#d33' stroke='#900'/><text x='" << W - 132 << "' y='23'>[ref] industrial</text>\n";
         f << "</svg>\n\n";
 
         // Same-BPW industrial head-to-head table computed from CSV.
-        f << "| InNova | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |\n|---|---|---|---|---|---|---|---|\n";
+        f << "| Transcender | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |\n|---|---|---|---|---|---|---|---|\n";
         struct PairDef { const char* a; const char* b; };
         PairDef pairs[] = {
             {"Q16", "[ref] IEEE FP16"},
-            {"MXQ_16.5_G", "[ref] IEEE FP16"},
-            {"Q_G_8.5", "[ref] GGUF Q8_0"},
-            {"MXQ_8.5", "[ref] GGUF Q8_0"},
-            {"Q_G_6.5", "[ref] GGUF Q6_K"},
-            {"Q_G_4.5", "[ref] GGUF Q4_K"},
-            {"MXQ_4.5_G", "[ref] GGUF Q4_K"},
-            {"Q1_G", "[ref] BitNet b1.58"},
-            {"Q1_G", "[ref] Binary 1-bit"},
+            {"QG_MX_16.5", "[ref] IEEE FP16"},
+            {"QG_8.5", "[ref] GGUF Q8_0"},
+            {"Q_MX_8.5", "[ref] GGUF Q8_0"},
+            {"QG_6.5", "[ref] GGUF Q6_K"},
+            {"QG_4.5", "[ref] GGUF Q4_K"},
+            {"QG_MX_4.5", "[ref] GGUF Q4_K"},
+            {"QG1", "[ref] BitNet b1.58"},
+            {"QG1", "[ref] Binary 1-bit"},
             {"Q8_K_M", "[ref] INT8 uniform"},
         };
         auto find_row = [&](const std::string& n) -> const Row* {

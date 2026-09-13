@@ -33,7 +33,7 @@ Critical distinction: BitNet b1.58 **trains from scratch** with ternary weights.
 - ❌ FALSE for post-hoc quantization of existing models
 - ❌ FALSE for all tasks at all sizes (they show "comparable" not "identical")
 
-### For InNova QUANT format:
+### For Transcender QUANT format:
 - **Ternary blocks:** If trained from scratch in-format, 0% quality loss is **theoretically possible** (proven by BitNet)
 - **QUANT8/QUANT4 blocks:** These are VQ-based, not ternary — different math, different guarantees
 - **Mixed format:** No paper has proven mixed-format training matches FP16 — this would be NOVEL RESEARCH
@@ -50,7 +50,7 @@ Critical distinction: BitNet b1.58 **trains from scratch** with ternary weights.
 | Mixed (ternary+QUANT8+QUANT4) | YES | ❓ UNKNOWN | **Original research needed** |
 | Mixed (ternary+QUANT8+QUANT4) | NO (post-hoc) | ❌ No | Accumulated errors |
 
-## Takeaway for InNova
+## Takeaway for Transcender
 BitNet b1.58 proves one thing: **from-scratch ternary training CAN match FP16 quality.**  
 But the kicker: QUANT's unique selling point is MIXED formats per-block. No paper has proven that a per-block mixed format (ternary + QUANT8 + QUANT4 in different blocks of the same weight matrix) can achieve 0% loss.  
 

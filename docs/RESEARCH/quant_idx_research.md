@@ -2,14 +2,14 @@
 
 **Task:** DIFFUSION.txt Phase K, Task 134  
 **Date:** 2026-07-16  
-**Scope:** Best practices for SHA256-indexed, content-addressed weight storage with memory-mapped loading — the `.quant` + `InNovaIDX` index format used by InNova.
+**Scope:** Best practices for SHA256-indexed, content-addressed weight storage with memory-mapped loading — the `.quant` + `TranscenderIDX` index format used by Transcender.
 
 ---
 
 ## 1. Content-Addressed Weight Storage
 
 ### The idea
-Instead of storing tensors by **position** (tensor #0, #1, … at fixed offsets), store by **content hash** — SHA256 over the raw weight bytes. The index file (`InNovaIDX`) maps each tensor's logical name to its SHA256, and the data file holds the (deduplicated) blobs.
+Instead of storing tensors by **position** (tensor #0, #1, … at fixed offsets), store by **content hash** — SHA256 over the raw weight bytes. The index file (`TranscenderIDX`) maps each tensor's logical name to its SHA256, and the data file holds the (deduplicated) blobs.
 
 ### Why content-addressing
 - **Deduplication** — identical tensors (shared embeddings, tied weights, common LoRA deltas, identical experts across MoE checkpoints) hash to the same SHA256 and are stored once. Across a model family this is a large win; across MoE with many experts it is substantial.
@@ -17,9 +17,9 @@ Instead of storing tensors by **position** (tensor #0, #1, … at fixed offsets)
 - **Caching / reuse** — a content-addressed blob is globally addressable: a downloader, a tier-2 SSD cache, and a peer can all key on the hash; you never re-fetch what you already have.
 - **Differential / sharded loading** — when a model is updated, only tensors whose SHA256 changed need to be re-downloaded/reloaded (git-for-weights). This is the backbone of efficient distributed checkpoint pull (pairs with ZeRO-3 sharding — see `distributed_research.md`).
 
-### InNova index layout (per DIFFUSION.txt conditions 13 & 14)
+### Transcender index layout (per DIFFUSION.txt conditions 13 & 14)
 ```
-magic        : 8 bytes  = "InNovaIDX"
+magic        : 15 bytes = "TranscenderIDX" + NUL (Phase 24: was "8 bytes" — wrong; truth `src/codec/quant_format.cpp:546-548` writes 15B incl. NUL; reader also accepts legacy 10B "InNovaIDX", `:585-592`)
 version      : uint32
 num_tensors  : uint32
 [ per tensor:
@@ -39,9 +39,9 @@ On load: read header → for each tensor, `mmap` (or pread) the byte range at `o
 1. **Full verify on cold load** — recompute all hashes; reject the whole file if any fail. Slowest but safest. Use for first load / release artifacts.
 2. **Lazy / on-demand verify** — verify a tensor's hash only when it is first touched (deferred until the mmap region is page-faulted in). Trades a little memory of trust for fast startup. Use for warm caches where the index was previously verified.
 3. **Merkle / chunked hashing** — for very large tensors, hash in fixed chunks (e.g. 1 MB) and store a Merkle root; lets you localize corruption to a chunk and re-fetch just that chunk (git-LFS-style). Overkill for 0.1B, valuable for 1T-param sharded checkpoints.
-4. **Streaming recompute** — verify while streaming the tensor through the dequantizer, so you pay the SHA256 cost once and it overlaps with I/O (no extra pass over memory). This is the recommended InNova pattern: fold SHA256 into the `mmap`→dequant loop so integrity is free-ish.
+4. **Streaming recompute** — verify while streaming the tensor through the dequantizer, so you pay the SHA256 cost once and it overlaps with I/O (no extra pass over memory). This is the recommended Transcender pattern: fold SHA256 into the `mmap`→dequant loop so integrity is free-ish.
 
-**Critical correctness note:** SHA256 must be computed over the **exact bytes that were written**, with a stable byte order (little-endian, as InNova uses). If you ever change quantization format, the hash changes — that's correct (it is a new artifact), so versioning is in the header, not by mutating bytes in place.
+**Critical correctness note:** SHA256 must be computed over the **exact bytes that were written**, with a stable byte order (little-endian, as Transcender uses). If you ever change quantization format, the hash changes — that's correct (it is a new artifact), so versioning is in the header, not by mutating bytes in place.
 
 ---
 
@@ -59,7 +59,7 @@ On load: read header → for each tensor, `mmap` (or pread) the byte range at `o
 
 ### When read() can win / be safer
 - **Small files** — mmap setup (page-table manipulation, `MAP_FAILED` handling) has fixed overhead; for tiny tensors `read` is simpler and as fast.
-- **Write path / training checkpoints** — mmap'd writes (`MAP_SHARED` writable) are coherent but subtle (you must `msync`/`FlushViewOfFile` to flush, and partial-write durability is OS-dependent). `write()`/`fwrite` gives clear durability semantics and is easier to make crash-safe. InNova uses `fwrite` for checkpoints (`trainer.cpp:save_checkpoint`) and mmap for loads — correct split.
+- **Write path / training checkpoints** — mmap'd writes (`MAP_SHARED` writable) are coherent but subtle (you must `msync`/`FlushViewOfFile` to flush, and partial-write durability is OS-dependent). `write()`/`fwrite` gives clear durability semantics and is easier to make crash-safe. Transcender uses `fwrite` for checkpoints (`trainer.cpp:save_checkpoint`) and mmap for loads — correct split.
 - **Portability of weird filesystems** — mmap on network/sparse files can be slow or unsupported; `pread` degrades gracefully.
 
 ### Numbers (typical, commodity NVMe + DDR4)
@@ -71,7 +71,7 @@ On load: read header → for each tensor, `mmap` (or pread) the byte range at `o
 
 ## 3. Windows CreateFileMapping vs Linux mmap
 
-InNova already abstracts this (`trainer.cpp:open_mmap`, `quant_format.cpp`). The API differences and best practices:
+Transcender already abstracts this (`trainer.cpp:open_mmap`, `quant_format.cpp`). The API differences and best practices:
 
 | Concern | Linux / POSIX | Windows |
 |--------|---------------|---------|
@@ -88,17 +88,17 @@ InNova already abstracts this (`trainer.cpp:open_mmap`, `quant_format.cpp`). The
 ### Best practices (both platforms)
 - **Map read-only for inference** (`PROT_READ`/`PAGE_READONLY`, `MAP_PRIVATE`). No COW, shared page cache, safe.
 - **Close handles in order**: unmap the view **before** closing the mapping handle **before** closing the file handle on Windows; on Linux just `munmap` + `close(fd)`.
-- **Check the sentinel correctly** — `mmap` returns `MAP_FAILED` (not NULL) on error; a common bug is `if (!ptr)` which never triggers because `MAP_FAILED != NULL`. InNova's `close_mmap` does this right (`if (mmap_ptr_ == MAP_FAILED)`).
+- **Check the sentinel correctly** — `mmap` returns `MAP_FAILED` (not NULL) on error; a common bug is `if (!ptr)` which never triggers because `MAP_FAILED != NULL`. Transcender's `close_mmap` does this right (`if (mmap_ptr_ == MAP_FAILED)`).
 - **Alignment**: `mmap` offsets must be page-aligned (`sysconf(_SC_PAGESIZE)`, usually 4096); Windows file-mapping offsets must be `GetSystemInfo().dwAllocationGranularity`-aligned (typically 65536). For per-tensor partial maps, round the offset **down** to the granularity and adjust the pointer up.
 - **Lazy access**: do not touch the whole mapping up front (that defeats the point). Access tensors as the model needs them; the OS faults pages in. For a known access pattern (training = all tensors), a single `madvise(MADV_SEQUENTIAL)` or Windows `FILE_FLAG_SEQUENTIAL_SCAN` hints the prefetcher.
-- **Large files (> virtual address space)**: on 32-bit this is a hard limit; InNova targets 64-bit so the whole checkpoint maps. For > available RAM, rely on the OS page cache + `MADV_DONTNEED` to evict cold experts.
+- **Large files (> virtual address space)**: on 32-bit this is a hard limit; Transcender targets 64-bit so the whole checkpoint maps. For > available RAM, rely on the OS page cache + `MADV_DONTNEED` to evict cold experts.
 - **Do not mmap + fread the same fd** interchangeably — offset state diverges. Pick one model per file.
 
 ---
 
 ## 4. Best Practices for Large Model Loading (1B–1T params)
 
-1. **Single mmap of the whole data file, index-driven access.** Map the entire `.quant` data file once (lazy); use the `InNovaIDX` index to get `(offset, nbytes, sha256)` per tensor and compute pointers as `base + offset`. One mapping, N tensors — cheapest setup and best page-cache sharing.
+1. **Single mmap of the whole data file, index-driven access.** Map the entire `.quant` data file once (lazy); use the `TranscenderIDX` index to get `(offset, nbytes, sha256)` per tensor and compute pointers as `base + offset`. One mapping, N tensors — cheapest setup and best page-cache sharing.
 
 2. **Verify SHA256 lazily / in the dequant stream.** Compute SHA256 while streaming a tensor's bytes through the dequantizer (INT8/QUANT8/ternary → FP32 on the fly). Integrity is then "free" — it rides on the bytes you must read anyway — and a corrupt tensor is caught before it poisons compute. Fail fast with the tensor name (condition 15).
 
@@ -112,7 +112,7 @@ InNova already abstracts this (`trainer.cpp:open_mmap`, `quant_format.cpp`). The
 
 7. **Atomic index + data on write.** Write the data blobs first, fsync, then write the index with their hashes, fsync. On load, if the index is missing/truncated, the data file is garbage-collectable but not loadable. Never mutate a blob in place (it changes the hash → invalidates the index); always write a new blob + new index entry (content-addressed append-only).
 
-8. **Cross-platform mmap wrapper.** Hide `mmap`/`CreateFileMapping` behind one `quant::MemoryMap` RAII type (open, map, pointer, size, close) so `quant_format.cpp` and `trainer.cpp` share one tested path — matching InNova's existing `open_mmap`/`close_mmap` split but unified.
+8. **Cross-platform mmap wrapper.** Hide `mmap`/`CreateFileMapping` behind one `quant::MemoryMap` RAII type (open, map, pointer, size, close) so `quant_format.cpp` and `trainer.cpp` share one tested path — matching Transcender's existing `open_mmap`/`close_mmap` split but unified.
 
 9. **Determinism.** Same prompt + seed → same tokens requires that weight load is bit-exact. mmap gives bit-exact load (no copy/resample); verify with SHA256. This is what the README "determinism" and condition 145 ("determinism same prompt seed 2 runs same tokens") depend on.
 
@@ -120,8 +120,8 @@ InNova already abstracts this (`trainer.cpp:open_mmap`, `quant_format.cpp`). The
 
 ---
 
-## Application to InNova `quant_format.cpp` / `quant_idx`
-- The `InNovaIDX` header (magic, version, num_tensors) + per-tensor `(name, shape, dtype, offset, nbytes, sha256)` is the target schema.
+## Application to Transcender `quant_format.cpp` / `quant_idx`
+- The `TranscenderIDX` header (magic, version, num_tensors) + per-tensor `(name, shape, dtype, offset, nbytes, sha256)` is the target schema.
 - `quant_load` should: mmap the data file → parse index → for each tensor, validate SHA256 lazily in the dequant stream → throw with tensor name on mismatch.
 - `quant_save` should: hash each tensor, dedup against existing blobs, append-only write, then atomically write the index.
 - The cross-platform mmap is already split correctly (`trainer.cpp`); unify it into one RAII `MemoryMap` used by both `quant_format` and the DataLoader.

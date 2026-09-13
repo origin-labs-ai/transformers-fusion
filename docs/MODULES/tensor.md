@@ -8,7 +8,7 @@
 
 ## 📚 Overview
 
-The Tensor module provides the fundamental data structure for InNova. It implements a multi-dimensional array that supports:
+The Tensor module provides the fundamental data structure for Transcender. It implements a multi-dimensional array that supports:
 
 - Various data types (FP32, FP16, INT8, etc.)
 - Automatic memory management
@@ -271,7 +271,7 @@ Operations that return copies:
 
 ### Custom Allocators
 
-InNova supports custom memory allocators for:
+Transcender supports custom memory allocators for:
 
 - Arena allocation (fast allocation/deallocation in bulk)
 - Pool allocation (fixed-size blocks)

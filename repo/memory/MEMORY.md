@@ -21,6 +21,7 @@
 | `09-repo-layout.md` | The research/ + repo/ restructure: what moved where, why, code-path updates, rules for new files | Any file placement work |
 | `10-code-review-findings.md` | Verdent session's independent code review (2026-08-31): codec praise, autograd teardown, KDA perf, ste_quantizer static-codebook bug with fix options | ste_quantizer work, Transcender Phase 2 |
 | `11-verdent-session-log.md` | Turn-by-turn log of the 2026-08-31 Verdent session (the full conversation arc, all owner interventions) | Context recovery |
+| `14-todos-cender-20260906.md` | 23 todos exact + D-C1..D-C11 Cender decisions + 33 user inputs verbatim index (2026-09-06 owner order: memory+telemetry dump, nothing missed) | Cender/todo work |
 
 ## Critical Quick-Facts (memorize these)
 

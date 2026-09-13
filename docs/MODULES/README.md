@@ -1,12 +1,12 @@
 # Module Documentation
 
-> **Detailed Documentation for Each InNova Module**
+> **Detailed Documentation for Each Transcender Module**
 
 ---
 
 ## 📚 Available Module Documentation
 
-This directory contains detailed documentation for each major component of InNova. Each module document covers:
+This directory contains detailed documentation for each major component of Transcender. Each module document covers:
 
 - Overview and purpose
 - Key features
@@ -99,7 +99,7 @@ Dive into optimization and specialized features:
 
 1. **[Autograd](autograd.md)** - Automatic differentiation
 2. **[Quantization](quantization.md)** - Quantization techniques
-3. **[QUANT Format](quant_format.md)** - Binary format
+3. **[QUANT Format](quant_format.md)** - `.quant` container format (TranscenderIDX index magic; v3 Q-series, 105 formats — `include/quant/types.h:67`)
 4. **[Trainer](trainer.md)** - Training infrastructure
 5. **[MoE Variants](moe.md)** - Mixture of Experts
 6. **[GPU Compute](gpu_compute.md)** - GPU acceleration
@@ -183,7 +183,7 @@ Dive into optimization and specialized features:
 
 ## 📄 Per-File Wiki Documentation
 
-Every source file in the InNova codebase has a dedicated documentation page in the **[wiki/files/](../../wiki/files/)** directory. These provide:
+Every source file in the Transcender codebase has a dedicated documentation page in the **[wiki/files/](../../wiki/files/)** directory. These provide:
 
 - **Line-by-line insights** into each file's purpose and logic
 - **Key types & functions** defined in each file
@@ -220,7 +220,7 @@ Browse the full index at **[wiki/files/_index.md](../../wiki/files/_index.md)**.
 
 ## 🎓 Learning Path
 
-### Path 1: Using InNova for Inference
+### Path 1: Using Transcender for Inference
 
 1. Read **[Tensor](tensor.md)** documentation
 2. Read **[Model](model.md)** documentation

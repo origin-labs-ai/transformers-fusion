@@ -71,7 +71,7 @@ _test_checkpoint.quant.opt
 # Dist (binary release)
 dist/
 
-# Lumina (separate project, not part of InNova)
+# Lumina (separate project, not part of Transcender)
 Lumina/
 
 # Checkpoints
@@ -104,10 +104,17 @@ SANDBOX_TEST_LOG.md
 # Regression tracker is versioned despite global ps1 ignore
 !scripts/check_regression.ps1
 
+# Bench outputs (generated) + editor backups
+*.bak
+bench/*.csv
+bench_format_comparison.csv
+
 # GLE telemetry: heavy run artifacts ignored, events.jsonl stays tracked
-.research/telemetry/runs/
-.research/telemetry/bench_history/
-.research/telemetry/reports/
+research/telemetry/runs/
+research/telemetry/bench_history/
+research/telemetry/reports/
+repo/state/telemetry/
+!repo/state/telemetry/events.jsonl
 
 # Dist (binary release)
 dist/

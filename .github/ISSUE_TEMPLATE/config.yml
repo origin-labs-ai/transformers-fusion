@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Contributor Board
-    url: https://github.com/origin-labs-ai/InNova/blob/main/docs/GOOD_FIRST_ISSUES.md
+    url: https://github.com/origin-labs-ai/Transcender/blob/main/docs/GOOD_FIRST_ISSUES.md
     about: Pick a task (GF-/INT-/ADV-) and comment "taking <ID>" to claim it
   - name: Discussions
-    url: https://github.com/origin-labs-ai/InNova/discussions
+    url: https://github.com/origin-labs-ai/Transcender/discussions
     about: Questions, ideas, and design talk before filing issues

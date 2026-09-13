@@ -156,7 +156,7 @@ static QuantizedWeight quantize_weight(const float* src, int64_t n) {
     }
 
     // BitNet b1.58-style ternary {-1,0,+1} with a per-tensor scale. This is a
-    // generic ternary baseline — NOT the canonical QUANT_Q0 codec (which is
+    // generic ternary baseline — NOT the canonical Q1_5 codec (which is
     // per-32 FP16 scale + sign bits); we label it honestly below.
     double sum_abs = 0.0;
     for (int64_t i = 0; i < n; i++) sum_abs += std::abs(src[i]);

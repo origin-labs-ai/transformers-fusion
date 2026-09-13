@@ -2,7 +2,7 @@
 
 **Task:** DIFFUSION.txt Phase K, Task 135  
 **Date:** 2026-07-16  
-**Scope:** ZeRO stage 1/2/3 sharding, the AllReduce/AllGather/ReduceScatter collectives they reduce to, and how to apply them to InNova `src/distributed.cpp`.
+**Scope:** ZeRO stage 1/2/3 sharding, the AllReduce/AllGather/ReduceScatter collectives they reduce to, and how to apply them to Transcender `src/distributed.cpp`.
 
 ---
 
@@ -77,7 +77,7 @@ This is **layer-by-layer materialization**: only the *currently computing* layer
 
 **Communication volume is higher than Stage 2:** every layer does an AllGather before fwd **and** before bwd (≈ 2 × 2Ψ/N × num_layers total = 2Ψ per pass, same order as plain DP but spread across the pass). Overlap comm with compute (start the next layer's AllGather while the current layer computes) to hide it — the core FSDP optimization.
 
-**When to use:** model does NOT fit in params on one GPU (e.g. 30B+ on 40 GB GPUs). This is the path for the InNova "MoE 1T capable" claim — 1T-param MoE is only trainable via ZeRO-3 / FSDP (or 3D parallelism combining FSDP + tensor parallel + pipeline parallel).
+**When to use:** model does NOT fit in params on one GPU (e.g. 30B+ on 40 GB GPUs). This is the path for the Transcender "MoE 1T capable" claim — 1T-param MoE is only trainable via ZeRO-3 / FSDP (or 3D parallelism combining FSDP + tensor parallel + pipeline parallel).
 
 ---
 
@@ -89,7 +89,7 @@ All three stages are built from three MPI/NCCL collectives:
 `out[i] = Σ_{rank r} in_r[i]` for all `i`, delivered to **every** rank.
 - Implementation: Ring AllReduce (bandwidth-optimal) — each rank sends/receives `Ψ/N` per step in `2(N-1)` steps, total comm per rank = `2Ψ(N-1)/N ≈ 2Ψ`. Bandwidth-optimal (matches the lower bound for a ring).
 - Used by: **plain DP** (sum grads), **ZeRO-1** (sum grads).
-- InNova: `distributed.cpp` already has a single-node AllReduce-sum (`condition 113`).
+- Transcender: `distributed.cpp` already has a single-node AllReduce-sum (`condition 113`).
 
 ### ReduceScatter
 `out_r[i] = Σ_{rank s} in_s[i]` **but** rank `r` only receives the slice for its shard `r`; the full reduced vector is distributed across ranks (reduced *and* scattered). Each rank ends with `Ψ/N` bytes.
@@ -109,13 +109,13 @@ All three stages are built from three MPI/NCCL collectives:
 ### Hierarchy / failure modes
 - **Single-node** (shared-memory or NVLink): very high bandwidth; ring is fine.
 - **Multi-node** (NCCL over IB/RoCE): ring across nodes; bandwidth = inter-node link. Hierarchical collectives (reduce within node, then across nodes) cut inter-node traffic.
-- **No-NCCL fallback**: InNova condition 113 requires `distributed.cpp` to compile *without* NCCL and provide a single-node sum. The collectives should have a pure-C++ fallback (memcpy + add) so the engine builds everywhere; NCCL is an optional fast path.
+- **No-NCCL fallback**: Transcender condition 113 requires `distributed.cpp` to compile *without* NCCL and provide a single-node sum. The collectives should have a pure-C++ fallback (memcpy + add) so the engine builds everywhere; NCCL is an optional fast path.
 
 ---
 
-## 6. Application to InNova `src/distributed.cpp`
+## 6. Application to Transcender `src/distributed.cpp`
 
-InNova's `distributed.cpp` (condition 113: "AllReduce single node sum multi NCCL placeholder compiles without NCCL") currently has a single-node AllReduce-sum. To reach the ZeRO/FSDP design:
+Transcender's `distributed.cpp` (condition 113: "AllReduce single node sum multi NCCL placeholder compiles without NCCL") currently has a single-node AllReduce-sum. To reach the ZeRO/FSDP design:
 
 ### Target architecture
 ```
@@ -138,12 +138,12 @@ class DistributedEngine {
 5. **Overlap**: start the next layer's AllGather while the current layer computes (double-buffer the gather buffer). This hides comm — the headline FSDP throughput result.
 6. **MoE-aware**: for the 1T-param MoE claim, ZeRO-3 must shard experts too; the AllGather before a layer gathers only the *active* experts for that batch (expert-parallel + data-parallel hybrid = the DeepSeek/Megatron expert-parallel scheme). AllReduce for the non-MoE layers, All-to-All for expert dispatch.
 
-### Memory math for InNova targets
+### Memory math for Transcender targets
 - 0.1B smoke (condition 112): fits on one GPU; `ZeroStage::NONE` is fine.
 - 1T-param MoE (README claim): only feasible at `ZeroStage::OS_G_P` (ZeRO-3) + expert parallel, N large. Memory ≈ 16Ψ/N + one-layer working set. This is the architecture the README "MoE 1T capable" line requires.
 
 ### Safety / determinism
-- ReduceScatter and AllGather are deterministic in fixed order, but **floating-point reduction order across ranks is not associative** — summed in a different ring order, grads differ at FP roundoff. For determinism (condition 145) either fix the ring order + reduction tree, or accumulate in FP32 (InNova already keeps master FP32) and round once. Document that distributed determinism requires a fixed world-size + ring order.
+- ReduceScatter and AllGather are deterministic in fixed order, but **floating-point reduction order across ranks is not associative** — summed in a different ring order, grads differ at FP roundoff. For determinism (condition 145) either fix the ring order + reduction tree, or accumulate in FP32 (Transcender already keeps master FP32) and round once. Document that distributed determinism requires a fixed world-size + ring order.
 
 ---
 

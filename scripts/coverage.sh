@@ -8,7 +8,7 @@ BUILD_DIR="${PROJECT_DIR}/build_coverage"
 REPORT_DIR="${BUILD_DIR}/coverage"
 HTML_DIR="${REPORT_DIR}/html"
 
-echo "=== InNova Code Coverage ==="
+echo "=== Transcender Code Coverage ==="
 echo "Project : ${PROJECT_DIR}"
 echo "Build   : ${BUILD_DIR}"
 echo "Report  : ${HTML_DIR}"
@@ -65,7 +65,7 @@ ${LCOV} --remove "${REPORT_DIR}/coverage_raw.info" \
 # Generate HTML
 ${GENHTML} "${REPORT_DIR}/coverage.info" \
   --output-directory "${HTML_DIR}" \
-  --title "InNova Code Coverage" \
+  --title "Transcender Code Coverage" \
   --legend \
   --quiet
 
