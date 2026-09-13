@@ -1193,7 +1193,7 @@ FormatPlanner scores each 256-wide weight block by activation magnitude and allo
 
 Quantization quality is measured on synthetic Gaussian, uniform and Laplace distributions (N = 4096 per distribution, block = 256, canonical block codec, no error feedback). Single-format rows are the registered typical-MSE claims (est_mse, max across the three distributions), enforced by test_fp32_gather_quality / grp_proof_test. QUANT_MIX rows are measured typical values on N(0,1), same block path:
 
-**Table 10: In-House Quantization Quality (STALE v1/v2 snapshot + old bench runs — Phase 24: MSE figures below are UNVERIFIED against the current `bench_format_comparison.csv`; use the CSV + `tests/test_quant_mix.cpp` as truth. v3 names: QUANT→Q-series, `_G`→`QG*`.)**
+**Table 10: In-House Quantization Quality (STALE v1/v2 snapshot + old bench runs — re-checked 2026-09-13: MSE figures below are UNVERIFIED against the current `bench_format_comparison.csv`; use the CSV + `tests/test_quant_mix.cpp` as truth. Do NOT cite these MSE numbers as current. v3 names: QUANT→Q-series, `_G`→`QG*`.)**
 
 | Format | BPW | Typ. MSE vs FP32 | Notes |
 |--------|-----|------------------|-------|
@@ -1209,7 +1209,7 @@ Quantization quality is measured on synthetic Gaussian, uniform and Laplace dist
 | QUANT_MIX_Q0 | 1.925 | 2.6×10⁻² | Adaptive 1.925 BPW hard cap |
 | QUANT_MIX_Q1 | 2.075 | 1.5×10⁻² | Adaptive 2.075 BPW hard cap |
 
-**Table 11: STE Native Training (MLP 128→64→8, eval MSE, bench_04_ste_training.csv — Phase 24: source CSV not in tree; ALL figures UNVERIFIED, re-measurement owed)**
+**Table 11: STE Native Training (MLP 128→64→8, eval MSE, bench_04_ste_training.csv — re-checked 2026-09-13: source CSV not in tree; ALL figures UNVERIFIED, re-measurement owed. Do NOT cite.)**
 
 | Format | BPW | Eval MSE | vs FP32 |
 |--------|-----|----------|---------|
@@ -1252,7 +1252,7 @@ scp quant-infer model.quant user@server:/opt/Transcender/
 ssh user@server '/opt/Transcender/quant-infer --model /opt/Transcender/model.quant --prompt "Hello"'
 ```
 
-Binary sizes: quant-infer ~2.1 MB, quant-train ~2.4 MB, quant-finetune ~2.0 MB. (Phase 24: UNVERIFIED — no measured build artifact source this phase.)
+Binary sizes (measured 2026-09-13, MSVC Release, `build-prod/Release/`): quant_infer 332 KB, quant_train 391 KB, quant_finetune 379.5 KB, quant_server 369 KB, quant_serve 400.5 KB. (Old ~2.1/2.4/2.0 MB figures were UNVERIFIED — superseded by these measured sizes.)
 
 ### 10.3 Cross-Platform Support
 

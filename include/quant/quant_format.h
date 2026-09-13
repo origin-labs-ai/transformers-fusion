@@ -82,9 +82,48 @@ public:
     std::vector<std::string> tensor_names() const;
     
     // Random-access block reader using the prebuilt offset index (O(1)).
+    // P0 hardening (crafted-.quant OOB read): block_ptr() and read_block()
+    // bounds-check, but block_offset()/format_entry() used raw operator[] —
+    // a file-controlled block id (via tensor_blocks start/count or a direct
+    // caller) read past the vectors (UB/crash). Now fail-closed:
+    //   block_offset()  -> SIZE_MAX sentinel on OOB (callers must check;
+    //                        block_ptr() already returns nullptr there).
+    //   format_entry()  -> static invalid entry (format byte 0xFF) on OOB;
+    //                        every consumer maps out-of-range wire formats to
+    //                        Format::Q32, and dequantize_block_all's default
+    //                        arm is a no-op, so a corrupt id decodes zeros.
+    // tensor_blocks() additionally validates start/count against the table
+    // (start + count <= num_blocks, overflow-safe), so engine bid math
+    // (start + r*bpr + blk) can never escape the index.
     const uint8_t* block_ptr(uint32_t block_id) const;
-    size_t block_offset(uint32_t block_id) const { return block_offsets_[block_id]; }
-    const FormatBlockEntry& format_entry(uint32_t block_id) const { return cached_ft_[block_id]; }
+    size_t block_offset(uint32_t block_id) const {
+        if (block_id >= (uint32_t)block_offsets_.size()) return (size_t)-1;
+        return block_offsets_[block_id];
+    }
+    const FormatBlockEntry& format_entry(uint32_t block_id) const {
+        if (block_id >= (uint32_t)cached_ft_.size()) return invalid_entry();
+        return cached_ft_[block_id];
+    }
+    // Fail-closed sentinel for out-of-range format_entry(). Wire byte 0xFF
+    // is outside the valid v3 set, so every consumer maps it to Format::Q32
+    // and dequantize_block_all's default arm decodes zeros (no-op).
+    static const FormatBlockEntry& invalid_entry() {
+        static const FormatBlockEntry kInvalid{0xFFFFFFFFu, 0xFF, 0};
+        return kInvalid;
+    }
+    // Range gate for file-controlled (start, count) pairs: overflow-safe
+    // start + count <= num_blocks. tensor_blocks()/read_tensor()/
+    // tensor_formats() reject corrupt ranges instead of walking OOB.
+    bool range_ok(uint32_t start, uint32_t count) const {
+        if (count == 0) return start <= num_format_blocks_;
+        if (start >= num_format_blocks_) return false;
+        return count <= num_format_blocks_ - start;
+    }
+    // Byte sizes of a stored block payload. False when the id is out of
+    // range or the stored cb/idx sizes would run past the mapping — callers
+    // that advance past block_ptr()'s 8 guaranteed header bytes must gate
+    // on this first (crafted cb/idx otherwise reach OOB).
+    bool block_sizes(uint32_t block_id, uint32_t* cb_bytes, uint32_t* idx_bytes) const;
     bool tensor_blocks(const std::string& name, uint32_t& start, uint32_t& count) const;
     
     // Check if file was successfully opened AND fully validated.

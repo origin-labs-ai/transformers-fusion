@@ -65,10 +65,9 @@ std::vector<int> SpeculativeDecoder::topk_sample(
 }
 
 void SpeculativeDecoder::checkpoint_kv(KVCache* cache, KVCheckpoint& ckpt) {
-    // P13 honest note: ye checkpoint sirf context_len record karta hai —
-    // saved_k/saved_v populate NAHI hote (KVCheckpoint ke wo fields hamesha
-    // khaali rehte hain). Matlab rollback ke paas restore karne layak K/V
-    // snapshot nahi hai, sirf length marker hai.
+    // Length-marker checkpoint: KVCache rows are positional (layer, pos), so
+    // truncate() back to this length is an exact rollback — no K/V snapshot
+    // copy needed (saved_k/saved_v stay unused by design).
     if (!cache) return;
     ckpt.kv_context_len = cache->context_len();
     ckpt.valid = true;
@@ -76,15 +75,14 @@ void SpeculativeDecoder::checkpoint_kv(KVCache* cache, KVCheckpoint& ckpt) {
 
 void SpeculativeDecoder::rewind_kv(KVCache* cache, const KVCheckpoint& ckpt,
                                      std::size_t new_len) {
-    // P13 honest note (DEPRECATED semantics): KVCache ka koi truncate API
-    // nahi hai. KVCache::resize(new_max_seq_len) max capacity badalta hai aur
-    // current_pos=0 karke POORA cache wipe kar deta hai (kv_cache.cpp) — ye
-    // true "new_len tak rewind" NAHI hai. Jab tak KVCache me proper truncate/
-    // set_pos API nahi aata, isko sirf guarded caller (decode_step rejection
-    // path) se best-effort rollback ke liye call karo; full-fidelity KV
-    // restore supported nahi hai.
+    // True rewind via KVCache::truncate(): drops rows after new_len, zeroes
+    // the tail, keeps capacity. Rejected draft tokens appended past the
+    // checkpoint never become visible to later steps. The checkpoint length
+    // is authoritative — new_len is clamped to it so a stale caller cannot
+    // rewind past the snapshot point.
     if (!cache || !ckpt.valid) return;
-    cache->resize(new_len);
+    std::size_t target = new_len > ckpt.kv_context_len ? ckpt.kv_context_len : new_len;
+    cache->truncate((int64_t)target);
 }
 
 SpeculativeDecoder::StepResult SpeculativeDecoder::decode_step(
@@ -119,9 +117,8 @@ SpeculativeDecoder::StepResult SpeculativeDecoder::decode_step(
             context.push_back(target_token);
             result.tokens_rejected++;
             sops_hook_speculative_propose(1);
-            // P13: rewind_kv ka caller wire — reject pe KV ko checkpoint tak
-            // wapas lao (best-effort; rewind_kv ke honest note dekho: true
-            // truncate API nahi hai). start_len ab dead var nahi raha.
+            // Reject path: rewind the KV cache to the checkpoint so rejected
+            // draft rows never leak into later steps (truncate = exact).
             rewind_kv(cache, ckpt, start_len + result.tokens_accepted.size());
             break;
         }

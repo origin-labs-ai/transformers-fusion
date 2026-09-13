@@ -33,15 +33,18 @@ RUN cmake -B build -G Ninja \
 # - test_native_quant: long training-linked quant test, ASAN-heavy/slow.
 # - test_moe_training: distributed MoE training test, heavy/flaky, nightly only.
 # - test_paged_kv_4m: large-memory 256MiB cache test, slow in image build.
-# NOTE: full suite with NO excludes runs in the weekly docker-full-test workflow (separate workflow file).
-RUN ctest --test-dir build --output-on-failure --timeout 120 \
-    --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m"
+# - test_fuzz_codec: 1.05M-roundtrip fuzz (900s TIMEOUT in Debug), nightly only.
+# NOTE: the union of the nightly-full-asan shards in .github/workflows/ci_full.yml
+# covers the full suite with NO excludes (shard-union gate fails loudly on orphans).
+RUN ctest --test-dir build --output-on-failure --timeout 300 \
+    --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_paged_kv_4m|test_fuzz_codec"
 
 FROM ubuntu:24.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -s /bin/false appuser
 
 WORKDIR /app
 
@@ -52,6 +55,14 @@ COPY --from=builder /app/build/bench_kernels .
 COPY --from=builder /app/build/bench_inference .
 COPY --from=builder /app/build/bench_quality .
 
+RUN chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8080
+
+# Binary-presence probe: no-arg run prints Usage to stderr and exits 1 —
+# grep for it so a present+executable binary reports healthy (exit 0).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD-SHELL ./quant_infer 2>&1 | grep -q Usage
 
 ENTRYPOINT ["./quant_infer"]

@@ -337,6 +337,51 @@ void KVCache::resize(int64_t new_max_seq_len) {
     }
 }
 
+void KVCache::truncate(int64_t new_len) {
+    if (new_len < 0) new_len = 0;
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto& c : caches_) {
+        if (new_len >= c.current_pos) continue;  // beyond pos: no-op
+        int64_t h = num_heads_;
+        int64_t d = head_dim_;
+        if (quantized_) {
+            // Flat layout: offset = pos * h * d values (same as append).
+            int64_t dst_off = new_len * h * d;
+            int64_t cur_off = (int64_t)c.current_pos * h * d;
+            int64_t n = cur_off - dst_off;
+            if (n > 0) {
+                size_t total = c.k_quant.size();  // k/v/scale buffers sized alike
+                if (dst_off >= 0 && (size_t)(dst_off + n) <= total) {
+                    std::memset(c.k_quant.data() + (size_t)dst_off, 0, (size_t)n);
+                    std::memset(c.v_quant.data() + (size_t)dst_off, 0, (size_t)n);
+                }
+                int64_t scale_off = dst_off / FP8_BLOCK_SIZE;
+                int64_t num_scales = (n + FP8_BLOCK_SIZE - 1) / FP8_BLOCK_SIZE;
+                if (scale_off >= 0 &&
+                    (size_t)(scale_off + num_scales) <= c.k_scales.size()) {
+                    std::memset(c.k_scales.data() + (size_t)scale_off, 0,
+                                (size_t)num_scales * sizeof(float));
+                    std::memset(c.v_scales.data() + (size_t)scale_off, 0,
+                                (size_t)num_scales * sizeof(float));
+                }
+            }
+        } else {
+            float* kdst = (float*)c.k.data();
+            float* vdst = (float*)c.v.data();
+            if (kdst && vdst) {
+                for (int64_t s = new_len; s < c.current_pos; s++) {
+                    for (int64_t hh = 0; hh < h; hh++) {
+                        int64_t off = hh * max_seq_len_ * d + s * d;
+                        std::memset(kdst + off, 0, (size_t)d * sizeof(float));
+                        std::memset(vdst + off, 0, (size_t)d * sizeof(float));
+                    }
+                }
+            }
+        }
+        c.current_pos = (int)new_len;
+    }
+}
+
 // ===========================================================================
 // PagedKVCacheBase — shared implementation
 // ===========================================================================

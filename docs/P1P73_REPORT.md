@@ -35,7 +35,7 @@ live-capability claim. UNVERIFIED = needs a pinned hardware run (orchestrator).
 | P34 | Joint Multimodal Cross-Attention | DONE (fusion math) / SOTA DOCUMENTED | `test_p1p73_platform.cpp` (`joint_fuse` mean-exact + finite) |
 | P35 | Tiled GEMM | DONE (parity) / Release timing UNVERIFIED | `test_p1p73_platform.cpp` (REAL `math::gemm_tiled` 8×8 parity 1e-4) + `bench/bench_p1p73_gemm.cpp` (64×64 parity + timing) |
 | P36 | Memory Opt (quantized cache) | DONE | `test_p1p73_platform.cpp` (REAL `KVCache`: size smaller, context advances, finite round-trip) |
-| P37 | Package Manager Install | DONE (manifest shape) | `test_p1p73_platform.cpp` (`pack_manifest_valid` + version one-truth `0.2.0`) |
+| P37 | Package Manager Install | DONE (manifest shape) | `test_p1p73_platform.cpp` (`pack_manifest_valid` + version one-truth `1.1.0`/`R0001.01`) |
 | P38 | Comprehensive Error Handling | DONE | `test_p1p73_platform.cpp` (REAL `Tensor::grad()` throw, rank>8 throw, empty-cache no-crash) |
 | P39 | C API | DOCUMENTED (roadmap + contract) | `test_p1p73_platform.cpp` (version/ABI contract) + snippet §4 |
 | P41 | Meta-Cognition Loop | DONE (toy) | `tests/test_p1p73_agi.cpp` (MAPEVI progress 1.0) |

@@ -82,14 +82,26 @@ log "Found ${#ARTIFACTS[@]} artifacts"
 
 log "Step 2: Authenticode signing..."
 
+# Hardening: signtool/gpg failures used to be swallowed by `|| true`, so a
+# release could ship UNSIGNED without failing. Now: strict mode is opt-out
+# (SIGN_STRICT=0 keeps the old lenient path for dev loops); default strict
+# fails loudly on any signing error. Unsigned artifacts never ship silently.
+SIGN_STRICT="${SIGN_STRICT:-1}"
+
 AUTHENTICODE_DONE=false
 if [[ -n "$AUTHENTICODE_CERT" ]] && [[ -f "$AUTHENTICODE_CERT" ]]; then
     for file in "${ARTIFACTS[@]}"; do
         if [[ "$file" == *.exe ]] || [[ "$file" == *.dll ]]; then
             log "  Signing: $(basename "$file")"
             if command -v signtool &> /dev/null; then
-                signtool sign /f "$AUTHENTICODE_CERT" /p "$AUTHENTICODE_PASSWORD" \
-                  /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$file" || true
+                if [[ "$SIGN_STRICT" == "1" ]]; then
+                    signtool sign /f "$AUTHENTICODE_CERT" /p "$AUTHENTICODE_PASSWORD" \
+                      /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$file"
+                else
+                    signtool sign /f "$AUTHENTICODE_CERT" /p "$AUTHENTICODE_PASSWORD" \
+                      /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$file" || \
+                      warn "  signtool failed for $(basename "$file") (SIGN_STRICT=0, continuing)"
+                fi
             fi
         fi
     done
@@ -148,8 +160,14 @@ SIGNATURE_FILE="${CHECKSUMS_FILE}.sig"
 
 if [[ -n "$GPG_KEY_ID" ]] && command -v gpg &> /dev/null; then
     log "  Signing checksums with GPG key: $GPG_KEY_ID"
-    gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-      --local-user "$GPG_KEY_ID" --detach-sign "$CHECKSUMS_FILE" || true
+    if [[ "$SIGN_STRICT" == "1" ]]; then
+        gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+          --local-user "$GPG_KEY_ID" --detach-sign "$CHECKSUMS_FILE"
+    else
+        gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+          --local-user "$GPG_KEY_ID" --detach-sign "$CHECKSUMS_FILE" || \
+          warn "  GPG signing failed (SIGN_STRICT=0, continuing)"
+    fi
 else
     log "  GPG signature file prepared: $SIGNATURE_FILE"
 fi

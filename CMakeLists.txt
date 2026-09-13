@@ -557,7 +557,9 @@ if(QUANT_BUILD_TOOLS)
 endif()
 install(DIRECTORY include/quant DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.h")
-install(FILES quant_config.h.in DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# Generated header (not the .in template): version/feature macros live in the
+# configured copy at ${CMAKE_BINARY_DIR}/quant_config.h.
+install(FILES "${CMAKE_BINARY_DIR}/quant_config.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 set(CPACK_PACKAGE_NAME "TransCender")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR "ORIGIN Labs")

@@ -129,3 +129,15 @@ dist/linux/
 publication/
 dist/windows/x64/
 repo/.mimosa/
+
+# Frozen external benchmark baselines (read-only local reference, ~161 MB).
+# Kept on disk per bar/README.md (Gauntlet Loop freeze, manifest bar.sha256)
+# but never tracked: the root CMakeLists.txt has zero references to bar/.
+bar/
+
+# Session dumps (agent working artifacts, not source)
+SESSION-00.jsonl
+SESSION-*.jsonl
+
+# Local install verification prefix (cmake --install self-check)
+install_test/

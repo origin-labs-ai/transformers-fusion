@@ -1,8 +1,4 @@
-![TransCender](TransCender.png)
-
----
-
-# ⚡ Transcender — R0001.01 Release
+# ⚡ TransFormers-Fusion — R0001.01 Release
 
 > **Phase 24 honesty notice (2026-09-07, docs-only sync, no build; version line re-verified
 > 2026-09-10):** version one-truth is **1.1.0 / `R0001.01`** (`CMakeLists.txt:3`
@@ -12,7 +8,7 @@
 > Index one-truth is the **TranscenderIDX** magic header
 > (`src/codec/quant_format.cpp:546,585-588`, `include/quant/quant_format.h:107,127,158`).
 > Every measured number below traces to `bench_format_comparison.csv` (224 data rows,
-> stale pre-v3 naming — fresh re-measurement owed) or `research/claim_ledger.md`; anything
+> v3 QG_/Q_MX_ names, fresh re-measured 2026-09-11, committed in-tree) or `research/claim_ledger.md`; anything
 > else is flagged **UNVERIFIED**. Test truth: **72 ctest cases from 73 test files**
 > (`tests/CMakeLists.txt` 71× `add_quant_test_full` + `test_gpu`; `ctest -N` = 72);
 > **72/72 green on 2026-09-11** (Release, `ctest --test-dir build -C Release),
@@ -31,7 +27,7 @@ EVERYTHING IS OUR OWN — zero dependency, maximum control.
 | Platform | Compiler | Status |
 |----------|----------|--------|
 | Windows 11 | Clang 22.1.7 (clang-cl) | ✅ 90+ build targets (C-08 VERIFIED ≈111), 72 ctest cases — 72/72 green 2026-09-11 (C-07 VERIFIED this round) |
-| Linux | GCC ≥ 12 / Clang ≥ 16 | ✅ 90+ build targets (C-08 VERIFIED ≈111), 72 ctest cases — 72/72 green owed on Linux CI (Windows green 2026-09-11) |
+| Linux | GCC ≥ 12 / Clang ≥ 16 | ✅ 90+ build targets (C-08 VERIFIED ≈111), CI PR-gate set 64/64 + FULL heavies 71/71 green on WSL2/GCC15 2026-09-13 (80%-push round 3; GitHub-hosted run owed on push) |
 | macOS (target) | Apple Clang | ⏳ Pending |
 
 ### Quick Start
@@ -51,7 +47,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 
 # Convert a HuggingFace model to QUANT format
-build/tools/quant-convert --input model.safetensors --output model.quant --target-bpw 1
+build/tools/quant-convert --input model.safetensors --output model.quant --target-bpw 4
 
 # Run inference
 build/tools/quant-infer --model model.quant --prompt "Hello" --max-tokens 256
@@ -2280,7 +2276,7 @@ This project is free and open-source software licensed under the [Apache License
 ## 📝 Changelog
 
 ### v0.1.02 (2026-07-26)
-- **358 files, ~99,700 lines** across 90+ build targets (UNVERIFIED — stale estimate, no fresh `wc -l`/file-count source this phase)
+- **358 files, ~99,700 lines** across 90+ build targets (UNVERIFIED — stale estimate, no fresh `wc -l`/file-count source; re-checked 2026-09-13, still no source)
 - Linux CI/CD pipeline (GitHub Actions) — builds and tests on Ubuntu
 - Vulkan compute backend with dynamic loading for GPU inference
 - Distributed training implementation complete (FSDP, TP, RingAllReduce, ParameterServer)
@@ -2289,7 +2285,7 @@ This project is free and open-source software licensed under the [Apache License
 - 128-page research whitepaper
 - iGPU zero-copy via Vulkan unified memory (C-046)
 - Out-of-core training via mmap (C-047)
-- 72 ctest cases covering all modules — 72/72 green 2026-09-11 (see `research/claim_ledger.md` C-07; was UNVERIFIED pending fresh full green run — see `research/claim_ledger.md` C-07)
+- 72 ctest cases covering all modules — 72/72 green 2026-09-11 (see `research/claim_ledger.md` C-07; fresh full green re-run owed after this round's P0/codec changes — see build evidence below)
 
 ### v0.1 (2026-07-11)
 - Initial release — complete C++ AI engine with zero dependencies
@@ -2357,17 +2353,18 @@ test_trainer   ── ✅ Training loop, loss decreases, checkpoint works
 - **Distributed training:** ✅ Implementation complete (FSDP, TP, RingAllReduce, ParameterServer)
 - **C API:** No C bindings yet (planned for v0.3)
 
-### Binary Sizes (Release Build)
+### Binary Sizes (Release Build — measured 2026-09-13, MSVC, `build-prod/Release/`)
 
-| Binary | Size (approx) | Description |
+| Binary | Size (measured) | Description |
 |--------|--------------|-------------|
-| `quant-infer.exe` | ~2.1 MB | Inference CLI |
-| `quant-train.exe` | ~2.4 MB | Training CLI |
-| `quant-finetune.exe` | ~2.0 MB | Fine-tuning CLI |
-| `quant-convert.exe` | ~1.8 MB | Model converter |
-| `quant-info.exe` | ~1.2 MB | QUANT file inspector |
-| `quant-bench.exe` | ~1.5 MB | Benchmark runner |
-| `test_all.exe` | ~3.0 MB | All tests combined |
+| `quant_infer.exe` | 332 KB | Inference CLI |
+| `quant_train.exe` | 391 KB | Training CLI |
+| `quant_finetune.exe` | 379.5 KB | Fine-tuning CLI |
+| `quant_convert.exe` | 196 KB | Model converter |
+| `quant_info.exe` | 75 KB | QUANT file inspector |
+| `quant_bench.exe` | 274.5 KB | Benchmark runner |
+| `quant_server.exe` | 369 KB | HTTP server |
+| `quant_serve.exe` | 400.5 KB | Serve CLI |
 
 All binaries are statically linked — no DLL dependencies. Copy and run anywhere.
 
@@ -3131,9 +3128,9 @@ Memory doctrine: persona pages are paged in on demand; the engine's working set 
 
 # PART SIX — THE MARKET AND THE STRATEGY
 
-> **Phase 24 flag:** this Part is strategy narrative, not measured engineering state.
+> **Phase 24 flag (re-checked 2026-09-13):** this Part is strategy narrative, not measured engineering state.
 > Numbers quoted here (108,997 lines, 6,391,004 sandbox trials, "42-test suite", 99%
-> thresholds, 0% claims) are **UNVERIFIED** — no bench/ledger source this phase. Mirrored
+> thresholds, 0% claims) are **UNVERIFIED** — no bench/ledger source. Mirrored
 > to `docs/STRATEGY.md`. Engineering one-truth stays at the top banner (1.1.0 / R0001.01 / 105
 > formats / TranscenderIDX / 72 ctest cases).
 
@@ -5562,7 +5559,7 @@ Every term used anywhere in this merged document, defined in one line:
 Questions the merged document is asked most often, answered from the full text:
 
 - Q: Is this README one project or two documents pasted together? A: One project, two layers — the engineering README and the research narrative are the same engine told twice.
-- Q: Why is the logo an image? A: The Transcender logo lives at the top of the README so the repository is recognizable at a glance.
+- Q: Why is the logo an image? A: It is not — the README header is text-only (the old `TransCender.png` banner was removed with the TransFormers-Fusion rename so the repo stays light); recognizability comes from the title + release line.
 - Q: What is the single most important idea? A: A frozen core plus additive, verified pages — nothing is overwritten, so nothing is forgotten.
 - Q: Does the engine really swap personas in zero milliseconds? A: No — that is a design target. The pointer-swap design exists; the latency is not yet measured on shipping hardware.
 - Q: What is the Pointer Hot-Swap Subsystem? A: It is the subsystem that swaps active persona weights by exchanging pointers; the swap is atomic, token-verified, and reversible.

@@ -1,4 +1,4 @@
-﻿# Usage Guide
+# Usage Guide
 
 > **How to Use Transcender for Inference and Training**
 >
@@ -630,7 +630,7 @@ Transcender uses JSON files for configuration.
 | Maximum Quality | 3.0+ | Mostly Q8/QG8 (UNVERIFIED guidance — no end-task bench source) |
 | Balanced | 1.50-2.0 | Q8 + Q4 + Q1/Q2 mix (UNVERIFIED guidance) |
 | Compact | 1.0-1.5 | Q4 + Q1/Q2 (UNVERIFIED guidance) |
-| Minimum Size | < 1.0 | Q1 family (UNVERIFIED guidance — sub-1.0 has no registered format; minimum is Q1=1.0) |
+| Minimum Size | 1.0 | Q1 family (UNVERIFIED guidance — floor is Q1=1.0; no sub-1.0 registered format exists, so `< 1.0` is not achievable) |
 
 ### 3. Training Tips
 

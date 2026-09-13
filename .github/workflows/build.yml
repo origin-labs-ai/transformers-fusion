@@ -13,6 +13,7 @@ jobs:
   build-windows:
     name: "Windows / MSVC"
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,9 +31,17 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
+      # Production-safe scope: PR-speed set (mirrors ci_full.yml Quick +
+      # Dockerfile) — full 900s fuzz / 600s training / 300s heavies run in
+      # the nightly-full-asan shards, not on every push. test_gpu stays
+      # INCLUDED here: it probes hardware and falls back gracefully with no
+      # GPU (tests/test_gpu.cpp:26-27), so Windows runners prove the binary.
       - name: Test
         working-directory: build
-        run: ctest -C Release --output-on-failure
+        timeout-minutes: 30
+        run: >
+          ctest -C Release --output-on-failure --timeout 300
+          --exclude-regex "test_protected|test_training|test_native_quant|test_moe_training|test_fuzz_codec|test_paged_kv_4m"
 
       - name: Upload build artifacts
         if: always()
@@ -47,6 +56,7 @@ jobs:
   build-ubuntu-gcc:
     name: "Ubuntu / GCC-13"
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,22 +82,30 @@ jobs:
 
       - name: Test
         working-directory: build-gcc
-        run: ctest --output-on-failure
+        timeout-minutes: 30
+        run: >
+          ctest --output-on-failure --timeout 300
+          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_fuzz_codec|test_paged_kv_4m"
 
       - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ubuntu-gcc13
+          # Single-config Make build: binaries land at the build root, test
+          # binaries under build-gcc/tests/ — there is no Release/ subdir.
           path: |
-            build-gcc/Release/*
-            build-gcc/*
+            build-gcc/quant_*
+            build-gcc/bench_*
+            build-gcc/train_*
+            build-gcc/tests/
           retention-days: 14
           include-hidden-files: false
 
   build-ubuntu-clang:
     name: "Ubuntu / Clang-18"
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,15 +131,22 @@ jobs:
 
       - name: Test
         working-directory: build-clang
-        run: ctest --output-on-failure
+        timeout-minutes: 30
+        run: >
+          ctest --output-on-failure --timeout 300
+          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_fuzz_codec|test_paged_kv_4m"
 
       - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ubuntu-clang18
+          # Single-config Make build: binaries land at the build root, test
+          # binaries under build-clang/tests/ — there is no Release/ subdir.
           path: |
-            build-clang/Release/*
-            build-clang/*
+            build-clang/quant_*
+            build-clang/bench_*
+            build-clang/train_*
+            build-clang/tests/
           retention-days: 14
           include-hidden-files: false

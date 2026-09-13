@@ -38,6 +38,15 @@ public:
     void clear();
     
     void resize(int64_t new_max_seq_len);
+
+    // Truncate the cache back to `new_len` tokens, discarding everything
+    // appended after it. Unlike resize() (which re-allocates and wipes the
+    // whole cache), truncate keeps the buffers and capacity intact — only
+    // `current_pos` moves back and the vacated tail rows are zeroed so a
+    // later re-append is deterministic. Clamps: new_len < 0 is treated as 0,
+    // new_len beyond the current position is a no-op. Thread-safe (mutex_).
+    // Primary consumer: SpeculativeDecoder::rewind_kv on draft rejection.
+    void truncate(int64_t new_len);
     
     static constexpr int FP8_BLOCK_SIZE = 64;
     static constexpr float FP8_MAX = 127.0f;

@@ -60,6 +60,14 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
+      # Release artifacts must be validated before they ship: run the
+      # PR-speed suite (heavies stay in nightly-full-asan). A release that
+      # never ran its own tests is not production-grade.
+      - name: Validate release binaries
+        run: >
+          ctest --test-dir build --output-on-failure --timeout 300
+          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|test_fuzz_codec|test_paged_kv_4m"
+
       - name: Package binaries
         shell: bash
         run: |
@@ -105,6 +113,15 @@ jobs:
         with:
           pattern: artifacts-*
           merge-multiple: true
+          path: dist
+
+      - name: Verify release payload (fail loudly on empty release)
+        shell: bash
+        run: |
+          echo "Release payload tree:"; find dist -type f | head -50
+          count=$(find dist -type f | wc -l)
+          echo "Payload files: $count"
+          if [ "$count" -eq 0 ]; then echo "FAIL: empty release payload"; exit 1; fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

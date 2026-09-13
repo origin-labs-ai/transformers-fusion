@@ -2,7 +2,9 @@
 
 > Canonical strategy pointer. Strategy narrative lives in `README.md` PART SIX;
 > measured registers in `research/claim_ledger.md`. All strategy numbers below are
-> UNVERIFIED-direction until measured (Phase 24 rule).
+> UNVERIFIED-direction until measured (re-checked 2026-09-13 — still no source).
+> SCOPE: a production-readiness tag covers the engine build/test/hardening
+> evidence in this round; it does NOT certify any P59–P73 strategy number.
 
 ## P59–P73 topic register (Phase 18 verdicts: DOCUMENTED)
 

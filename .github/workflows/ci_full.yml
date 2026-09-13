@@ -128,7 +128,10 @@ jobs:
           # - test_training: long training loop (600s TIMEOUT), too slow/flaky for PR gate.
           #   NOTE: substring also excludes test_training_features (runs in nightly).
           # - test_native_quant: long training-linked quant convergence test (300s TIMEOUT), ASAN-heavy/slow.
-          #   NOTE: substring also excludes test_native_quant_moe and test_native_weight (nightly).
+          #   NOTE: substring also excludes test_native_quant_moe (runs in nightly).
+          #   test_native_weight does NOT match this substring — it runs in PR
+          #   Quick with its 300s TIMEOUT (slow but green; nightly shard 2
+          #   also covers it).
           # - test_moe_training: distributed MoE training test (300s TIMEOUT), heavy/flaky, nightly only.
           # - test_paged_kv_4m: large-memory 256MiB cache test, slow/OOM-prone under sanitizers in PR.
           ctest --test-dir build --output-on-failure --timeout 120 \
@@ -229,11 +232,14 @@ jobs:
       matrix:
         include:
           - shard: 1
-            ctest_regex: "test_(tensor|math|format|kernel|model|tokenizer|ops)"
+            ctest_regex: "test_(tensor|math|format|kernel|model|tokenizer|ops|hybrid|debug|gle|mix|mixed|sha256|grp|fp32|backends|continual|transformer|sampler|kv_cache|autograd|optimizer|code_gen|simd|server|wave|unified|data_trust|guard|hotswap|platform)"
           - shard: 2
             ctest_regex: "test_(trainer|training|gradient|native|moe|expert|grpo|rll|rollout|fine|quant)"
           - shard: 3
             ctest_regex: "test_(gpu|cuda|inference|agi|multimodal|production|protected|paged|fuzz|ste_codebook|block_codec|all)"
+      # Shard-union gate: fail loudly if any registered test matches NO shard
+      # (prevents silent orphaning — 28 tests were orphaned before shard 1
+      # carried the hybrid/debug/gle/mix/sha256/… alternation).
     steps:
       - uses: actions/checkout@v4
         with:
@@ -265,3 +271,19 @@ jobs:
           # test_training, test_native_quant, test_moe_training, test_paged_kv_4m.
           ctest --test-dir build-asan-full --output-on-failure --timeout 600 \
             -R "${{ matrix.ctest_regex }}"
+
+      - name: Shard-union gate (no orphaned tests)
+        if: matrix.shard == 1
+        run: |
+          # Every registered ctest name must match at least one nightly shard
+          # regex, else it silently never runs in CI. Prints orphans + fails.
+          ctest --test-dir build-asan-full -N -R "test_|grp_proof" 2>/dev/null \
+            | grep -oE "(test_[A-Za-z0-9_]+|grp_proof_test)" | sort -u > /tmp/all_tests.txt || true
+          for t in $(cat /tmp/all_tests.txt); do
+            if ! echo "$t" | grep -Eq "test_(tensor|math|format|kernel|model|tokenizer|ops|hybrid|debug|gle|mix|mixed|sha256|grp|fp32|backends|continual|transformer|sampler|kv_cache|autograd|optimizer|code_gen|simd|server|wave|unified|data_trust|guard|hotswap|platform)|test_(trainer|training|gradient|native|moe|expert|grpo|rll|rollout|fine|quant)|test_(gpu|cuda|inference|agi|multimodal|production|protected|paged|fuzz|ste_codebook|block_codec|all)|grp_proof_test"; then
+              echo "ORPHANED TEST (matches no nightly shard): $t"
+              echo "$t" >> /tmp/orphans.txt
+            fi
+          done
+          if [ -f /tmp/orphans.txt ]; then echo "FAIL: orphaned tests exist"; cat /tmp/orphans.txt; exit 1; fi
+          echo "Shard-union gate: all $(wc -l < /tmp/all_tests.txt) tests covered"

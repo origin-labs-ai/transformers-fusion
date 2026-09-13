@@ -18,14 +18,19 @@ static const int MAX_BATCH = 512;
 // the engine runs QG_MX files too (they are per-block formats).
 void Qwen35Engine::decode_block(const QUANTReader& rd, uint32_t block_id, uint32_t nw, float* out) {
     for (uint32_t i = 0; i < 256; i++) out[i] = 0.0f;
+    // P0 hardening: raw pointer math below advances 8+cb+4 bytes past the
+    // block start, but block_ptr() only guarantees the first 8 bytes.
+    // Gate on block_sizes() so a crafted cb/idx pair fails closed (zeros).
+    uint32_t cb = 0, idx_bytes = 0;
+    if (!rd.block_sizes(block_id, &cb, &idx_bytes)) return;
     const uint8_t* raw = rd.block_ptr(block_id);
     if (!raw) return;
-    uint32_t cb;
-    std::memcpy(&cb, raw + 4, 4);
-    uint32_t idx_bytes;
-    std::memcpy(&idx_bytes, raw + 8 + cb, 4);
     const uint8_t* idx = raw + 8 + cb + 4;
-    const Format fmt = (Format)(uint8_t)rd.format_entry(block_id).format;
+    // Same wire-format clamp as QUANTReader::read_block: v3 spans 105 ids
+    // (hole at 19); anything else (incl. the 0xFF OOB sentinel) is Q32.
+    const uint8_t wire_fmt = rd.format_entry(block_id).format;
+    const Format fmt = (wire_fmt < FORMAT_COUNT && wire_fmt != 19)
+                           ? (Format)wire_fmt : Format::Q32;
     dequantize_block_all(fmt, idx, idx_bytes, raw + 8, cb, nw, out);
 }
 
@@ -48,7 +53,16 @@ void Qwen35Engine::rmsnorm(float* out, const float* x, const float* w, int n) {
 // ---- gemm: Y[B][rows] = X[B][cols] @ W^T ---------------------------------
 void Qwen35Engine::gemm(const Th& t, const float* X, float* Y, int B) {
     const int rows = (int)t.rows, cols = (int)t.cols;
+    if (!reader_ || !X || !Y || B <= 0 || B > MAX_BATCH) return;
+    if (rows <= 0 || cols <= 0 || cols % 256 != 0) return;
     const int bpr = cols / 256;
+    // P0 hardening: bid arithmetic below is u32 (start + r*bpr + blk). Gate
+    // the whole (rows, bpr) rectangle against the resolved block count in
+    // 64-bit first — a corrupt shape that survived resolve() must no-op,
+    // never wrap around into block 0. Matches resolve()'s need check.
+    if ((uint64_t)rows * (uint64_t)bpr > (uint64_t)t.count) return;
+    uint64_t nblocks = reader_->num_blocks();
+    if ((uint64_t)t.start + (uint64_t)rows * (uint64_t)bpr > nblocks) return;
     int nt = (int)std::thread::hardware_concurrency();
     if (nt < 1) nt = 1;
     if (nt > 8) nt = 8;
@@ -105,10 +119,31 @@ bool Qwen35Engine::resolve(const std::string& name, uint32_t rows, uint32_t cols
         std::fprintf(stderr, "qwen35_engine: missing tensor %s\n", name.c_str());
         return false;
     }
+    // P0 hardening: tensor_blocks() range-gates (start,count) against the
+    // format table, but the engine additionally needs rows*cols weights —
+    // 256 per block. A corrupt count that passes the table gate but exceeds
+    // the weight shape would drive gemm()/prefill() bid math OOB. Reject.
+    if (cols == 0 || cols % 256 != 0) {
+        std::fprintf(stderr, "qwen35_engine: bad shape %s (%u x %u)\n",
+                     name.c_str(), rows, cols);
+        return false;
+    }
+    uint64_t need = (uint64_t)rows * (uint64_t)(cols / 256);
+    if ((uint64_t)count < need) {
+        std::fprintf(stderr, "qwen35_engine: short tensor %s (blocks %u < %llu)\n",
+                     name.c_str(), count, (unsigned long long)need);
+        return false;
+    }
     Th t;
     t.start = start;
     t.count = count;
-    t.fmt = (Format)reader_->format_entry(start).format;
+    // P0 hardening: same wire-format clamp as read_block/decode_block.
+    // format_entry() already returns a 0xFF sentinel on OOB, and
+    // tensor_blocks() range-gates start/count — this clamp covers the
+    // remaining corrupt-wire-byte case for the cached display format.
+    const uint8_t wire_fmt = reader_->format_entry(start).format;
+    t.fmt = (wire_fmt < FORMAT_COUNT && wire_fmt != 19)
+                ? (Format)wire_fmt : Format::Q32;
     t.rows = rows;
     t.cols = cols;
     th_[name] = t;

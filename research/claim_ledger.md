@@ -947,3 +947,29 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | J1-J2 | `strtod/strtoll` errno+endptr unchecked (`1e999`→inf, huge ints clamp, bare `-`→0, all silent) | ERANGE/endptr/finite validation, fail-loud |
 | J3 | Unbounded nesting recursion (`[[[[...` → stack overflow on attacker input) | Depth cap 128 (RAII guard) |
 | Suite | Rebuild 0 errors; full ctest green (contract 56/56 incl.) | 72/72 |
+
+## 100%-production push round 4 — 2026-09-13 (crafted-.quant P0 + CI/docs close-out)
+
+Three external audits (CI/Docker, docs-honesty, security-hardening) filed the
+last production-tag blockers. All closed this round; fresh evidence below.
+
+| # | Item | State |
+|---|---|---|
+| P0-oob | `QUANTReader::block_offset()/format_entry()` raw `operator[]` on file-controlled ids; `tensor_blocks()` returned unvalidated `(start,count)` consumed at `qwen35_engine.cpp:28,71,111` → crafted `.quant` = OOB-read/crash | **FIXED + TESTED.** `include/quant/quant_format.h:85-126`: `block_offset()` → `SIZE_MAX` sentinel on OOB, `format_entry()` → static `0xFF` invalid entry (consumers clamp to `Format::Q32`, whose decode arm is a zeros no-op), new `range_ok()` overflow-safe gate + `block_sizes()` payload gate. `src/codec/quant_format.cpp`: `tensor_blocks()` (`:506`), `read_tensor()` (`:533`), `tensor_formats()` (`:607`) all range-gate; ctor bounds file-controlled `num_format_blocks_` before any walk/resize (`:343-348`); `read_tensor()` caps alloc at 256M weights + catches `bad_alloc` (`:545-555`). Engine side (`src/adapters/tools/qwen35_engine.cpp`): `decode_block()` gates on `block_sizes()` (`:19-36`), `resolve()` weight-shape gate (`:107-127`), `gemm()` 64-bit bid guards (`:54-67`) |
+| P0-regress | No coverage for crafted-file paths | **NEW P6b suite.** `tests/test_protected.cpp:575-679` writes a valid 1-block file, patches `(start=7,count=5)` + `count=0xFFFFFFFF`, asserts fail-closed on all 12 probes; `test_protected` **30/30** (`build-prod/tests/Release/test_protected.exe`) |
+| P0-resid | `QUANTIdxReader` leak-on-early-return + double-free; Win32 `MappedFile` uninit size, no cap | **FIXED.** `quant_format.cpp:662-671` nulls `mapped_file_` on every early return; Win32 `open()` (`:125-145`) checks `GetFileSizeEx`, rejects empty, enforces the same 64 GiB cap as POSIX |
+| H-501 | `http_server.cpp` sent `501 Unknown` for chunked path (local `status_text` lacked 501; `http_parse.h` already had it) | **FIXED.** `src/server/http_server.cpp:65` |
+| CI-shard | Nightly shards orphaned 28 tests; union==full-suite unproven | **FIXED.** `ci_full.yml:232` shard 1 carries the full alternation; shard-union gate job fails loudly on orphans |
+| CI-comment | `ci_full.yml:131` falsely claimed `test_native_weight` excluded | **FIXED.** Comment now states it runs in PR Quick (300s TIMEOUT) + nightly shard 2 |
+| CI-build | `build.yml` unfiltered ctest (fuzz 900s/training 600s would hang runners), wrong GCC artifact paths (`build-gcc/Release/*` doesn't exist for single-config) | **FIXED.** PR-speed exclusions + `--timeout 300` + `timeout-minutes: 30/60`; artifact paths corrected to build-root globs |
+| CI-release | `release.yml` shipped untested binaries; `dist/**/*` glob vs flattened `merge-multiple` download = likely empty release | **FIXED.** Validate-binaries test step + `path: dist` download + payload gate (fails on 0 files) |
+| CI-docker | `Dockerfile` referenced a nonexistent weekly docker-full-test workflow; ran as root; no HEALTHCHECK; binary-presence probe missing | **FIXED.** Note now cites the nightly shard-union; `appuser` non-root, `HEALTHCHECK CMD-SHELL ... grep -q Usage`, fuzz added to speed exclusions with `--timeout 300` |
+| Sign | `sign_release.sh` `|| true` let unsigned releases pass silently | **FIXED (strict default).** `SIGN_STRICT=1` default fails loudly; `SIGN_STRICT=0` keeps the lenient dev path with warnings |
+| CMake | `install()` shipped the `quant_config.h.in` template instead of the generated header | **FIXED.** `CMakeLists.txt:560` installs `${CMAKE_BINARY_DIR}/quant_config.h` |
+| Docs | README banner still said CSV stale pre-v3; Linux row said green owed; WHITEPAPER Tables 10/11 + sizes UNVERIFIED; USAGE `< 1.0` row contradicted Q1=1.0 floor; P1P73 `0.2.0`; STRATEGY scope | **SYNCED.** Banner cites fresh 224-row v3 CSV; Linux row cites WSL2 64/64 + FULL 71/71; WHITEPAPER sizes now measured (infer 332 KB / train 391 KB / finetune 379.5 KB, `build-prod/Release/`, MSVC); USAGE floor row = 1.0; P1P73 → 1.1.0/R0001.01; STRATEGY carries the production-tag scope note |
+| A-01 | BPW ironclad (31 historic violations) | **RE-PROBED 2026-09-13.** `build-prod/tests/Release/test_format_audit.exe`: **BPW violations: 0** (all 105 v3 formats `ok`) |
+| Suite | Full Windows Release with ALL this-round changes | **72/72 green, 0 failed** (`ctest --test-dir build-prod -C Release`, Total Test time 188.20s) |
+| Linux | Fresh GCC 15.2 WSL build (`build-prod-linux/`, Ninja, benchmarks off) with ALL this-round changes | **PR-speed set 62/62 green** (38.56s) + **heavies 7/7 green** (`test_protected|test_training|test_native_quant|test_moe_training|test_paged_kv_4m`, 78.63s). P0 codec/heavy paths proven on Linux too |
+| Install | `cmake --install` self-check | **VERIFIED.** 12 tool exes + full `include/quant/` headers + generated `quant_config.h` land under `install_test/` (local prefix, git-ignored) |
+
+Still owed (stated, not hidden): GitHub-hosted CI run (needs push); macOS green (no runner here — `macos.yml` + `ci_full` macOS leg are now accurate); CUDA/Metal/SYCL/HIP runtime (no device on this host); multi-process/NCCL (out of scope, single-host threading tested); end-task quality benches (synthetic MSE only); C-15 draft-present acceptance numbers.

@@ -572,6 +572,113 @@ void test_bpe_roundtrip() {
     PROTECT_TEST("P10 BPE empty roundtrip", empty_ids.empty() && empty_dec.empty());
 }
 
+// P6b: crafted-.quant fail-closed — file-controlled ids/ranges must never
+// reach OOB. Writes one valid 1-block file, then patches raw bytes:
+//   A: tensor (start=7, count=5) beyond num_blocks=1 -> tensor_blocks false,
+//      read_tensor empty, block_offset sentinel, format_entry 0xFF,
+//      block_ptr nullptr, block_sizes false, tensor_formats empty.
+//   B: format-table count = 0xFFFFFFFF -> reader invalid (no OOB walk/OOM).
+static void write_p6b_valid(const std::string& path) {
+    QUANTWriter writer(path);
+    QUANTHeader hdr;
+    std::memcpy(hdr.magic, "QUA1", 4);
+    hdr.version = (1 << 22) | (0 << 12) | 0;
+    hdr.flags = 0;
+    hdr.config_size = 0;
+    writer.write_header(hdr, nullptr);
+    std::vector<quant::FormatBlockEntry> ft(1);
+    ft[0].block_id = 0;
+    ft[0].format = 9; // Format::Q32
+    ft[0].cb_bytes = 0;
+    writer.write_format_table(ft);
+    std::vector<quant::TensorEntry> te(1);
+    te[0].name_len = 1;
+    te[0].block_start = 0;
+    te[0].num_blocks = 1;
+    writer.write_tensor_table(te, {"w"});
+    quant::BlockData bd;
+    bd.format = quant::Format::Q32;
+    bd.num_weights = 8;
+    bd.indices.resize(8 * 4);
+    float vals[8] = {1,2,3,4,5,6,7,8};
+    std::memcpy(bd.indices.data(), vals, sizeof(vals));
+    writer.write_block(bd);
+    writer.close();
+}
+
+static std::vector<uint8_t> read_file_bytes(const std::string& path) {
+    FILE* f = std::fopen(path.c_str(), "rb");
+    std::vector<uint8_t> out;
+    if (!f) return out;
+    std::fseek(f, 0, SEEK_END);
+    long sz = std::ftell(f);
+    std::fseek(f, 0, SEEK_SET);
+    if (sz > 0) { out.resize((size_t)sz); std::fread(out.data(), 1, out.size(), f); }
+    std::fclose(f);
+    return out;
+}
+
+static void write_file_bytes(const std::string& path, const std::vector<uint8_t>& b) {
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) return;
+    std::fwrite(b.data(), 1, b.size(), f);
+    std::fclose(f);
+}
+
+void test_quant_format_corrupt_failclosed() {
+    const std::string base = "_test_protect_p6b_base.quant";
+    write_p6b_valid(base);
+    std::vector<uint8_t> bytes = read_file_bytes(base);
+    PROTECT_TEST("P6b base file written", !bytes.empty());
+    if (bytes.empty()) return;
+
+    // Layout: header 16B | ft-count @16 (4B) | ft-entry @20 (9B) |
+    // tt-count @29 (4B) | name_len @33 (2B) | name @35 (1B) |
+    // block_start @36 (4B) | num_blocks @40 (4B).
+    {
+        std::vector<uint8_t> a = bytes;
+        uint32_t bad_start = 7, bad_count = 5;
+        std::memcpy(a.data() + 36, &bad_start, 4);
+        std::memcpy(a.data() + 40, &bad_count, 4);
+        const std::string pa = "_test_protect_p6b_a.quant";
+        write_file_bytes(pa, a);
+        QUANTReader rd(pa);
+        PROTECT_TEST("P6b corrupt-range file still header-valid", rd.valid());
+        uint32_t st = 0, ct = 0;
+        PROTECT_TEST("P6b tensor_blocks rejects OOB range", !rd.tensor_blocks("w", st, ct));
+        // Default-constructed Tensor is rank-0 with numel()==1 — so "empty"
+        // means "identical to a default Tensor", not numel 0.
+        PROTECT_TEST("P6b read_tensor corrupt range -> default Tensor",
+                     rd.read_tensor("w").numel() == quant::Tensor().numel());
+        PROTECT_TEST("P6b block_offset OOB -> SIZE_MAX sentinel",
+                     rd.block_offset(7) == (size_t)-1);
+        PROTECT_TEST("P6b format_entry OOB -> 0xFF sentinel",
+                     rd.format_entry(7).format == (uint8_t)0xFF);
+        PROTECT_TEST("P6b block_ptr OOB -> nullptr", rd.block_ptr(7) == nullptr);
+        uint32_t cb = 0, ib = 0;
+        PROTECT_TEST("P6b block_sizes OOB -> false",
+                     !rd.block_sizes(7, &cb, &ib));
+        PROTECT_TEST("P6b tensor_formats corrupt range -> empty",
+                     rd.tensor_formats("w").empty());
+        // Sane id still works after the hardening (no regression).
+        PROTECT_TEST("P6b block_offset(0) sane", rd.block_offset(0) != (size_t)-1);
+        PROTECT_TEST("P6b block_ptr(0) sane", rd.block_ptr(0) != nullptr);
+        PROTECT_TEST("P6b block_sizes(0) sane", rd.block_sizes(0, &cb, &ib));
+        std::remove(pa.c_str());
+    }
+    {
+        std::vector<uint8_t> b = bytes;
+        uint32_t huge = 0xFFFFFFFFu;
+        std::memcpy(b.data() + 16, &huge, 4);
+        const std::string pb = "_test_protect_p6b_b.quant";
+        write_file_bytes(pb, b);
+        QUANTReader rd(pb);
+        PROTECT_TEST("P6b huge block-count -> invalid (no OOB walk/OOM)", !rd.valid());
+        std::remove(pb.c_str());
+    }
+    std::remove(base.c_str());
+}
+
 int main() {
     std::cout << "=== PROTECTED VERIFICATION TESTS ===" << std::endl;
 
@@ -587,6 +694,8 @@ int main() {
     test_kernel_tl_gemm();
     std::cout << "START P6" << std::endl;
     test_quant_format_roundtrip();
+    std::cout << "START P6b" << std::endl;
+    test_quant_format_corrupt_failclosed();
     test_moe_load_balance();
     test_trainer_checkpoint();
     test_rope_correctness();

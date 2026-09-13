@@ -127,8 +127,14 @@ public:
                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) return false;
 
-        LARGE_INTEGER li;
-        GetFileSizeEx(hFile, &li);
+        // Hardening: GetFileSizeEx can fail (network share, racing delete)
+        // leaving li uninitialized — fail closed instead of mapping garbage.
+        // Same 64 GiB cap + non-empty gate as the POSIX shim above.
+        LARGE_INTEGER li{};
+        if (!GetFileSizeEx(hFile, &li)) { CloseHandle(hFile); hFile = INVALID_HANDLE_VALUE; return false; }
+        if (li.QuadPart <= 0 || (uint64_t)li.QuadPart > ((uint64_t)64 << 30)) {
+            CloseHandle(hFile); hFile = INVALID_HANDLE_VALUE; return false;
+        }
         size_ = (size_t)li.QuadPart;
 
         hMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
@@ -335,6 +341,18 @@ QUANTReader::QUANTReader(const std::string& path)
     const uint8_t* p = data_ + format_table_offset_;
     memcpy(&num_format_blocks_, p, sizeof(num_format_blocks_)); p += sizeof(uint32_t);
 
+    // P0 hardening: num_format_blocks_ is a file-controlled u32. Bound it by
+    // what the file can actually hold before any walk/resize derived from it:
+    // each on-disk entry is sizeof(FormatBlockEntry) bytes right after the
+    // count field. A corrupt huge count otherwise drives an OOB memcpy walk
+    // below (crash) and a 36 GB-scale resize (OOM). Fail-closed: invalid.
+    {
+        const uint8_t* file_end = data_ + file_size_;
+        size_t ft_avail = (size_t)((file_end > p) ? (file_end - p) : 0);
+        size_t max_blocks = ft_avail / sizeof(FormatBlockEntry);
+        if ((size_t)num_format_blocks_ > max_blocks) return;
+    }
+
     size_t ft_bytes = sizeof(uint32_t) + (size_t)num_format_blocks_ * sizeof(FormatBlockEntry);
     tensor_table_offset_ = format_table_offset_ + ft_bytes;
 
@@ -449,6 +467,25 @@ const uint8_t* QUANTReader::block_ptr(uint32_t block_id) const {
     return data_ + block_offsets_[block_id];
 }
 
+// P0 hardening: stored cb/idx sizes are file-controlled. block_ptr() only
+// guarantees the first 8 bytes (nw + cb_bytes); consumers that read past
+// them must gate on this first.
+bool QUANTReader::block_sizes(uint32_t block_id, uint32_t* cb_bytes, uint32_t* idx_bytes) const {
+    if (block_id >= (uint32_t)block_offsets_.size() || !data_) return false;
+    size_t off = block_offsets_[block_id];
+    if (off < sizeof(QUANTHeader)) return false;
+    if (off + sizeof(uint32_t) * 2 > file_size_) return false;
+    const uint8_t* p = data_ + off;
+    const uint8_t* end = data_ + file_size_;
+    uint32_t cb; memcpy(&cb, p + sizeof(uint32_t), sizeof(cb));
+    if (p + sizeof(uint32_t) * 2 + cb + sizeof(uint32_t) > end) return false;
+    uint32_t idx; memcpy(&idx, p + sizeof(uint32_t) * 2 + cb, sizeof(idx));
+    if (p + sizeof(uint32_t) * 2 + cb + sizeof(uint32_t) + idx > end) return false;
+    if (cb_bytes) *cb_bytes = cb;
+    if (idx_bytes) *idx_bytes = idx;
+    return true;
+}
+
 bool QUANTReader::tensor_blocks(const std::string& name, uint32_t& start, uint32_t& count) const {
     if (!data_) return false;
     const uint8_t* end = data_ + file_size_;
@@ -463,6 +500,10 @@ bool QUANTReader::tensor_blocks(const std::string& name, uint32_t& start, uint32
         uint32_t block_start; memcpy(&block_start, p, sizeof(block_start)); p += sizeof(block_start);
         uint32_t num_blocks; memcpy(&num_blocks, p, sizeof(num_blocks)); p += sizeof(num_blocks);
         if (tensor_name == name) {
+            // P0 hardening: start/count are file-controlled (u32 pair in the
+            // tensor table). Reject corrupt ranges — including 64-bit-wrapped
+            // start+count overflow — instead of walking OOB downstream.
+            if (!range_ok(block_start, num_blocks)) return false;
             start = block_start;
             count = num_blocks;
             return true;
@@ -487,6 +528,9 @@ Tensor QUANTReader::read_tensor(const std::string& name) const {
         uint32_t num_blocks; memcpy(&num_blocks, p, sizeof(num_blocks)); p += sizeof(num_blocks);
 
         if (tensor_name == name) {
+            // P0 hardening: same range gate as tensor_blocks() — a corrupt
+            // (start, count) pair must decode empty, never walk OOB.
+            if (!range_ok(block_start, num_blocks)) return Tensor();
             int64_t total_weights = 0;
             for (uint32_t b = 0; b < num_blocks; b++) {
                 BlockData bd = read_block(block_start + b);
@@ -494,7 +538,21 @@ Tensor QUANTReader::read_tensor(const std::string& name) const {
             }
             if (total_weights == 0) return Tensor();
 
-            Tensor t(Shape{total_weights}, DType::F32);
+            // P0 hardening: total_weights is file-controlled (sum of stored
+            // per-block nw fields). Cap the allocation at 1 GiB of fp32
+            // (256M weights) so a corrupt file fails closed (empty) instead
+            // of OOM-killing the process. bad_alloc is also caught.
+            static constexpr int64_t kMaxTensorWeights = (int64_t)256 << 20;
+            if (total_weights > kMaxTensorWeights) return Tensor();
+            // Fail-closed on genuine OOM too: Tensor ctor throws bad_alloc,
+            // and callers (engine load paths) treat exceptions as fatal.
+            // An empty tensor keeps the corrupt-file contract (decode empty).
+            Tensor t;
+            try {
+                t = Tensor(Shape{total_weights}, DType::F32);
+            } catch (const std::bad_alloc&) {
+                return Tensor();
+            }
             float* td = (float*)t.data();
             for (uint32_t b = 0; b < num_blocks; b++) {
                 uint32_t blk_id = block_start + b;
@@ -544,6 +602,9 @@ std::vector<Format> QUANTReader::tensor_formats(const std::string& name) const {
         uint32_t num_blocks; memcpy(&num_blocks, p, sizeof(num_blocks)); p += sizeof(num_blocks);
 
         if (tensor_name == name) {
+            // P0 hardening: range gate first — the loop's (block_start + b)
+            // u32 addition could otherwise wrap past 2^32 and alias block 0.
+            if (!range_ok(block_start, num_blocks)) return fmts;
             for (uint32_t b = 0; b < num_blocks && (block_start + b) < (uint32_t)cached_ft_.size(); b++) {
                 uint32_t bid = block_start + b;
                 const uint8_t wire_fmt = cached_ft_[bid].format;
@@ -610,10 +671,12 @@ QUANTIdxReader::QUANTIdxReader(const std::string& path)
     file_size_ = mapped_file_->size();
     // Magic: "TranscenderIDX" (15B, current) or legacy "InNovaIDX" (10B).
     // Reader accepts both; writer always emits current. Minimum size uses legacy.
-    if (file_size_ < 18) { return; }
+    // P0 hardening: every early return after ownership transfer nulls
+    // mapped_file_ — otherwise ~QUANTIdxReader double-frees the dangling ptr.
+    if (file_size_ < 18) { delete mf; mapped_file_ = nullptr; return; }
     if (memcmp(data_, "TranscenderIDX", 14) == 0) { magic_size_ = 15; }
     else if (memcmp(data_, "InNovaIDX", 9) == 0) { magic_size_ = 10; }
-    else { data_ = nullptr; return; }
+    else { data_ = nullptr; delete mf; mapped_file_ = nullptr; return; }
     size_t off = magic_size_;
     memcpy(&version_, data_ + off, sizeof(version_)); off += sizeof(version_);
     memcpy(&num_tensors_, data_ + off, sizeof(num_tensors_)); off += sizeof(num_tensors_);
