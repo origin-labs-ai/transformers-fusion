@@ -1,4 +1,4 @@
-﻿#include "quant/kv_cache.h"
+#include "quant/kv_cache.h"
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -243,7 +243,10 @@ std::pair<Tensor, Tensor> KVCache::get_range(int layer, int start, int end) cons
                 for (int64_t i = 0; i < d; i++) {
                     int64_t off = read_off + i;
                     int64_t bi = off / FP8_BLOCK_SIZE;
-                    int64_t bo = off % FP8_BLOCK_SIZE; (void)bo;
+                    // NOTE (bug census): `bo = off % FP8_BLOCK_SIZE` was
+                    // computed then (void)-discarded — dead remainder. The
+                    // block-float scaling below uses per-block scales only;
+                    // remainder kept out (no sub-block interpolation).
                     kdst[write_off + i] = (float)(int8_t)c.k_quant[(size_t)off] * c.k_scales[(size_t)bi];
                     vdst[write_off + i] = (float)(int8_t)c.v_quant[(size_t)off] * c.v_scales[(size_t)bi];
                 }

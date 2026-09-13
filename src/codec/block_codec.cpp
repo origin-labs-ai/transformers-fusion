@@ -441,7 +441,10 @@ static float lattice_claimed(int bits) {
 
 void quant_lattice(Format fmt, const float* w, int n, int bits,
                    std::vector<uint8_t>& indices) {
-    (void)fmt;
+    // NOTE (bug census): `fmt` intentionally unused here — bit-width dispatch
+    // goes through `bits` (the format's wire width). Kept for signature
+    // symmetry with dequant_lattice callers that pass both.
+    (void)fmt; // documented-unused: dispatch is on `bits`
     const size_t budget_bits = (size_t)std::ceil(lattice_claimed(bits) * (double)n);
     indices.assign((budget_bits + 7) / 8, 0);
     if (n < kScaleSlots) {
@@ -494,8 +497,11 @@ void quant_lattice(Format fmt, const float* w, int n, int bits,
 
 void dequant_lattice(const uint8_t* bytes, size_t size, int n, int bits,
                      float* out) {
+    // NOTE (bug census): budget_bits recomputed for documentation only — the
+    // reader trusts the actual byte size (FastBitReader zero-pads the tail).
+    // Kept as a debug anchor, not a gate.
     const size_t budget_bits = (size_t)std::ceil(lattice_claimed(bits) * (double)n);
-    (void)budget_bits;
+    (void)budget_bits; // documented-unused: informational only
     FastBitReader br(bytes, size);
     if (n < kScaleSlots) {
         for (int i = 0; i < n; ++i) out[i] = level_value(bits, br.get(bits));
@@ -1270,7 +1276,8 @@ static void dequant_6k(const uint8_t* bytes, size_t size, int n, float* out) {
         if (cnt == 16) {
             uint32_t idxb[16];
             for (int k = 0; k < 16; ++k) idxb[(size_t)k] = br.get(6); // 0..63, wire order
-            const __m256 ve = _mm256_set1_ps(e);
+            // NOTE (bug census): `ve` (+e broadcast) was dead — the FMA uses
+            // vne (-e) to compute e*lvl directly. Removed instead of (void).
             const __m256 vne = _mm256_set1_ps(-e);
             const __m256 vz = _mm256_setzero_ps();
             for (int k = 0; k < 16; k += 8) {
@@ -1282,7 +1289,6 @@ static void dequant_6k(const uint8_t* bytes, size_t size, int n, float* out) {
                 const __m256 lvl = _mm256_i32gather_ps(q6_lut, gi, 4); // small-LUT gather
                 const __m256 r = _mm256_fnmadd_ps(vne, lvl, vz); // -((-e)*lvl)+0 == e*lvl
                 _mm256_storeu_ps(out + out_pos + (size_t)k, r);
-                (void)ve;
             }
             out_pos += 16;
             continue;

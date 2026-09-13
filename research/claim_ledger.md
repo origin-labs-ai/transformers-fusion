@@ -677,3 +677,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | P1-P2 | `quant_ptq --bpw/--block-size` bare atof/atoi fail-open | cli_parse + ranges (exit 2) |
 | V1 | `quant_verify_roundtrip` bare atoi (garbage → 0 → checks nothing, exit 0 fake pass) | strtol validated 0..1000000 |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 25 — 2026-09-13 (codec discards)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| B1 | Q6 AVX2 path dead `ve` broadcast (+e unused, FMA uses -e) | Removed (verified by codec 7/7 incl. fuzz 55s) |
+| B2 | `kv_cache` dead `bo` remainder `(void)`-discarded | Removed + documented (block-scale only) |
+| B3-B4 | `quant/dequant_lattice` bare `(void)fmt/budget_bits` hid intent | Documented-unused (dispatch on bits; informational) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
