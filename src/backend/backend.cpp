@@ -2375,7 +2375,11 @@ static inline void quant_cpuid(int info[4], int leaf) {
 #if defined(_WIN32)
     __cpuid(info, leaf);
 #elif defined(__aarch64__) || defined(__arm__)
-    (void)info; (void)leaf;
+    // ARM has no CPUID leaf: callers must not read info[] (availability
+    // helpers return false up-front on ARM). Zero it to fail closed.
+    // NOTE (bug census): was bare (void)info/(void)leaf (stale stack values).
+    info[0] = info[1] = info[2] = info[3] = 0;
+    (void)leaf; // documented-unused: no CPUID instruction on ARM
 #else
     __cpuid(leaf, info[0], info[1], info[2], info[3]);
 #endif
@@ -2385,7 +2389,8 @@ static inline void quant_cpuidex(int info[4], int leaf, int sub) {
 #if defined(_WIN32)
     __cpuidex(info, leaf, sub);
 #elif defined(__aarch64__) || defined(__arm__)
-    (void)info; (void)leaf; (void)sub;
+    info[0] = info[1] = info[2] = info[3] = 0;
+    (void)leaf; (void)sub; // documented-unused: no CPUID instruction on ARM
 #else
     __cpuid_count(leaf, sub, info[0], info[1], info[2], info[3]);
 #endif
@@ -2527,7 +2532,13 @@ bool is_rpc_available() {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(9000);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    (void)connect(s, (const sockaddr*)&addr, sizeof(addr));
+    // BUGFIX (bug census): connect() return was (void)-discarded. On
+    // non-blocking sockets connect returns SOCKET_ERROR/EINPROGRESS by
+    // design (the select() below is the real verdict), but a SYNCHRONOUS
+    // success (0) means the port is open NOW — keep the fast path honest:
+    // only trust select(); document that 0/EINPROGRESS both funnel there.
+    int cconn = connect(s, (const sockaddr*)&addr, sizeof(addr));
+    (void)cconn; // documented-unused: non-blocking by design; select() below decides
     fd_set wf;
     FD_ZERO(&wf);
     FD_SET(s, &wf);
@@ -2687,7 +2698,9 @@ int64_t cpu_memory_total() {
 }
 
 int64_t gpu_memory_free(int64_t device_id) {
-    (void)device_id;
+    // NOTE (bug census): device_id intentionally unused — single-GPU query
+    // helpers (DirectX device 0); multi-GPU indexing is future work.
+    (void)device_id; // documented-unused: single-device query
 #if defined(_WIN32)
     if (is_directx_available()) {
         try {

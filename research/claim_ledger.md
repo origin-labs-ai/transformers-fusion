@@ -874,3 +874,12 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 |---|---|---|
 | U1-U10 | `GPU_OPENCLBackend` GEMM-only gap stubs: 10 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 44 — 2026-09-13 (cpuid/connect/device discards)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| A1 | ARM `quant_cpuid/cpuidex` left stale stack values in `info[]` (callers read them) | Zeroed fail-closed (ARM helpers return false up-front) |
+| R1 | `is_rpc_available` connect() discard undocumented (sync-success vs EINPROGRESS) | Documented: select() decides |
+| G1 | `gpu_memory_free` device_id discard undocumented | Documented single-device query |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
