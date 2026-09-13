@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <cmath>
 #include <cassert>
+#include <cstdlib>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <thread>
@@ -170,8 +172,31 @@ static void test_language_bindings() {
 
 static void test_mobile_wasm() {
     TEST_SUITE("I19-I20: Mobile/WASM");
+    // Environment-coupled contract (CI lesson 2026-09-13): GitHub-hosted
+    // ubuntu-latest runners preinstall the Android SDK AND export
+    // ANDROID_HOME/ANDROID_SDK_ROOT, so deploy_android() returns true there
+    // while returning false on a bare dev box. Pin the CONTRACT, not the
+    // bare-machine value. Contract per production_api.cpp:
+    //   POSIX:  true iff ANDROID_HOME is set.
+    //   Win32:  true iff ANDROID_HOME (else ANDROID_SDK_ROOT) is set AND
+    //           "<sdk>/tools/bin/gradlew" exists (env alone is NOT enough).
     bool android = MobileDeploy::deploy_android("test.apk");
-    TEST_CHECK(!android, "android deploy returns false (no SDK configured)");
+#ifdef _WIN32
+    const char* ah = std::getenv("ANDROID_HOME");
+    if (!ah) ah = std::getenv("ANDROID_SDK_ROOT");
+    bool expect = false;
+    if (ah) {
+        std::string gradlew = std::string(ah) + "/tools/bin/gradlew";
+        std::ifstream f(gradlew);
+        expect = f.good();
+    }
+#else
+    bool expect = (std::getenv("ANDROID_HOME") != nullptr);
+#endif
+    TEST_CHECK(android == expect,
+               "android deploy result matches SDK-detectability (env-coupled)");
+    if (!expect)
+        TEST_CHECK(!android, "android deploy returns false (no SDK configured)");
 
     bool ios = MobileDeploy::deploy_ios("test.xcarchive");
     TEST_CHECK(!ios, "ios deploy returns false (not on macOS)");
