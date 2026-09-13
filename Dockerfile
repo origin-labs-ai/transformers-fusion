@@ -62,7 +62,9 @@ EXPOSE 8080
 
 # Binary-presence probe: no-arg run prints Usage to stderr and exits 1 —
 # grep for it so a present+executable binary reports healthy (exit 0).
+# NOTE: HEALTHCHECK takes CMD + shell form (no CMD-SHELL keyword — that is
+# a parse error, 2026-09-13). Runs under /bin/sh -c so pipes work.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD-SHELL ./quant_infer 2>&1 | grep -q Usage
+  CMD ./quant_infer 2>&1 | grep -q Usage
 
 ENTRYPOINT ["./quant_infer"]
