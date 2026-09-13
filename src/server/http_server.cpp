@@ -745,6 +745,28 @@ void HTTPServer::handle_request(int fd) {
         std::string current(buf.data(), buf.size());
         auto hend = current.find("\r\n\r\n");
         if (hend != std::string::npos) {
+            // BUGFIX (bug census): Transfer-Encoding: chunked was silently
+            // treated as bodyless (headers-only parse → truncated JSON →
+            // confusing 400s). Fail closed with 501 until chunked decoding
+            // lands. Case-insensitive lookup on the header section only.
+            {
+                std::string hdrs = current.substr(0, hend);
+                std::string lower = hdrs;
+                std::transform(lower.begin(), lower.end(), lower.begin(),
+                               [](unsigned char c) { return (char)std::tolower(c); });
+                auto te = lower.find("transfer-encoding:");
+                if (te != std::string::npos) {
+                    auto vle = lower.find("\r\n", te);
+                    std::string teval = lower.substr(te + 18,
+                        (vle == std::string::npos ? lower.size() : vle) - (te + 18));
+                    if (teval.find("chunked") != std::string::npos) {
+                        send_openai_error(fd, 501, "Transfer-Encoding: chunked not supported (send Content-Length)",
+                                          "invalid_request_error", "chunked_unsupported");
+                        total_errors_.fetch_add(1);
+                        return;
+                    }
+                }
+            }
             auto cl_pos = current.find("Content-Length:");
             if (cl_pos == std::string::npos)
                 cl_pos = current.find("content-length:");

@@ -63,6 +63,12 @@ struct HTTPRequest {
 //   - Model load/unload via API
 //   - Endpoints: /v1/completions, /v1/chat/completions, /v1/embeddings,
 //                /v1/models, /health
+//
+// SCOPE (bug census round-19, honest): one request per connection
+// (responses carry `Connection: close`; pipelined bytes are never read),
+// and only Content-Length bodies are accepted — `Transfer-Encoding:
+// chunked` fails closed with 501. Persistent/pipelined/chunked support is
+// future work, not a silent truncation.
 // ===========================================================================
 
 class HTTPServer {

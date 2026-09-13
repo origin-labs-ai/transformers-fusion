@@ -366,15 +366,23 @@ disconnect:
 }
 
 void WebSocketHandler::broadcast(const std::string& msg) {
+    // BUGFIX (bug census): short send (sent < size but >= 0) was treated as
+    // success, truncating frames. Loop send_all; drop the client on error.
     std::lock_guard<std::mutex> lock(clients_mutex_);
     auto frame = create_frame(msg, 0x1); // Text opcode
 
     auto it = clients_.begin();
     while (it != clients_.end()) {
         int client = *it;
-        int sent = send(client, (const char*)frame.data(),
-                        (int)frame.size(), 0);
-        if (sent < 0) {
+        size_t total = 0;
+        bool ok = true;
+        while (total < frame.size()) {
+            int sent = send(client, (const char*)frame.data() + total,
+                            (int)(frame.size() - total), 0);
+            if (sent <= 0) { ok = false; break; }
+            total += (size_t)sent;
+        }
+        if (!ok) {
             socket_helpers::close_socket(client);
             it = clients_.erase(it);
         } else {

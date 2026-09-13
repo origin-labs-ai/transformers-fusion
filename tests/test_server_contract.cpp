@@ -224,6 +224,32 @@ static void test_query_decode() {
                "orphan continuation without prior header is dropped safely");
 }
 
+static void test_chunked_rejected_live() {
+    TEST_SUITE("bug census: chunked Transfer-Encoding fails closed (501)");
+    HTTPServer s(0);
+    const int kPort = 18092;
+    HTTPServer srv(kPort);
+    srv.start();
+    std::string h;
+    for (int i = 0; i < 40; i++) {
+        h = http_get("127.0.0.1", kPort,
+                     "GET /health HTTP/1.1\r\nHost: x\r\n\r\n");
+        if (h.find("200 OK") != std::string::npos) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    TEST_CHECK(h.find("200 OK") != std::string::npos, "smoke server up");
+    std::string r = http_get("127.0.0.1", kPort,
+        "POST /v1/completions HTTP/1.1\r\n"
+        "Host: x\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "5\r\nhello\r\n0\r\n\r\n");
+    TEST_CHECK(r.find("501") != std::string::npos, "chunked body fails closed with 501");
+    TEST_CHECK(r.find("chunked") != std::string::npos, "501 names chunked as the reason");
+    srv.stop();
+    (void)s;
+}
+
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("Transcender - OpenAI Server Contract (L076) Test Suite\n");
@@ -237,6 +263,7 @@ int main() {
     test_legacy_status_text();
     test_parse_content_length();
     test_query_decode();
+    test_chunked_rejected_live();
     test_live_server_smoke();
 
     printf("\n======================================================\n");

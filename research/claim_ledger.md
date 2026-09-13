@@ -619,3 +619,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | H5 | **Final header line silently dropped** (no `\n` in section → `break` before parse; every request lost its last header) — caught by my own new orphan-continuation test | Lines+tail iteration |
 | T16 | New `test_query_decode` suite (11 asserts: decode/continuation/malformed/orphan) | `test_server_contract` 53/53 (was 42/42) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 19 — 2026-09-13 (chunked scope + WS broadcast)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| H6 | `Transfer-Encoding: chunked` silently treated as bodyless (truncated JSON → confusing 400s) | Fail-closed 501 + scope documented in `http_server.h` |
+| W1 | WS `broadcast()` short-send treated as success (truncated frames) | `send_all` loop, drop-on-error |
+| T17 | New `test_chunked_rejected_live` (real socket: 501 + reason) | `test_server_contract` 56/56 (was 53/53) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
