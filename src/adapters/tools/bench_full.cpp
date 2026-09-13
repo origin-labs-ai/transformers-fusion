@@ -2,10 +2,10 @@
 // bench_full.cpp — Comprehensive benchmark suite: QUANT vs GGUF + Pure formats
 // ============================================================================
 // Formats compared:
-//   1. QUANT Mixed  (95% QUANT, 4% QUANT4, 1% QUANT8)  ~1.5 bpw
+//   1. QUANT Mixed  (95% QUANT, 4% Q4, 1% Q8)  ~1.5 bpw
 //   2. GGUF Q8_0   (8.5 bpw, per-block 8-bit)
 //   3. Pure QUANT (1.50 bpw, all weights)
-//   4. Pure QUANT1  (1.0 bpw, all weights)
+//   4. Pure Q1  (1.0 bpw, all weights)
 //   5. FP16         (16.0 bpw, baseline)
 //
 // Metrics:
@@ -220,7 +220,7 @@ static float measure_error(const float* orig, const std::vector<uint8_t>& qdata,
 } // namespace gguf_q8
 
 // ============================================================================
-// Pure QUANT / QUANT1 Quantization
+// Pure QUANT / Q1 Quantization
 // ============================================================================
 namespace pure_quant {
 
@@ -290,7 +290,7 @@ static float measure_error_quant(const float* orig, const std::vector<uint8_t>& 
     return (float)(mse_sum / (double)n_elem);
 }
 
-// QUANT1
+// Q1
 static std::vector<uint8_t> quantize_tensor_quant1(const float* data, int M, int K) {
     int n_blocks = (K + 31) / 32;
     int total_blocks = M * n_blocks;
@@ -447,7 +447,7 @@ static const FormatInfo g_formats[] = {
     {"QUANT Mixed",        1.50f, quantize_quant,      measure_error_quant},
     {"GGUF Q8_0",        8.50f, quantize_q8,       gguf_q8::measure_error},
     {"Pure QUANT",       1.50f, quantize_pure_quant, pure_quant::measure_error_quant},
-    {"Pure QUANT1",        1.00f, quantize_quant1,      pure_quant::measure_error_quant1},
+    {"Pure Q1",        1.00f, quantize_quant1,      pure_quant::measure_error_quant1},
     {"FP16",            16.00f, quantize_fp16,      fp16_quant::measure_error},
 };
 
@@ -801,7 +801,14 @@ int main(int argc, char** argv) {
     int pos = 0;
     auto now = std::time(nullptr);
     char timebuf[64];
-    strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", std::localtime(&now));
+    // BUGFIX (bug census): std::localtime is thread-unsafe (shared static).
+    std::tm tmv{};
+#ifdef _WIN32
+    localtime_s(&tmv, &now);
+#else
+    localtime_r(&now, &tmv);
+#endif
+    strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", &tmv);
     
     MemoryResult mem_res = bench_memory(std::vector<float>());
     LatencyResult lat_res = bench_latency(std::vector<float>(), threads);

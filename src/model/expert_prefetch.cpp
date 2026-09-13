@@ -111,6 +111,8 @@ void ExpertPrefetcher::initialize() {
 
 
 void ExpertPrefetcher::set_expert_source(int layer_id, int expert_id, const void* src_ptr) {
+    // BUGFIX (bug census): unlocked write raced the worker's reads.
+    std::lock_guard<std::mutex> lock(mutex_);
     if (layer_id >= 0 && layer_id < num_layers_ && expert_id >= 0 && expert_id < num_experts_) {
         ExpertPage& page = pages_[layer_id][expert_id];
         page.source_ptr = src_ptr;
@@ -120,6 +122,8 @@ void ExpertPrefetcher::set_expert_source(int layer_id, int expert_id, const void
 
 void ExpertPrefetcher::set_expert_segments(int layer_id, int expert_id,
                                            const std::vector<SourceSegment>& segments) {
+    // BUGFIX (bug census): same unlocked-write race as set_expert_source.
+    std::lock_guard<std::mutex> lock(mutex_);
     if (layer_id >= 0 && layer_id < num_layers_ && expert_id >= 0 && expert_id < num_experts_) {
         ExpertPage& page = pages_[layer_id][expert_id];
         page.source_segments = segments;
@@ -155,6 +159,15 @@ const float* ExpertPrefetcher::get_expert_weights(int layer_id, int expert_id) {
         expert_id < 0 || expert_id >= num_experts_)
         return nullptr;
     auto start_time = std::chrono::steady_clock::now();
+    // BUGFIX (bug census): TOCTOU — is_on_device/host_ptr/device_ptr were
+    // read lock-free, re-checked under lock, and disk/GPU I/O ran while
+    // holding mutex_ (worker stall + double-load). Snapshot under lock, do
+    // I/O unlocked, revalidate under lock before publishing.
+    bool need_load = false;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        need_load = !pages_[layer_id][expert_id].is_on_device;
+    }
     ExpertPage& page = pages_[layer_id][expert_id];
     
     bool waited = false;
@@ -213,7 +226,12 @@ const float* ExpertPrefetcher::get_expert_weights(int layer_id, int expert_id) {
         stats_.avg_wait_ms = total_wait / (stats_.prefetch_hits + stats_.prefetch_misses);
     }
     
-    // Return device_ptr if GPU is active and the data was uploaded, else host_ptr
+    // Return device_ptr if GPU is active and the data was uploaded, else host_ptr.
+    // NOTE (bug census round-11): this runs INSIDE the mutex_ guard above —
+    // do NOT take another lock_guard here (non-recursive mutex: self-deadlock/
+    // abort, caught by test_expert_prefetch 0xc0000409). The TOCTOU on the
+    // returned pointer is inherent to the synchronous-miss API (caller uses
+    // it before the next eviction); a fully safe API would ref-count pages.
     if (gpu::get_cuda_compute().is_initialized() && page.device_ptr) {
         return reinterpret_cast<const float*>(page.device_ptr);
     }

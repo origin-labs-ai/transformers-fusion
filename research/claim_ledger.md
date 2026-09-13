@@ -540,3 +540,13 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Z1 | `ModelZoo` cache vector race + double-scan + unlocked push | `zoo_mtx_`, snapshot-walk, locked mutation; slow I/O outside lock |
 | R1 | `GlobalSeedManager` plain statics (duplicate seeds/threads) | Atomic base/counter + CAS init |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 11 — 2026-09-12 (flywheel/log/prefetch + own nested-lock)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| F1 | `get_task_templates` static cache race (concurrent vector/string) | `cache_mtx_` guard, copy return |
+| L1-L2 | `bench_full` + `log_writer` thread-unsafe/dead `localtime` | `localtime_r/s`; dead call dropped |
+| P1-P3 | Prefetch: `schedule`/`get` unchecked indices, `initialize` unchecked malloc | Bounds-check + fail-closed nullptr + null-check |
+| P4 | **Own goal caught by tests**: my return-snapshot `lock_guard` inside already-locked miss path = nested-lock abort (0xc0000409, test_all + test_expert_prefetch) | Reverted to in-lock return + honest note (fully safe API needs page ref-counts) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
