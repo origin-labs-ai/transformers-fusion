@@ -559,7 +559,19 @@ void QUANT32Engine::quantize_per_channel(const Tensor& t, int channel_dim,
 
 void QUANT32Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                           int channel_dim, Tensor& out) const {
-    (void)scales; (void)channel_dim;
+    // BUGFIX (bug census): silently discarded scales+channel_dim — callers
+    // passing a scaled tensor got raw values with no error. FP32 is the
+    // identity format: any non-unity scale is a contract violation, not a
+    // no-op. Validate instead of pretending.
+    if (channel_dim != 0 && channel_dim != 1)
+        throw Error("QUANT32Engine::dequantize_per_channel: channel_dim must be 0/1");
+    const float* sd = scales.numel() ? scales.data<float>() : nullptr;
+    if (sd) {
+        for (int64_t i = 0; i < scales.numel(); i++) {
+            if (sd[i] != 1.0f)
+                throw Error("QUANT32Engine::dequantize_per_channel: non-unity scale on identity format");
+        }
+    }
     out = Tensor(q.shape(), quant::DType::F32);
     std::memcpy(out.data<float>(), q.data<float>(), (size_t)q.numel() * sizeof(float));
 }

@@ -58,7 +58,15 @@ Tensor QuantEngine::dequantize(const Tensor& packed, const Tensor& scales, int64
     const float* rd = packed.data<float>();
     int64_t num_blocks = (int64_t)rd[0];
     int64_t packed_size = (int64_t)rd[1];
+    // BUGFIX (bug census): packed_size (embedded payload length) was read
+    // then (void)-discarded — truncated buffers decoded garbage instead of
+    // failing. Validate it covers the payload before touching pd[].
     int64_t hdr = 2;
+    if (num_blocks < 0 || packed_size < 0) throw Error("QuantEngine::dequantize: corrupt header");
+    if (hdr + num_blocks + (packed_size + 3) / 4 > packed.numel())
+        throw Error("QuantEngine::dequantize: truncated buffer");
+    if (n < 0 || n > num_blocks * block_size_ + block_size_)
+        throw Error("QuantEngine::dequantize: bad output length");
     const float* sd = rd + hdr;
     const uint8_t* pd = reinterpret_cast<const uint8_t*>(sd + num_blocks);
     // Use embedded scales if passed scales are insufficient (dummy)
@@ -68,7 +76,6 @@ Tensor QuantEngine::dequantize(const Tensor& packed, const Tensor& scales, int64
         scale_ptr = scales.data<float>();
         scale_count = scales.numel();
     }
-    (void)packed_size;
     Tensor out({n});
     float* od = out.data<float>();
     for (int64_t i = 0; i < n; ++i) {

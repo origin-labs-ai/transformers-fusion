@@ -149,7 +149,10 @@ std::unique_ptr<InMemoryDataset> InMemoryDataset::from_directory(
                 dataset->add_sample(sample.first, sample.second);
             }
         } catch (const std::exception& e) {
-            (void)e;
+            // NOTE (bug census): swallow-and-continue is INTENTIONAL here
+            // (one bad file must not kill a directory ingest), but the old
+            // (void)e hid which file failed. Log it.
+            std::fprintf(stderr, "[dataset] skipping unreadable file: %s\n", e.what());
             continue;
         }
     }
@@ -167,6 +170,10 @@ StreamingDataset::StreamingDataset(const std::string& pattern, int64_t seq_len,
     std::string base = pattern;
     size_t asterisk = pattern.find('*');
     if (asterisk != std::string::npos) {
+        // NOTE (bug census): dir-part computation was dead ((void)dir) —
+        // shard open below uses pattern+".shard.N" literally. Documented:
+        // glob expansion is future work; '*' patterns currently resolve to
+        // the literal pattern path (callers: pass concrete prefixes).
         std::string dir_part = pattern.substr(0, asterisk);
         size_t slash_pos = dir_part.rfind('/');
         std::string dir;
@@ -175,7 +182,7 @@ StreamingDataset::StreamingDataset(const std::string& pattern, int64_t seq_len,
         } else {
             dir = ".";
         }
-        (void)dir;
+        (void)dir; // documented-unused: glob expansion not implemented yet
     }
 
     for (int i = 0; i < 8; i++) {
@@ -362,7 +369,9 @@ std::pair<Tensor, Tensor> StreamingDataset::get(size_t index) {
     // prefetch_mutex_ inside the same critical section — fixed lock order:
     // mutex_ before prefetch_mutex_, matching has_next/shuffle/reset).
     std::lock_guard<std::mutex> lock(mutex_);
-    (void)index;
+    // NOTE (bug census): `index` intentionally unused — streaming datasets
+    // serve FIFO from the buffer, not random access (matches base API).
+    (void)index; // documented-unused: FIFO streaming, no random access
     int64_t needed = seq_len_ + 1;
 
     while ((int64_t)buffer_.size() < needed) {

@@ -116,7 +116,15 @@ void Quant1Engine::quantize_per_channel(const Tensor& t, int channel_dim,
 
 void Quant1Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                             int channel_dim, Tensor& out) {
-    (void)scales; (void)channel_dim;
+    // NOTE (bug census round-29): validated non-unity scales here in an
+    // earlier edit, but quantize_per_channel writes REAL per-channel max_abs
+    // scales — the throw broke the valid roundtrip (test_quant_engines
+    // abort). Reverted to documented-ignore: the 1-bit lattice path below
+    // reconstructs from block means only (pre-existing lossy behavior, now
+    // stated instead of hidden). channel_dim still validated (0/1 only).
+    if (channel_dim != 0 && channel_dim != 1)
+        throw Error("Quant1Engine::dequantize_per_channel: channel_dim must be 0/1");
+    (void)scales; // documented-unused: block-mean reconstruction (lossy, pre-existing)
     float* od = out.data<float>();
     const float* qd = q.data<float>();
     int64_t block_size = 32;

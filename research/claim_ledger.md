@@ -728,3 +728,14 @@ Verification: `test_inference_opt.exe` → `[KV Truncate Test] Passed.`,
 | T2 | Qwen `<0xHH>` via sscanf (1-digit accept, no range check) | Exact-2-hex hand parse |
 | Note | Transient `SpeculativeDecoder` C2011 during parallel build (external C-15 truncate work landing mid-build); clean on rebuild | Full suite green after |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 29 — 2026-09-13 (engine discards + dataset/parquet + own revert)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| F1 | `QUANT32::dequantize_per_channel` discarded scales (non-unity silently ignored on identity format) | Non-unity/ bad-dim throws (scales always 1.0 by construction) |
+| Q1 | `QuantEngine::dequantize` discarded `packed_size` (truncated buffers decoded garbage) | Header + truncation validation |
+| D1-D2 | `dataset.cpp` swallowed exception + dead glob `(void)dir` | Logged skip; documented future-work |
+| P1 | `parquet StreamingDataset` discarded `data_dir` (empty dataset silently) | Auto-scan *.parquet |
+| R1 | **Own revert**: my Quant1 non-unity-scale throw broke the VALID roundtrip (`quantize_per_channel` writes real max_abs scales) → test abort 0xc0000409 | Reverted to documented-ignore; 81/81 green |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

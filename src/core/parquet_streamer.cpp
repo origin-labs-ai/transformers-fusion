@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 #include <random>
 
 namespace quant {
@@ -73,7 +74,18 @@ void ParquetReader::close() {
 StreamingDataset::StreamingDataset(const std::string& data_dir, int64_t vocab_size)
     : vocab_size_(vocab_size), total_tokens_(0), current_shard_(0),
       epochs_(0), buffer_pos_(0), buffer_len_(0) {
-    (void)data_dir;
+    // BUGFIX (bug census): data_dir was silently discarded — shards added
+    // later via add_shard() only, so a dir passed here was never scanned.
+    // Auto-scan *.parquet in the dir (non-recursive); missing dir = empty
+    // dataset (not an error — matches add_shard laziness).
+    if (!data_dir.empty()) {
+        std::error_code ec;
+        for (auto& e : std::filesystem::directory_iterator(data_dir, ec)) {
+            if (ec) break;
+            if (e.is_regular_file(ec) && e.path().extension() == ".parquet")
+                add_shard(e.path().string());
+        }
+    }
     text_buffer_.resize(1 << 20); // 1M float buffer
 }
 
