@@ -18,18 +18,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The VS-generator Configure failed in ~1s on windows-latest for two
+      # consecutive commits (pre-existing, not a source change): a 1-second
+      # failure happens before any compile check, i.e. VS-instance discovery
+      # itself ("Visual Studio 17 2022" via vswhere/COM) is fragile across the
+      # windows-latest image roll. Ninja + msvc-dev-cmd is the proven
+      # in-repo pattern (release.yml Windows leg, ci_full.yml Windows leg)
+      # and Ninja 1.13.2 is preinstalled on the runner image.
+      - name: Install Ninja
+        run: choco install ninja -y || true
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Diagnose toolchain
+        run: |
+          cmake --version
+          ninja --version
+          Get-Command cl.exe
+
       - name: Configure
         run: >
           cmake -S . -B build
-          -G "Visual Studio 17 2022"
-          -A x64
+          -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DQUANT_BUILD_TESTS=ON
           -DQUANT_BUILD_BENCHMARKS=OFF
           -DQUANT_BUILD_TOOLS=ON
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --parallel
 
       # Production-safe scope: PR-speed set (mirrors ci_full.yml Quick +
       # Dockerfile) — full 900s fuzz / 600s training / 300s heavies run in
@@ -40,7 +58,7 @@ jobs:
         working-directory: build
         timeout-minutes: 30
         run: >
-          ctest -C Release --output-on-failure --timeout 300
+          ctest --output-on-failure --timeout 300
           --exclude-regex "test_protected|test_training|test_native_quant|test_moe_training|test_fuzz_codec|test_paged_kv_4m"
 
       - name: Upload build artifacts
@@ -48,9 +66,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-msvc-x64
+          # Single-config Ninja build: binaries land at the build root, test
+          # binaries under build/tests/ — there is no Release/ subdir.
           path: |
-            build/Release/*.exe
-            build/Release/*.lib
+            build/*.exe
+            build/*.lib
+            build/tests/
           retention-days: 14
 
   build-ubuntu-gcc:
