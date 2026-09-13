@@ -394,7 +394,7 @@ If you use Transcender in your research, please cite it as:
   author = {Transcender Contributors},
   title = {Transcender: A Zero-Dependency C++20 AI Engine with QUANT Format},
   year = {2026},
-  url = {https://github.com/origin-labs-ai/Transcender},
+  url = {https://github.com/origin-labs-ai/transformers-fusion},
   note = {Zero-dependency C++20 AI engine with mixed-precision QUANT format}
 }
 ```

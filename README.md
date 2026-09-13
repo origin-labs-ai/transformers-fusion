@@ -1,4 +1,4 @@
-﻿![TransCender](TransCender.png)
+![TransCender](TransCender.png)
 
 ---
 
@@ -38,8 +38,8 @@ EVERYTHING IS OUR OWN — zero dependency, maximum control.
 
 ```bash
 # Clone
-git clone https://github.com/origin-labs-ai/TransCender
-cd TransCender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Configure (requires CMake ≥ 3.24, Ninja optional)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -1354,8 +1354,8 @@ QUANT4: 16 FP16 centroids per codebook
 
 ```bash
 # Clone
-git clone https://github.com/origin-labs-ai/Transcender
-cd Transcender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Configure & Build
 mkdir build && cd build
@@ -3629,7 +3629,7 @@ The simulation result, locked: task embedding, raw delta generation (the "Risk" 
 
 ## C.8. The Transcender Framework Discovery Path
 
-The GitHub repository (origin-labs-ai/Transcender, seen in the conversation) revealed the existing C++20 property: FormatPlanner (AWQ-style activation magnitudes) and STE (Straight-Through Estimator). Combined with the QUANT-Rank native fine-tuning logic, the framework offers:
+The GitHub repository (origin-labs-ai/transformers-fusion, seen in the conversation) revealed the existing C++20 property: FormatPlanner (AWQ-style activation magnitudes) and STE (Straight-Through Estimator). Combined with the QUANT-Rank native fine-tuning logic, the framework offers:
 
 - A native format that the engine can reason over algebraically, not just statistically.
 - A Straight-Through Estimator path for training around quantization discontinuities.
@@ -5588,7 +5588,7 @@ The commands, the numbers, and the guarantees, in one place.
 
 ### Build Commands
 
-- git clone https://github.com/origin-labs-ai/Transcender
+- git clone https://github.com/origin-labs-ai/transformers-fusion
 - cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 - cmake --build build --parallel
 - ctest --test-dir build --output-on-failure

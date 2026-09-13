@@ -65,7 +65,7 @@ If you know C++/CUDA/SIMD — DMs open.
 
 **Post 4 — CTA:**
 ```
-⭐ Repo: github.com/origin-labs-ai/Transcender
+⭐ Repo: github.com/origin-labs-ai/transformers-fusion
 📋 Contributor board with tiered tasks: docs/GOOD_FIRST_ISSUES.md
 📖 Whitepaper in /docs
 
@@ -109,7 +109,7 @@ Honest flags: multi-arch model loading, deep CUDA/Metal kernels, and a
 perplexity harness are still open — all tracked on a public contributor
 board with exact files and exit criteria.
 
-Repo: https://github.com/origin-labs-ai/Transcender
+Repo: https://github.com/origin-labs-ai/transformers-fusion
 Contributor board: docs/GOOD_FIRST_ISSUES.md
 
 Roast away — I'd genuinely love feedback from C++ folks, especially on
@@ -144,7 +144,7 @@ I'm opening this up to contributors. Whether you're a CUDA wizard, a
 SIMD nerd, a tokenizer tamer, or a docs person — there's a task board
 with your name on it:
 
-🔗 github.com/origin-labs-ai/Transcender
+🔗 github.com/origin-labs-ai/transformers-fusion
 📋 Contributor board: docs/GOOD_FIRST_ISSUES.md
 
 If this resonates, a share helps more than you know. 🙏

@@ -19,8 +19,8 @@
 ### Windows (Clang-cl)
 ```powershell
 # Clone the repository
-git clone https://github.com/origin-labs-ai/Transcender
-cd Transcender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Configure (requires CMake >= 3.24, Ninja recommended)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -35,8 +35,8 @@ ctest --test-dir build --output-on-failure
 ### Linux (GCC/Clang)
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/Transcender
-cd Transcender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Install dependencies (CMake, Ninja, compiler)
 # Ubuntu/Debian:
@@ -55,8 +55,8 @@ ctest --test-dir build --output-on-failure -j$(nproc)
 ### macOS (Apple Clang)
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/Transcender
-cd Transcender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Install CMake and Ninja
 brew install cmake ninja

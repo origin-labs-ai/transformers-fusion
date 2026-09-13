@@ -87,8 +87,8 @@ Follow the [Build Guide](BUILD.md) to get Transcender compiled on your machine:
 
 ```bash
 # Clone the repository
-git clone https://github.com/origin-labs-ai/Transcender
-cd Transcender
+git clone https://github.com/origin-labs-ai/transformers-fusion
+cd transformers-fusion
 
 # Build in debug mode for development
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
