@@ -17,7 +17,7 @@ int main(){
  printf("--- T2: schedule 93 layers ---\n");
  {
   HybridExpertShard sh(cfg, 8);
-  auto sched=build_k3_schedule();
+  auto sched=build_hybrid_schedule(93,0);
   auto per=sh.assign_schedule(sched);
   TEST_CHECK((int)per.size()==93,"93 layers assignments");
   // each layer should have 64 entries
@@ -27,5 +27,7 @@ int main(){
   for(auto &a: per[0]) cnt[a.node_id]++;
   for(int i=0;i<8;++i) TEST_CHECK(cnt[i]==8,"balanced 8 per node");
  }
- printf("\nHybridExpert TESTS PASSED!\n"); return 0;
+ printf("\nHybridExpert TESTS DONE.\n");
+ int fails = TEST_REPORT();
+ return fails > 0 ? 1 : 0;
 }

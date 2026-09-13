@@ -1,9 +1,11 @@
-# 🚀 InNova Launch Kit — Community & Contributor Outreach
+# 🚀 Transcender Launch Kit — Community & Contributor Outreach
 
-> Everything needed to announce InNova and attract contributors.
-> Rule for ALL posts: **claim only measured facts.** Current verified claims:
-> Q16 > FP16 (+16 dB gaussian / +18 dB real), Q6_G > GGUF Q6_K (+1.5/+2.5 dB),
-> 120K LOC pure C++20, zero dependencies, 44-test suite, Windows+Linux CI.
+> Everything needed to announce Transcender and attract contributors.
+> Rule for ALL posts: **claim only measured facts.** Current verified claims
+> (fresh v3 `bench_format_comparison.csv`, 224 rows, 2026-09-11):
+> Q16 > FP16 (+15.98 dB gaussian / +18.23 dB real), QG6 > GGUF Q6_K
+> (+1.53/+2.48 dB, same 6.5625 BPW), ~99K LOC pure C++20, zero dependencies,
+> 72-test suite, Windows green + Linux/macOS CI.
 > Do NOT post perf numbers still under investigation.
 
 ---
@@ -14,7 +16,7 @@
 
 **A (recommended):**
 ```
-Solo building InNova — zero-dependency C++20 AI engine. Train→Quantize→Infer in one .quant file. No PyTorch. No Eigen. Just SIMD. 🚀
+Solo building Transcender — zero-dependency C++20 AI engine. Train→Quantize→Infer in one .quant file. No PyTorch. No Eigen. Just SIMD. 🚀
 ```
 
 **B:**
@@ -24,7 +26,7 @@ Writing 120K lines of pure C++20 so AI can run without Python. Quantization that
 
 **C:**
 ```
-If it needs Python, it's not fast enough. Building the InNova Engine — full AI stack, one binary, zero dependencies.
+If it needs Python, it's not fast enough. Building the Transcender Engine — full AI stack, one binary, zero dependencies.
 ```
 
 ### Launch thread (4 posts)
@@ -33,7 +35,7 @@ If it needs Python, it's not fast enough. Building the InNova Engine — full AI
 ```
 I got tired of needing 12 Python environments to run a model.
 
-So I'm building InNova: a complete AI engine in pure C++20.
+So I'm building Transcender: a complete AI engine in pure C++20.
 Zero dependencies. Zero Python. One .quant file format.
 
 🧵 Here's what 120,000 lines of hand-written C++ looks like: 👇
@@ -45,7 +47,8 @@ No PyTorch. No Eigen. No BLAS. Every kernel hand-written — AVX2/AVX-512, CUDA,
 
 Train from scratch → fine-tune → quantize → inference. All native. All one format.
 
-The numbers? Q16 quantization beats IEEE FP16 by +16 dB PSNR at the SAME bit rate. Measured, not marketed.
+The numbers? Q16 quantization beats IEEE FP16 by +15.98 dB PSNR (gaussian)
+/ +18.23 dB (real weights) at the SAME bit rate. Measured, not marketed.
 ```
 
 **Post 3 — Honest hook (attracts serious engineers):**
@@ -62,7 +65,7 @@ If you know C++/CUDA/SIMD — DMs open.
 
 **Post 4 — CTA:**
 ```
-⭐ Repo: github.com/origin-labs-ai/InNova
+⭐ Repo: github.com/origin-labs-ai/Transcender
 📋 Contributor board with tiered tasks: docs/GOOD_FIRST_ISSUES.md
 📖 Whitepaper in /docs
 
@@ -87,25 +90,26 @@ I'm building a complete AI engine in pure C++20 — training, quantization and i
 Hi r/programming — long-time lurker, first-time show-er.
 
 Frustrated that running a local LLM usually means dragging in Python,
-PyTorch, and a pile of dependencies, I started building InNova: an
+PyTorch, and a pile of dependencies, I started building Transcender: an
 engine where the model is born, trained, fine-tuned, quantized, and
 served entirely inside ONE binary format (.quant) — no conversion
 pipelines, no Python glue.
 
 What exists today (all measured through the production codec):
 - Hand-written SIMD kernels: AVX2/AVX-512 dispatch via CPUID
-- 37 quantization formats (Q1–Q32 + grouped super-blocks + importance-routed mixes)
+- 105 quantization formats (Q-series singles + grouped QG + importance-routed Q_MX/QG_MX mixes)
 - Autograd + trainer + MoE + speculative decoding + BPE tokenizer
-- HTTP server, CLI tools, 44-test suite, Windows/Linux CI
+- HTTP server, CLI tools, 72-test suite, Windows green + Linux/macOS CI
 
-One result I'm proud of: our Q16 format beats IEEE FP16 by ~16 dB PSNR
-at identical bits-per-weight (same test harness as our GGUF baselines).
+One result I'm proud of: our Q16 format beats IEEE FP16 by +15.98 dB PSNR
+(gaussian) / +18.23 dB (real weights) at identical bits-per-weight
+(same test harness as our GGUF baselines).
 
 Honest flags: multi-arch model loading, deep CUDA/Metal kernels, and a
 perplexity harness are still open — all tracked on a public contributor
 board with exact files and exit criteria.
 
-Repo: https://github.com/origin-labs-ai/InNova
+Repo: https://github.com/origin-labs-ai/Transcender
 Contributor board: docs/GOOD_FIRST_ISSUES.md
 
 Roast away — I'd genuinely love feedback from C++ folks, especially on
@@ -115,7 +119,7 @@ the codec design and build system.
 ### Show HN (title)
 
 ```
-Show HN: InNova – Train, quantize and run LLMs in pure C++20, zero dependencies
+Show HN: Transcender – Train, quantize and run LLMs in pure C++20, zero dependencies
 ```
 
 ---
@@ -123,24 +127,24 @@ Show HN: InNova – Train, quantize and run LLMs in pure C++20, zero dependencie
 ## 3. LinkedIn (professional tone)
 
 ```
-🚀 Open-sourcing my life's project: InNova Engine.
+🚀 Open-sourcing my life's project: Transcender Engine.
 
 Most AI inference today stands on a mountain of Python dependencies.
-InNova is my answer: a complete AI engine — training, quantization,
+Transcender is my answer: a complete AI engine — training, quantization,
 inference — written entirely in C++20 with ZERO external libraries.
 
-120,000 lines. Every SIMD kernel hand-written. One portable .quant
+~99,000 lines. Every SIMD kernel hand-written. One portable .quant
 model format that carries models from birth (training) to deployment
 (inference) without a single conversion step.
 
 Recent measured milestone: our Q16 quantized format outperforms IEEE
-FP16 by 16+ dB PSNR at the same memory footprint.
+FP16 by +15.98/+18.23 dB PSNR (gaussian/real) at the same memory footprint.
 
 I'm opening this up to contributors. Whether you're a CUDA wizard, a
 SIMD nerd, a tokenizer tamer, or a docs person — there's a task board
 with your name on it:
 
-🔗 github.com/origin-labs-ai/InNova
+🔗 github.com/origin-labs-ai/Transcender
 📋 Contributor board: docs/GOOD_FIRST_ISSUES.md
 
 If this resonates, a share helps more than you know. 🙏
@@ -170,7 +174,7 @@ If this resonates, a share helps more than you know. 🙏
 **When someone asks "how is this different from llama.cpp?":**
 ```
 Great question — llama.cpp is inference-first with GGUF; excellent project.
-InNova differs in three ways: (1) native training + fine-tuning inside the
+Transcender differs in three ways: (1) native training + fine-tuning inside the
 same .quant format (llama.cpp doesn't train), (2) importance-routed mix
 formats (QUAD/TWI_MIX) instead of fixed-width only, (3) zero deps even for
 build tooling beyond CMake. We also benchmark against GGUF formats directly

@@ -23,130 +23,130 @@
   <EKUs />
   <!--File Rules-->
   <FileRules>
-    <Allow ID="ID_ALLOW_A_1" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_all.exe Hash Sha1" Hash="1CBAD790D4ACC2942D954B7F8210E8423D4DB923" />
-    <Allow ID="ID_ALLOW_A_2" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_all.exe Hash Sha256" Hash="75A3FC37C761BFD3882FCC2BC39B77178865CE29F0FAB70D44FCE681346B5F3D" />
-    <Allow ID="ID_ALLOW_A_3" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_all.exe Hash Page Sha1" Hash="DAA9441B21755F57B7BD092B4951168B01C479C8" />
-    <Allow ID="ID_ALLOW_A_4" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_all.exe Hash Page Sha256" Hash="FA806478676A4D333029982CB5DCEDF5911EFBC61A6E6276C37952A59100B0EA" />
-    <Allow ID="ID_ALLOW_A_5" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_hardware.exe Hash Sha1" Hash="377E90AE740CB1E3817DB315DDC0761435C2EB36" />
-    <Allow ID="ID_ALLOW_A_6" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_hardware.exe Hash Sha256" Hash="631BF47F42E4200B0645B6A2F79E976E6E70F4E9FFEE797CD675C24299D65862" />
-    <Allow ID="ID_ALLOW_A_7" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_hardware.exe Hash Page Sha1" Hash="71E70CC73975065A3938D08E92DD3C9A703395CC" />
-    <Allow ID="ID_ALLOW_A_8" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_hardware.exe Hash Page Sha256" Hash="7B71A7E78B09E1F722738B211447D900CB3DB434B15935B98BAFE318808FBEB5" />
-    <Allow ID="ID_ALLOW_A_9" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_inference.exe Hash Sha1" Hash="5ABBC5A8094E3E059447A6847062418CF4EE7D90" />
-    <Allow ID="ID_ALLOW_A_A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_inference.exe Hash Sha256" Hash="049B9B7EA754CE4BE82E37DAFF8FAE88A316CC232277141AEC17479A18DD67D2" />
-    <Allow ID="ID_ALLOW_A_B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_inference.exe Hash Page Sha1" Hash="E809686684FE086C6F001776CD7DA58A3ACF556A" />
-    <Allow ID="ID_ALLOW_A_C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_inference.exe Hash Page Sha256" Hash="EC19A075A8874D75CBFB9282E7FA26BA83A113A182BF7A11F05742A5BDD894EE" />
-    <Allow ID="ID_ALLOW_A_D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_kernels.exe Hash Sha1" Hash="32B941394471E569277214BE3DDFAE703648C170" />
-    <Allow ID="ID_ALLOW_A_E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_kernels.exe Hash Sha256" Hash="8A6BC400F88B364010F0051A6DD9A46B07FB289FE76A365FF7F5F35A20C7A432" />
-    <Allow ID="ID_ALLOW_A_F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_kernels.exe Hash Page Sha1" Hash="A33C223DBBFD243DA4A8F0BD2C0669CF464A7D71" />
-    <Allow ID="ID_ALLOW_A_10" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_kernels.exe Hash Page Sha256" Hash="BBC478A63B83204178932A2F5C510F0CCE0FEEFB77B8D2EAC671CB379A6CA8DE" />
-    <Allow ID="ID_ALLOW_A_11" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_quality.exe Hash Sha1" Hash="96C81C4BB517360C09F5A648201050CE2F775F02" />
-    <Allow ID="ID_ALLOW_A_12" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_quality.exe Hash Sha256" Hash="E89FEB0995C589116D3279C3C7A81BD806648ECDCB1F0AB6F0A4C8B25435DF71" />
-    <Allow ID="ID_ALLOW_A_13" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_quality.exe Hash Page Sha1" Hash="969092677739787B806FF7D0F33338E0860CEC80" />
-    <Allow ID="ID_ALLOW_A_14" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\bench_quality.exe Hash Page Sha256" Hash="9F22F463215D54FE017E7E7C06BBB7161C429A7D81B11BB322AE61023C7DF84F" />
-    <Allow ID="ID_ALLOW_A_15" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_asi_demo.exe Hash Sha1" Hash="2F663BCB79C8FC05F0257D35BC79B8F97E084883" />
-    <Allow ID="ID_ALLOW_A_16" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_asi_demo.exe Hash Sha256" Hash="CD3CF27CF90581FF149772D420F58FC9C2B6FE3636D9A37043057F261CC913A6" />
-    <Allow ID="ID_ALLOW_A_17" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_asi_demo.exe Hash Page Sha1" Hash="BA3929FE782618AAA2590CAE742A930070542A4E" />
-    <Allow ID="ID_ALLOW_A_18" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_asi_demo.exe Hash Page Sha256" Hash="2698113F4D2FF0D990C9757A0588BE1C40834ABCBB012E5B607CD28CACE7BF2E" />
-    <Allow ID="ID_ALLOW_A_19" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_bench.exe Hash Sha1" Hash="21C00DB7ADD7DFE925E003BD6557DCA20E3861F9" />
-    <Allow ID="ID_ALLOW_A_1A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_bench.exe Hash Sha256" Hash="E39F17447911336111342D015D8B5EFBF855A91170AC53E0AB74A62B6CCB7851" />
-    <Allow ID="ID_ALLOW_A_1B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_bench.exe Hash Page Sha1" Hash="DBFF7E69BB5107DE4B1E2CED11E206CEA5E8E47C" />
-    <Allow ID="ID_ALLOW_A_1C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_bench.exe Hash Page Sha256" Hash="024019C5C009C9A43D579BEF0D6DA8DB121A25AC47C17671B3C2FE386F666994" />
-    <Allow ID="ID_ALLOW_A_1D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_convert.exe Hash Sha1" Hash="C2D82F83C2B379A38AA309C414ACF7A14EA20CAD" />
-    <Allow ID="ID_ALLOW_A_1E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_convert.exe Hash Sha256" Hash="2507BFA0F66C9210F35ECDACA4052E0D8A6B76CDB171F36803B3D5AE1234DAAA" />
-    <Allow ID="ID_ALLOW_A_1F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_convert.exe Hash Page Sha1" Hash="30A548EC819321DFA98E717BDB7A687A9E858D55" />
-    <Allow ID="ID_ALLOW_A_20" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_convert.exe Hash Page Sha256" Hash="FA525EA8FE7B512696748BC0074F8EC3CA61D8EFF43E7321A0F22A1A0C868A59" />
-    <Allow ID="ID_ALLOW_A_21" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_finetune.exe Hash Sha1" Hash="50171C0766603B6D0F511521F60C65D54F2F84DE" />
-    <Allow ID="ID_ALLOW_A_22" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_finetune.exe Hash Sha256" Hash="C0925A8EA3CFCEA605C0EFFD0AC0C1E94774C54E765E64DF81B910808491AD16" />
-    <Allow ID="ID_ALLOW_A_23" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_finetune.exe Hash Page Sha1" Hash="045EAEB907508473207E212EBF129E8EC83D85BF" />
-    <Allow ID="ID_ALLOW_A_24" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_finetune.exe Hash Page Sha256" Hash="9997A243B5097BF040B79AA253B250CDCFFABC3465162E4809614739CF1CEC06" />
-    <Allow ID="ID_ALLOW_A_25" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_infer.exe Hash Sha1" Hash="3D2A742420B9B1201238B677A01F6384502659E8" />
-    <Allow ID="ID_ALLOW_A_26" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_infer.exe Hash Sha256" Hash="2506AB74CB53D9077D8362AB8FAED6F8261DF0EAB171AE5A455494502597BF87" />
-    <Allow ID="ID_ALLOW_A_27" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_infer.exe Hash Page Sha1" Hash="FBEEB9729163E1883EF55BC45C8D1D9407A92873" />
-    <Allow ID="ID_ALLOW_A_28" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_infer.exe Hash Page Sha256" Hash="2CC669843DFCE09B8FC192C56203B2D70B3DCC856DC98598923FCF580A12A915" />
-    <Allow ID="ID_ALLOW_A_29" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_info.exe Hash Sha1" Hash="AC92C07DF1FD607B0A9D9A2A9A22CEC80E797BFF" />
-    <Allow ID="ID_ALLOW_A_2A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_info.exe Hash Sha256" Hash="CC7064D3D2130B4DF910F15C7F3000D70A54D39A0FC12937D8AE5F3A8CB8A69C" />
-    <Allow ID="ID_ALLOW_A_2B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_info.exe Hash Page Sha1" Hash="490F24A9DFBD6D36297D60BB307243F413F0C4F1" />
-    <Allow ID="ID_ALLOW_A_2C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_info.exe Hash Page Sha256" Hash="4F02F68E967B7BD5019996E3515C2991D1BCFF40BFC6AA10E2D643668560D273" />
-    <Allow ID="ID_ALLOW_A_2D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_train.exe Hash Sha1" Hash="1D3B0FD85A6391A2995B4E5F0BDCA7F89EB89E78" />
-    <Allow ID="ID_ALLOW_A_2E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_train.exe Hash Sha256" Hash="05AA7A017F6023695A4930A9299A8337746CEF6860A23243DFAB13CBDCFED20D" />
-    <Allow ID="ID_ALLOW_A_2F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_train.exe Hash Page Sha1" Hash="28D6502DB96D78D3946E4B185D7F61075D95EAF6" />
-    <Allow ID="ID_ALLOW_A_30" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\quant_train.exe Hash Page Sha256" Hash="209BDCB75B15DDF81BA3D4B18513DEC22CAD252A2840142E846A25FD3FBDF455" />
-    <Allow ID="ID_ALLOW_A_31" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_all.exe Hash Sha1" Hash="7A16BAF6266740A4DB431A2D1F73A1001A9C62ED" />
-    <Allow ID="ID_ALLOW_A_32" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_all.exe Hash Sha256" Hash="3A4A967FA45C47B5C5AAF2A73D547B72351A27348EAA8E30BE834A62399DE633" />
-    <Allow ID="ID_ALLOW_A_33" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_all.exe Hash Page Sha1" Hash="97705C957CF7853E8640D62D1F15051F4B2CB04F" />
-    <Allow ID="ID_ALLOW_A_34" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_all.exe Hash Page Sha256" Hash="D6448E022E5890D4287D1AE3FBACF73C04B8071B4B418E016429852F59FD282F" />
-    <Allow ID="ID_ALLOW_A_35" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_asi.exe Hash Sha1" Hash="E3F8C689CAE220B97FDCAD880E84D8E26070B7DE" />
-    <Allow ID="ID_ALLOW_A_36" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_asi.exe Hash Sha256" Hash="4F08A1522B43C47B9E086F63DB043BA450536A2FB4707F0CFA0C0741AF19F012" />
-    <Allow ID="ID_ALLOW_A_37" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_asi.exe Hash Page Sha1" Hash="DAA21378D7180B204CB8CAF36239CBBCFB779A20" />
-    <Allow ID="ID_ALLOW_A_38" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_asi.exe Hash Page Sha256" Hash="DDD5F845AB0E36CF410C73932E081CCD17A388885630019AC5D2B7C42C453187" />
-    <Allow ID="ID_ALLOW_A_39" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_debug.exe Hash Sha1" Hash="BA22A60652A803C9FF07A759C9A74467F5C37E57" />
-    <Allow ID="ID_ALLOW_A_3A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_debug.exe Hash Sha256" Hash="265E4104D7AAC3A382E260E06036DAA3FBECBE743AF15C7CDBBFBF013B9628B1" />
-    <Allow ID="ID_ALLOW_A_3B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_debug.exe Hash Page Sha1" Hash="5F2D15D8E3EB3D9C0E805B39859E7217338B3EE0" />
-    <Allow ID="ID_ALLOW_A_3C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_debug.exe Hash Page Sha256" Hash="082B01A9EB97A8002D0652C4C9F1744AD082826532131F705A4714C83AA76931" />
-    <Allow ID="ID_ALLOW_A_3D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_e2e_training.exe Hash Sha1" Hash="59B5356D27861DE9B219290C831869F2F8FA0F47" />
-    <Allow ID="ID_ALLOW_A_3E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_e2e_training.exe Hash Sha256" Hash="E2D6E50EFC9F178C8F15AA4527573BF9688FC0CD7AE1921EAA50782D5E653DBA" />
-    <Allow ID="ID_ALLOW_A_3F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_e2e_training.exe Hash Page Sha1" Hash="3B04DAA047787492D8D1B23639D5A6F1480AB798" />
-    <Allow ID="ID_ALLOW_A_40" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_e2e_training.exe Hash Page Sha256" Hash="EB30AF23ECDDEF3ACF6E927DE439151A0C5BE07324B2A8E6473A48AB0FFE65EF" />
-    <Allow ID="ID_ALLOW_A_41" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_format.exe Hash Sha1" Hash="4E47A972E811F66A266E86D69C9A65CF664158B9" />
-    <Allow ID="ID_ALLOW_A_42" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_format.exe Hash Sha256" Hash="1EA92EC9BFC0E06FB28564BA8636C727CC8D94AFC7E8ECA9E9B59EE4DD9850FC" />
-    <Allow ID="ID_ALLOW_A_43" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_format.exe Hash Page Sha1" Hash="CD9D7770E23A8089B958F0869CC2AD4866EC3F94" />
-    <Allow ID="ID_ALLOW_A_44" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_format.exe Hash Page Sha256" Hash="6DEF4B1FCE943353E73E8901C49044AAE52636F697458A7B8CA968C2D8753404" />
-    <Allow ID="ID_ALLOW_A_45" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gpu.exe Hash Sha1" Hash="C0D47800F255A8D3CE5CAABC0DAA152691543E7A" />
-    <Allow ID="ID_ALLOW_A_46" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gpu.exe Hash Sha256" Hash="2836685B9F571DD37835C0D5E17D1AEE88A0B5B74596411927D9993679BAB66C" />
-    <Allow ID="ID_ALLOW_A_47" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gpu.exe Hash Page Sha1" Hash="CD708D4A48B78568394725E72F0A33EE3E7A9E4B" />
-    <Allow ID="ID_ALLOW_A_48" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gpu.exe Hash Page Sha256" Hash="9CC2AB1AAFEB67FFE2979CA3CA53332026BCA04AF4D44A0F7B0BD65ECA7D5E29" />
-    <Allow ID="ID_ALLOW_A_49" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gradient_check.exe Hash Sha1" Hash="8A330D18FCA183D7817F502B03234F4469BFFD1F" />
-    <Allow ID="ID_ALLOW_A_4A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gradient_check.exe Hash Sha256" Hash="6ED624B94B12E0256B020CBEEC8679114E342BF71278476AC9256692553C27DA" />
-    <Allow ID="ID_ALLOW_A_4B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gradient_check.exe Hash Page Sha1" Hash="3497A16A72B06CCFC817BCDBC55F6A5FC6D4AA43" />
-    <Allow ID="ID_ALLOW_A_4C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_gradient_check.exe Hash Page Sha256" Hash="4CC99A01DBE3B9B07352313E20D57267D2A04075D3239898D39EF81C45C08CB5" />
-    <Allow ID="ID_ALLOW_A_4D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_inference_opt.exe Hash Sha1" Hash="E19625D7343297C92977C3B486B11F886F0630F5" />
-    <Allow ID="ID_ALLOW_A_4E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_inference_opt.exe Hash Sha256" Hash="5F9FF463F2F6A81C5CA586D1F5F4074202356F996076133B64D0EFAD64EACB5F" />
-    <Allow ID="ID_ALLOW_A_4F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_inference_opt.exe Hash Page Sha1" Hash="6634E587637579872C010EAD1775F4D1D0F4743D" />
-    <Allow ID="ID_ALLOW_A_50" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_inference_opt.exe Hash Page Sha256" Hash="B902753DCA4BEC55D71DA83B434DC3CBB76F103B0CD3252AF17638074275660F" />
-    <Allow ID="ID_ALLOW_A_51" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_integration.exe Hash Sha1" Hash="ECAA027E50D9B8EF1B38F5FF0FE7391B6B9356FF" />
-    <Allow ID="ID_ALLOW_A_52" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_integration.exe Hash Sha256" Hash="F280A2AED686372D440F85188F5658EA08FA06C3493CE1229ADC0739EF87004A" />
-    <Allow ID="ID_ALLOW_A_53" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_integration.exe Hash Page Sha1" Hash="AC2965017CA43031A3C835C2D6CBF1AB1BE7520F" />
-    <Allow ID="ID_ALLOW_A_54" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_integration.exe Hash Page Sha256" Hash="E1496AF5B376ACF2405C08DE697EEE6229CECE74448DE02A243D6F7994E33681" />
-    <Allow ID="ID_ALLOW_A_55" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_kernel.exe Hash Sha1" Hash="48152311B3FFB97202BA9C088E40606C8DDE61AF" />
-    <Allow ID="ID_ALLOW_A_56" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_kernel.exe Hash Sha256" Hash="F9B4005B17BF300AF4DC8F5A703CAA5463F9807D542B8B650DA70AB93F77DAE5" />
-    <Allow ID="ID_ALLOW_A_57" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_kernel.exe Hash Page Sha1" Hash="4BF04229204C060FA72A4A46DA68D12912659B3D" />
-    <Allow ID="ID_ALLOW_A_58" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_kernel.exe Hash Page Sha256" Hash="35C7F889A4677567C74C3E01D17FD9B1F610CD91D1B8897B168BDEDFD597E068" />
-    <Allow ID="ID_ALLOW_A_59" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_math.exe Hash Sha1" Hash="639B280412EEAA0B767D078F2AC8F8BF10831968" />
-    <Allow ID="ID_ALLOW_A_5A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_math.exe Hash Sha256" Hash="D6CD6BE6A6DB5F78780B467B26876478DDD284FE41908D633E32ED14B578207B" />
-    <Allow ID="ID_ALLOW_A_5B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_math.exe Hash Page Sha1" Hash="7002130B27CB706CF49B173F63B70059E7200EDD" />
-    <Allow ID="ID_ALLOW_A_5C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_math.exe Hash Page Sha256" Hash="7ADF74D3A8AEC241D8CF6D2B1D183D4785E1AE49C007DC00E0F7B1C1F1237286" />
-    <Allow ID="ID_ALLOW_A_5D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_model.exe Hash Sha1" Hash="6A66973C021E282FDE5BA304BE2BFEC9AD249424" />
-    <Allow ID="ID_ALLOW_A_5E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_model.exe Hash Sha256" Hash="58D5F8323E73CBD190907004158367CEF9118C9FC7233EE8F7684473043EABDC" />
-    <Allow ID="ID_ALLOW_A_5F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_model.exe Hash Page Sha1" Hash="DF5253C24B38A4F67C01E4405F59F62C2B44F54B" />
-    <Allow ID="ID_ALLOW_A_60" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_model.exe Hash Page Sha256" Hash="63B13A1EDC2D6AA3302292032A59F4C91095D37E8D0828178C6DE4022AE14013" />
-    <Allow ID="ID_ALLOW_A_61" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_multimodal.exe Hash Sha1" Hash="BFAB759C4A95DA08D799CD6963283729303D2CF3" />
-    <Allow ID="ID_ALLOW_A_62" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_multimodal.exe Hash Sha256" Hash="2E55C6FF1E49C03F262905C31E007584EAFDC699B9624C0CD8BCD3D144E72CD9" />
-    <Allow ID="ID_ALLOW_A_63" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_multimodal.exe Hash Page Sha1" Hash="86417265641BE62C30C6CD932C07F06ECAD299B3" />
-    <Allow ID="ID_ALLOW_A_64" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_multimodal.exe Hash Page Sha256" Hash="8F5B21D6245A7C40FC4DAD2AF7F64FD861DABA96FBFF5B211EF421243D186CB9" />
-    <Allow ID="ID_ALLOW_A_65" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_production.exe Hash Sha1" Hash="8C00F77F2083CD743216D8F9FD7143BE59547890" />
-    <Allow ID="ID_ALLOW_A_66" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_production.exe Hash Sha256" Hash="60235E363D3B363874324169083F49027F6608ED907398A375F95B217E500E3B" />
-    <Allow ID="ID_ALLOW_A_67" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_production.exe Hash Page Sha1" Hash="E96655013A2050045A8FE84B34DD80D2C2B4EEB1" />
-    <Allow ID="ID_ALLOW_A_68" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_production.exe Hash Page Sha256" Hash="BB8BAB643E289A4B27157083D67EC1133DA3086225D7041F109D049AB00B8FCA" />
-    <Allow ID="ID_ALLOW_A_69" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_save_load_debug.exe Hash Sha1" Hash="54FDFAEA3C5F503EC483E27F748853DB8551DD01" />
-    <Allow ID="ID_ALLOW_A_6A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_save_load_debug.exe Hash Sha256" Hash="EFA21E90FEE60F2A861CF19665D8B4622881ACD9363129F6051C9B6CA201412A" />
-    <Allow ID="ID_ALLOW_A_6B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_save_load_debug.exe Hash Page Sha1" Hash="5AE4CFFF5B84C8AB55F4BDD6F793AE3745E4AC32" />
-    <Allow ID="ID_ALLOW_A_6C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_save_load_debug.exe Hash Page Sha256" Hash="C4DC1024752D5F12952E9200B0EE4B74AA28CC670A9AABBE2AEB0553E0C9CBA7" />
-    <Allow ID="ID_ALLOW_A_6D" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tensor.exe Hash Sha1" Hash="77B383E632EC2B00F3A06B8F73F0FB9498570292" />
-    <Allow ID="ID_ALLOW_A_6E" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tensor.exe Hash Sha256" Hash="3DDA21184E933DEBE6EDDCD57930B6D8758ABC524D64FA44C4CD2CD4BD0843B0" />
-    <Allow ID="ID_ALLOW_A_6F" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tensor.exe Hash Page Sha1" Hash="A34866C69FF7A50DCF3482874F99481C082BB7DE" />
-    <Allow ID="ID_ALLOW_A_70" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tensor.exe Hash Page Sha256" Hash="1AEF025A74015CCA5D980D218F822610D5E5ED4564ADECFBCA17D59E581DA927" />
-    <Allow ID="ID_ALLOW_A_71" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tokenizer.exe Hash Sha1" Hash="ECDF7929FED6A6A1436C0E902FBC066B7108990C" />
-    <Allow ID="ID_ALLOW_A_72" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tokenizer.exe Hash Sha256" Hash="60C678D170F4F032F831738A26D57FF34F58F8A01E6172D095259834A7BFECAD" />
-    <Allow ID="ID_ALLOW_A_73" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tokenizer.exe Hash Page Sha1" Hash="79C987791A6E54026F6E7E6CA2711AF8223CF117" />
-    <Allow ID="ID_ALLOW_A_74" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_tokenizer.exe Hash Page Sha256" Hash="BED385F5CFCF78FD8E727F2520EF1B8A85AD904D221E8B269200839134D18AFC" />
-    <Allow ID="ID_ALLOW_A_75" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_trainer.exe Hash Sha1" Hash="0046C2D6C7978C6BB25A93D7E0BBC77E77D4B1EC" />
-    <Allow ID="ID_ALLOW_A_76" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_trainer.exe Hash Sha256" Hash="44E158A31177D01816F5A8114252DE1B56D0D8A200D434FF8B1317225D8A915C" />
-    <Allow ID="ID_ALLOW_A_77" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_trainer.exe Hash Page Sha1" Hash="69351E9B7CD4762AC77517E694992990FEA48951" />
-    <Allow ID="ID_ALLOW_A_78" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_trainer.exe Hash Page Sha256" Hash="C2070CA168418231C94DB9E28F80D88C48D65B0089BA84934F1FCC2AAD5393B2" />
-    <Allow ID="ID_ALLOW_A_79" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_training.exe Hash Sha1" Hash="9FB90C048117A8BC492AD1B598129ADC35C994E4" />
-    <Allow ID="ID_ALLOW_A_7A" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_training.exe Hash Sha256" Hash="C134D00C089551A8A5E7965EC6539E89B8A1D0093A3EB55F5854EEC7C637E2AC" />
-    <Allow ID="ID_ALLOW_A_7B" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_training.exe Hash Page Sha1" Hash="0FB34CF3E2606FFFD26FB95B5FD232CF28D04E33" />
-    <Allow ID="ID_ALLOW_A_7C" FriendlyName="C:\Users\thaku\Downloads\InNova\build_windows\Release\test_training.exe Hash Page Sha256" Hash="C87F7225FC8DBCDAA6EC17F86C4EC29FF3C4B6EE615BF4A1BE17453EC3F49F5D" />
+    <Allow ID="ID_ALLOW_A_1" FriendlyName="%BUILDROOT%\\Release\\bench_all.exe Hash Sha1" Hash="1CBAD790D4ACC2942D954B7F8210E8423D4DB923" />
+    <Allow ID="ID_ALLOW_A_2" FriendlyName="%BUILDROOT%\\Release\\bench_all.exe Hash Sha256" Hash="75A3FC37C761BFD3882FCC2BC39B77178865CE29F0FAB70D44FCE681346B5F3D" />
+    <Allow ID="ID_ALLOW_A_3" FriendlyName="%BUILDROOT%\\Release\\bench_all.exe Hash Page Sha1" Hash="DAA9441B21755F57B7BD092B4951168B01C479C8" />
+    <Allow ID="ID_ALLOW_A_4" FriendlyName="%BUILDROOT%\\Release\\bench_all.exe Hash Page Sha256" Hash="FA806478676A4D333029982CB5DCEDF5911EFBC61A6E6276C37952A59100B0EA" />
+    <Allow ID="ID_ALLOW_A_5" FriendlyName="%BUILDROOT%\\Release\\bench_hardware.exe Hash Sha1" Hash="377E90AE740CB1E3817DB315DDC0761435C2EB36" />
+    <Allow ID="ID_ALLOW_A_6" FriendlyName="%BUILDROOT%\\Release\\bench_hardware.exe Hash Sha256" Hash="631BF47F42E4200B0645B6A2F79E976E6E70F4E9FFEE797CD675C24299D65862" />
+    <Allow ID="ID_ALLOW_A_7" FriendlyName="%BUILDROOT%\\Release\\bench_hardware.exe Hash Page Sha1" Hash="71E70CC73975065A3938D08E92DD3C9A703395CC" />
+    <Allow ID="ID_ALLOW_A_8" FriendlyName="%BUILDROOT%\\Release\\bench_hardware.exe Hash Page Sha256" Hash="7B71A7E78B09E1F722738B211447D900CB3DB434B15935B98BAFE318808FBEB5" />
+    <Allow ID="ID_ALLOW_A_9" FriendlyName="%BUILDROOT%\\Release\\bench_inference.exe Hash Sha1" Hash="5ABBC5A8094E3E059447A6847062418CF4EE7D90" />
+    <Allow ID="ID_ALLOW_A_A" FriendlyName="%BUILDROOT%\\Release\\bench_inference.exe Hash Sha256" Hash="049B9B7EA754CE4BE82E37DAFF8FAE88A316CC232277141AEC17479A18DD67D2" />
+    <Allow ID="ID_ALLOW_A_B" FriendlyName="%BUILDROOT%\\Release\\bench_inference.exe Hash Page Sha1" Hash="E809686684FE086C6F001776CD7DA58A3ACF556A" />
+    <Allow ID="ID_ALLOW_A_C" FriendlyName="%BUILDROOT%\\Release\\bench_inference.exe Hash Page Sha256" Hash="EC19A075A8874D75CBFB9282E7FA26BA83A113A182BF7A11F05742A5BDD894EE" />
+    <Allow ID="ID_ALLOW_A_D" FriendlyName="%BUILDROOT%\\Release\\bench_kernels.exe Hash Sha1" Hash="32B941394471E569277214BE3DDFAE703648C170" />
+    <Allow ID="ID_ALLOW_A_E" FriendlyName="%BUILDROOT%\\Release\\bench_kernels.exe Hash Sha256" Hash="8A6BC400F88B364010F0051A6DD9A46B07FB289FE76A365FF7F5F35A20C7A432" />
+    <Allow ID="ID_ALLOW_A_F" FriendlyName="%BUILDROOT%\\Release\\bench_kernels.exe Hash Page Sha1" Hash="A33C223DBBFD243DA4A8F0BD2C0669CF464A7D71" />
+    <Allow ID="ID_ALLOW_A_10" FriendlyName="%BUILDROOT%\\Release\\bench_kernels.exe Hash Page Sha256" Hash="BBC478A63B83204178932A2F5C510F0CCE0FEEFB77B8D2EAC671CB379A6CA8DE" />
+    <Allow ID="ID_ALLOW_A_11" FriendlyName="%BUILDROOT%\\Release\\bench_quality.exe Hash Sha1" Hash="96C81C4BB517360C09F5A648201050CE2F775F02" />
+    <Allow ID="ID_ALLOW_A_12" FriendlyName="%BUILDROOT%\\Release\\bench_quality.exe Hash Sha256" Hash="E89FEB0995C589116D3279C3C7A81BD806648ECDCB1F0AB6F0A4C8B25435DF71" />
+    <Allow ID="ID_ALLOW_A_13" FriendlyName="%BUILDROOT%\\Release\\bench_quality.exe Hash Page Sha1" Hash="969092677739787B806FF7D0F33338E0860CEC80" />
+    <Allow ID="ID_ALLOW_A_14" FriendlyName="%BUILDROOT%\\Release\\bench_quality.exe Hash Page Sha256" Hash="9F22F463215D54FE017E7E7C06BBB7161C429A7D81B11BB322AE61023C7DF84F" />
+    <Allow ID="ID_ALLOW_A_15" FriendlyName="%BUILDROOT%\\Release\\quant_asi_demo.exe Hash Sha1" Hash="2F663BCB79C8FC05F0257D35BC79B8F97E084883" />
+    <Allow ID="ID_ALLOW_A_16" FriendlyName="%BUILDROOT%\\Release\\quant_asi_demo.exe Hash Sha256" Hash="CD3CF27CF90581FF149772D420F58FC9C2B6FE3636D9A37043057F261CC913A6" />
+    <Allow ID="ID_ALLOW_A_17" FriendlyName="%BUILDROOT%\\Release\\quant_asi_demo.exe Hash Page Sha1" Hash="BA3929FE782618AAA2590CAE742A930070542A4E" />
+    <Allow ID="ID_ALLOW_A_18" FriendlyName="%BUILDROOT%\\Release\\quant_asi_demo.exe Hash Page Sha256" Hash="2698113F4D2FF0D990C9757A0588BE1C40834ABCBB012E5B607CD28CACE7BF2E" />
+    <Allow ID="ID_ALLOW_A_19" FriendlyName="%BUILDROOT%\\Release\\quant_bench.exe Hash Sha1" Hash="21C00DB7ADD7DFE925E003BD6557DCA20E3861F9" />
+    <Allow ID="ID_ALLOW_A_1A" FriendlyName="%BUILDROOT%\\Release\\quant_bench.exe Hash Sha256" Hash="E39F17447911336111342D015D8B5EFBF855A91170AC53E0AB74A62B6CCB7851" />
+    <Allow ID="ID_ALLOW_A_1B" FriendlyName="%BUILDROOT%\\Release\\quant_bench.exe Hash Page Sha1" Hash="DBFF7E69BB5107DE4B1E2CED11E206CEA5E8E47C" />
+    <Allow ID="ID_ALLOW_A_1C" FriendlyName="%BUILDROOT%\\Release\\quant_bench.exe Hash Page Sha256" Hash="024019C5C009C9A43D579BEF0D6DA8DB121A25AC47C17671B3C2FE386F666994" />
+    <Allow ID="ID_ALLOW_A_1D" FriendlyName="%BUILDROOT%\\Release\\quant_convert.exe Hash Sha1" Hash="C2D82F83C2B379A38AA309C414ACF7A14EA20CAD" />
+    <Allow ID="ID_ALLOW_A_1E" FriendlyName="%BUILDROOT%\\Release\\quant_convert.exe Hash Sha256" Hash="2507BFA0F66C9210F35ECDACA4052E0D8A6B76CDB171F36803B3D5AE1234DAAA" />
+    <Allow ID="ID_ALLOW_A_1F" FriendlyName="%BUILDROOT%\\Release\\quant_convert.exe Hash Page Sha1" Hash="30A548EC819321DFA98E717BDB7A687A9E858D55" />
+    <Allow ID="ID_ALLOW_A_20" FriendlyName="%BUILDROOT%\\Release\\quant_convert.exe Hash Page Sha256" Hash="FA525EA8FE7B512696748BC0074F8EC3CA61D8EFF43E7321A0F22A1A0C868A59" />
+    <Allow ID="ID_ALLOW_A_21" FriendlyName="%BUILDROOT%\\Release\\quant_finetune.exe Hash Sha1" Hash="50171C0766603B6D0F511521F60C65D54F2F84DE" />
+    <Allow ID="ID_ALLOW_A_22" FriendlyName="%BUILDROOT%\\Release\\quant_finetune.exe Hash Sha256" Hash="C0925A8EA3CFCEA605C0EFFD0AC0C1E94774C54E765E64DF81B910808491AD16" />
+    <Allow ID="ID_ALLOW_A_23" FriendlyName="%BUILDROOT%\\Release\\quant_finetune.exe Hash Page Sha1" Hash="045EAEB907508473207E212EBF129E8EC83D85BF" />
+    <Allow ID="ID_ALLOW_A_24" FriendlyName="%BUILDROOT%\\Release\\quant_finetune.exe Hash Page Sha256" Hash="9997A243B5097BF040B79AA253B250CDCFFABC3465162E4809614739CF1CEC06" />
+    <Allow ID="ID_ALLOW_A_25" FriendlyName="%BUILDROOT%\\Release\\quant_infer.exe Hash Sha1" Hash="3D2A742420B9B1201238B677A01F6384502659E8" />
+    <Allow ID="ID_ALLOW_A_26" FriendlyName="%BUILDROOT%\\Release\\quant_infer.exe Hash Sha256" Hash="2506AB74CB53D9077D8362AB8FAED6F8261DF0EAB171AE5A455494502597BF87" />
+    <Allow ID="ID_ALLOW_A_27" FriendlyName="%BUILDROOT%\\Release\\quant_infer.exe Hash Page Sha1" Hash="FBEEB9729163E1883EF55BC45C8D1D9407A92873" />
+    <Allow ID="ID_ALLOW_A_28" FriendlyName="%BUILDROOT%\\Release\\quant_infer.exe Hash Page Sha256" Hash="2CC669843DFCE09B8FC192C56203B2D70B3DCC856DC98598923FCF580A12A915" />
+    <Allow ID="ID_ALLOW_A_29" FriendlyName="%BUILDROOT%\\Release\\quant_info.exe Hash Sha1" Hash="AC92C07DF1FD607B0A9D9A2A9A22CEC80E797BFF" />
+    <Allow ID="ID_ALLOW_A_2A" FriendlyName="%BUILDROOT%\\Release\\quant_info.exe Hash Sha256" Hash="CC7064D3D2130B4DF910F15C7F3000D70A54D39A0FC12937D8AE5F3A8CB8A69C" />
+    <Allow ID="ID_ALLOW_A_2B" FriendlyName="%BUILDROOT%\\Release\\quant_info.exe Hash Page Sha1" Hash="490F24A9DFBD6D36297D60BB307243F413F0C4F1" />
+    <Allow ID="ID_ALLOW_A_2C" FriendlyName="%BUILDROOT%\\Release\\quant_info.exe Hash Page Sha256" Hash="4F02F68E967B7BD5019996E3515C2991D1BCFF40BFC6AA10E2D643668560D273" />
+    <Allow ID="ID_ALLOW_A_2D" FriendlyName="%BUILDROOT%\\Release\\quant_train.exe Hash Sha1" Hash="1D3B0FD85A6391A2995B4E5F0BDCA7F89EB89E78" />
+    <Allow ID="ID_ALLOW_A_2E" FriendlyName="%BUILDROOT%\\Release\\quant_train.exe Hash Sha256" Hash="05AA7A017F6023695A4930A9299A8337746CEF6860A23243DFAB13CBDCFED20D" />
+    <Allow ID="ID_ALLOW_A_2F" FriendlyName="%BUILDROOT%\\Release\\quant_train.exe Hash Page Sha1" Hash="28D6502DB96D78D3946E4B185D7F61075D95EAF6" />
+    <Allow ID="ID_ALLOW_A_30" FriendlyName="%BUILDROOT%\\Release\\quant_train.exe Hash Page Sha256" Hash="209BDCB75B15DDF81BA3D4B18513DEC22CAD252A2840142E846A25FD3FBDF455" />
+    <Allow ID="ID_ALLOW_A_31" FriendlyName="%BUILDROOT%\\Release\\test_all.exe Hash Sha1" Hash="7A16BAF6266740A4DB431A2D1F73A1001A9C62ED" />
+    <Allow ID="ID_ALLOW_A_32" FriendlyName="%BUILDROOT%\\Release\\test_all.exe Hash Sha256" Hash="3A4A967FA45C47B5C5AAF2A73D547B72351A27348EAA8E30BE834A62399DE633" />
+    <Allow ID="ID_ALLOW_A_33" FriendlyName="%BUILDROOT%\\Release\\test_all.exe Hash Page Sha1" Hash="97705C957CF7853E8640D62D1F15051F4B2CB04F" />
+    <Allow ID="ID_ALLOW_A_34" FriendlyName="%BUILDROOT%\\Release\\test_all.exe Hash Page Sha256" Hash="D6448E022E5890D4287D1AE3FBACF73C04B8071B4B418E016429852F59FD282F" />
+    <Allow ID="ID_ALLOW_A_35" FriendlyName="%BUILDROOT%\\Release\\test_asi.exe Hash Sha1" Hash="E3F8C689CAE220B97FDCAD880E84D8E26070B7DE" />
+    <Allow ID="ID_ALLOW_A_36" FriendlyName="%BUILDROOT%\\Release\\test_asi.exe Hash Sha256" Hash="4F08A1522B43C47B9E086F63DB043BA450536A2FB4707F0CFA0C0741AF19F012" />
+    <Allow ID="ID_ALLOW_A_37" FriendlyName="%BUILDROOT%\\Release\\test_asi.exe Hash Page Sha1" Hash="DAA21378D7180B204CB8CAF36239CBBCFB779A20" />
+    <Allow ID="ID_ALLOW_A_38" FriendlyName="%BUILDROOT%\\Release\\test_asi.exe Hash Page Sha256" Hash="DDD5F845AB0E36CF410C73932E081CCD17A388885630019AC5D2B7C42C453187" />
+    <Allow ID="ID_ALLOW_A_39" FriendlyName="%BUILDROOT%\\Release\\test_debug.exe Hash Sha1" Hash="BA22A60652A803C9FF07A759C9A74467F5C37E57" />
+    <Allow ID="ID_ALLOW_A_3A" FriendlyName="%BUILDROOT%\\Release\\test_debug.exe Hash Sha256" Hash="265E4104D7AAC3A382E260E06036DAA3FBECBE743AF15C7CDBBFBF013B9628B1" />
+    <Allow ID="ID_ALLOW_A_3B" FriendlyName="%BUILDROOT%\\Release\\test_debug.exe Hash Page Sha1" Hash="5F2D15D8E3EB3D9C0E805B39859E7217338B3EE0" />
+    <Allow ID="ID_ALLOW_A_3C" FriendlyName="%BUILDROOT%\\Release\\test_debug.exe Hash Page Sha256" Hash="082B01A9EB97A8002D0652C4C9F1744AD082826532131F705A4714C83AA76931" />
+    <Allow ID="ID_ALLOW_A_3D" FriendlyName="%BUILDROOT%\\Release\\test_e2e_training.exe Hash Sha1" Hash="59B5356D27861DE9B219290C831869F2F8FA0F47" />
+    <Allow ID="ID_ALLOW_A_3E" FriendlyName="%BUILDROOT%\\Release\\test_e2e_training.exe Hash Sha256" Hash="E2D6E50EFC9F178C8F15AA4527573BF9688FC0CD7AE1921EAA50782D5E653DBA" />
+    <Allow ID="ID_ALLOW_A_3F" FriendlyName="%BUILDROOT%\\Release\\test_e2e_training.exe Hash Page Sha1" Hash="3B04DAA047787492D8D1B23639D5A6F1480AB798" />
+    <Allow ID="ID_ALLOW_A_40" FriendlyName="%BUILDROOT%\\Release\\test_e2e_training.exe Hash Page Sha256" Hash="EB30AF23ECDDEF3ACF6E927DE439151A0C5BE07324B2A8E6473A48AB0FFE65EF" />
+    <Allow ID="ID_ALLOW_A_41" FriendlyName="%BUILDROOT%\\Release\\test_format.exe Hash Sha1" Hash="4E47A972E811F66A266E86D69C9A65CF664158B9" />
+    <Allow ID="ID_ALLOW_A_42" FriendlyName="%BUILDROOT%\\Release\\test_format.exe Hash Sha256" Hash="1EA92EC9BFC0E06FB28564BA8636C727CC8D94AFC7E8ECA9E9B59EE4DD9850FC" />
+    <Allow ID="ID_ALLOW_A_43" FriendlyName="%BUILDROOT%\\Release\\test_format.exe Hash Page Sha1" Hash="CD9D7770E23A8089B958F0869CC2AD4866EC3F94" />
+    <Allow ID="ID_ALLOW_A_44" FriendlyName="%BUILDROOT%\\Release\\test_format.exe Hash Page Sha256" Hash="6DEF4B1FCE943353E73E8901C49044AAE52636F697458A7B8CA968C2D8753404" />
+    <Allow ID="ID_ALLOW_A_45" FriendlyName="%BUILDROOT%\\Release\\test_gpu.exe Hash Sha1" Hash="C0D47800F255A8D3CE5CAABC0DAA152691543E7A" />
+    <Allow ID="ID_ALLOW_A_46" FriendlyName="%BUILDROOT%\\Release\\test_gpu.exe Hash Sha256" Hash="2836685B9F571DD37835C0D5E17D1AEE88A0B5B74596411927D9993679BAB66C" />
+    <Allow ID="ID_ALLOW_A_47" FriendlyName="%BUILDROOT%\\Release\\test_gpu.exe Hash Page Sha1" Hash="CD708D4A48B78568394725E72F0A33EE3E7A9E4B" />
+    <Allow ID="ID_ALLOW_A_48" FriendlyName="%BUILDROOT%\\Release\\test_gpu.exe Hash Page Sha256" Hash="9CC2AB1AAFEB67FFE2979CA3CA53332026BCA04AF4D44A0F7B0BD65ECA7D5E29" />
+    <Allow ID="ID_ALLOW_A_49" FriendlyName="%BUILDROOT%\\Release\\test_gradient_check.exe Hash Sha1" Hash="8A330D18FCA183D7817F502B03234F4469BFFD1F" />
+    <Allow ID="ID_ALLOW_A_4A" FriendlyName="%BUILDROOT%\\Release\\test_gradient_check.exe Hash Sha256" Hash="6ED624B94B12E0256B020CBEEC8679114E342BF71278476AC9256692553C27DA" />
+    <Allow ID="ID_ALLOW_A_4B" FriendlyName="%BUILDROOT%\\Release\\test_gradient_check.exe Hash Page Sha1" Hash="3497A16A72B06CCFC817BCDBC55F6A5FC6D4AA43" />
+    <Allow ID="ID_ALLOW_A_4C" FriendlyName="%BUILDROOT%\\Release\\test_gradient_check.exe Hash Page Sha256" Hash="4CC99A01DBE3B9B07352313E20D57267D2A04075D3239898D39EF81C45C08CB5" />
+    <Allow ID="ID_ALLOW_A_4D" FriendlyName="%BUILDROOT%\\Release\\test_inference_opt.exe Hash Sha1" Hash="E19625D7343297C92977C3B486B11F886F0630F5" />
+    <Allow ID="ID_ALLOW_A_4E" FriendlyName="%BUILDROOT%\\Release\\test_inference_opt.exe Hash Sha256" Hash="5F9FF463F2F6A81C5CA586D1F5F4074202356F996076133B64D0EFAD64EACB5F" />
+    <Allow ID="ID_ALLOW_A_4F" FriendlyName="%BUILDROOT%\\Release\\test_inference_opt.exe Hash Page Sha1" Hash="6634E587637579872C010EAD1775F4D1D0F4743D" />
+    <Allow ID="ID_ALLOW_A_50" FriendlyName="%BUILDROOT%\\Release\\test_inference_opt.exe Hash Page Sha256" Hash="B902753DCA4BEC55D71DA83B434DC3CBB76F103B0CD3252AF17638074275660F" />
+    <Allow ID="ID_ALLOW_A_51" FriendlyName="%BUILDROOT%\\Release\\test_integration.exe Hash Sha1" Hash="ECAA027E50D9B8EF1B38F5FF0FE7391B6B9356FF" />
+    <Allow ID="ID_ALLOW_A_52" FriendlyName="%BUILDROOT%\\Release\\test_integration.exe Hash Sha256" Hash="F280A2AED686372D440F85188F5658EA08FA06C3493CE1229ADC0739EF87004A" />
+    <Allow ID="ID_ALLOW_A_53" FriendlyName="%BUILDROOT%\\Release\\test_integration.exe Hash Page Sha1" Hash="AC2965017CA43031A3C835C2D6CBF1AB1BE7520F" />
+    <Allow ID="ID_ALLOW_A_54" FriendlyName="%BUILDROOT%\\Release\\test_integration.exe Hash Page Sha256" Hash="E1496AF5B376ACF2405C08DE697EEE6229CECE74448DE02A243D6F7994E33681" />
+    <Allow ID="ID_ALLOW_A_55" FriendlyName="%BUILDROOT%\\Release\\test_kernel.exe Hash Sha1" Hash="48152311B3FFB97202BA9C088E40606C8DDE61AF" />
+    <Allow ID="ID_ALLOW_A_56" FriendlyName="%BUILDROOT%\\Release\\test_kernel.exe Hash Sha256" Hash="F9B4005B17BF300AF4DC8F5A703CAA5463F9807D542B8B650DA70AB93F77DAE5" />
+    <Allow ID="ID_ALLOW_A_57" FriendlyName="%BUILDROOT%\\Release\\test_kernel.exe Hash Page Sha1" Hash="4BF04229204C060FA72A4A46DA68D12912659B3D" />
+    <Allow ID="ID_ALLOW_A_58" FriendlyName="%BUILDROOT%\\Release\\test_kernel.exe Hash Page Sha256" Hash="35C7F889A4677567C74C3E01D17FD9B1F610CD91D1B8897B168BDEDFD597E068" />
+    <Allow ID="ID_ALLOW_A_59" FriendlyName="%BUILDROOT%\\Release\\test_math.exe Hash Sha1" Hash="639B280412EEAA0B767D078F2AC8F8BF10831968" />
+    <Allow ID="ID_ALLOW_A_5A" FriendlyName="%BUILDROOT%\\Release\\test_math.exe Hash Sha256" Hash="D6CD6BE6A6DB5F78780B467B26876478DDD284FE41908D633E32ED14B578207B" />
+    <Allow ID="ID_ALLOW_A_5B" FriendlyName="%BUILDROOT%\\Release\\test_math.exe Hash Page Sha1" Hash="7002130B27CB706CF49B173F63B70059E7200EDD" />
+    <Allow ID="ID_ALLOW_A_5C" FriendlyName="%BUILDROOT%\\Release\\test_math.exe Hash Page Sha256" Hash="7ADF74D3A8AEC241D8CF6D2B1D183D4785E1AE49C007DC00E0F7B1C1F1237286" />
+    <Allow ID="ID_ALLOW_A_5D" FriendlyName="%BUILDROOT%\\Release\\test_model.exe Hash Sha1" Hash="6A66973C021E282FDE5BA304BE2BFEC9AD249424" />
+    <Allow ID="ID_ALLOW_A_5E" FriendlyName="%BUILDROOT%\\Release\\test_model.exe Hash Sha256" Hash="58D5F8323E73CBD190907004158367CEF9118C9FC7233EE8F7684473043EABDC" />
+    <Allow ID="ID_ALLOW_A_5F" FriendlyName="%BUILDROOT%\\Release\\test_model.exe Hash Page Sha1" Hash="DF5253C24B38A4F67C01E4405F59F62C2B44F54B" />
+    <Allow ID="ID_ALLOW_A_60" FriendlyName="%BUILDROOT%\\Release\\test_model.exe Hash Page Sha256" Hash="63B13A1EDC2D6AA3302292032A59F4C91095D37E8D0828178C6DE4022AE14013" />
+    <Allow ID="ID_ALLOW_A_61" FriendlyName="%BUILDROOT%\\Release\\test_multimodal.exe Hash Sha1" Hash="BFAB759C4A95DA08D799CD6963283729303D2CF3" />
+    <Allow ID="ID_ALLOW_A_62" FriendlyName="%BUILDROOT%\\Release\\test_multimodal.exe Hash Sha256" Hash="2E55C6FF1E49C03F262905C31E007584EAFDC699B9624C0CD8BCD3D144E72CD9" />
+    <Allow ID="ID_ALLOW_A_63" FriendlyName="%BUILDROOT%\\Release\\test_multimodal.exe Hash Page Sha1" Hash="86417265641BE62C30C6CD932C07F06ECAD299B3" />
+    <Allow ID="ID_ALLOW_A_64" FriendlyName="%BUILDROOT%\\Release\\test_multimodal.exe Hash Page Sha256" Hash="8F5B21D6245A7C40FC4DAD2AF7F64FD861DABA96FBFF5B211EF421243D186CB9" />
+    <Allow ID="ID_ALLOW_A_65" FriendlyName="%BUILDROOT%\\Release\\test_production.exe Hash Sha1" Hash="8C00F77F2083CD743216D8F9FD7143BE59547890" />
+    <Allow ID="ID_ALLOW_A_66" FriendlyName="%BUILDROOT%\\Release\\test_production.exe Hash Sha256" Hash="60235E363D3B363874324169083F49027F6608ED907398A375F95B217E500E3B" />
+    <Allow ID="ID_ALLOW_A_67" FriendlyName="%BUILDROOT%\\Release\\test_production.exe Hash Page Sha1" Hash="E96655013A2050045A8FE84B34DD80D2C2B4EEB1" />
+    <Allow ID="ID_ALLOW_A_68" FriendlyName="%BUILDROOT%\\Release\\test_production.exe Hash Page Sha256" Hash="BB8BAB643E289A4B27157083D67EC1133DA3086225D7041F109D049AB00B8FCA" />
+    <Allow ID="ID_ALLOW_A_69" FriendlyName="%BUILDROOT%\\Release\\test_save_load_debug.exe Hash Sha1" Hash="54FDFAEA3C5F503EC483E27F748853DB8551DD01" />
+    <Allow ID="ID_ALLOW_A_6A" FriendlyName="%BUILDROOT%\\Release\\test_save_load_debug.exe Hash Sha256" Hash="EFA21E90FEE60F2A861CF19665D8B4622881ACD9363129F6051C9B6CA201412A" />
+    <Allow ID="ID_ALLOW_A_6B" FriendlyName="%BUILDROOT%\\Release\\test_save_load_debug.exe Hash Page Sha1" Hash="5AE4CFFF5B84C8AB55F4BDD6F793AE3745E4AC32" />
+    <Allow ID="ID_ALLOW_A_6C" FriendlyName="%BUILDROOT%\\Release\\test_save_load_debug.exe Hash Page Sha256" Hash="C4DC1024752D5F12952E9200B0EE4B74AA28CC670A9AABBE2AEB0553E0C9CBA7" />
+    <Allow ID="ID_ALLOW_A_6D" FriendlyName="%BUILDROOT%\\Release\\test_tensor.exe Hash Sha1" Hash="77B383E632EC2B00F3A06B8F73F0FB9498570292" />
+    <Allow ID="ID_ALLOW_A_6E" FriendlyName="%BUILDROOT%\\Release\\test_tensor.exe Hash Sha256" Hash="3DDA21184E933DEBE6EDDCD57930B6D8758ABC524D64FA44C4CD2CD4BD0843B0" />
+    <Allow ID="ID_ALLOW_A_6F" FriendlyName="%BUILDROOT%\\Release\\test_tensor.exe Hash Page Sha1" Hash="A34866C69FF7A50DCF3482874F99481C082BB7DE" />
+    <Allow ID="ID_ALLOW_A_70" FriendlyName="%BUILDROOT%\\Release\\test_tensor.exe Hash Page Sha256" Hash="1AEF025A74015CCA5D980D218F822610D5E5ED4564ADECFBCA17D59E581DA927" />
+    <Allow ID="ID_ALLOW_A_71" FriendlyName="%BUILDROOT%\\Release\\test_tokenizer.exe Hash Sha1" Hash="ECDF7929FED6A6A1436C0E902FBC066B7108990C" />
+    <Allow ID="ID_ALLOW_A_72" FriendlyName="%BUILDROOT%\\Release\\test_tokenizer.exe Hash Sha256" Hash="60C678D170F4F032F831738A26D57FF34F58F8A01E6172D095259834A7BFECAD" />
+    <Allow ID="ID_ALLOW_A_73" FriendlyName="%BUILDROOT%\\Release\\test_tokenizer.exe Hash Page Sha1" Hash="79C987791A6E54026F6E7E6CA2711AF8223CF117" />
+    <Allow ID="ID_ALLOW_A_74" FriendlyName="%BUILDROOT%\\Release\\test_tokenizer.exe Hash Page Sha256" Hash="BED385F5CFCF78FD8E727F2520EF1B8A85AD904D221E8B269200839134D18AFC" />
+    <Allow ID="ID_ALLOW_A_75" FriendlyName="%BUILDROOT%\\Release\\test_trainer.exe Hash Sha1" Hash="0046C2D6C7978C6BB25A93D7E0BBC77E77D4B1EC" />
+    <Allow ID="ID_ALLOW_A_76" FriendlyName="%BUILDROOT%\\Release\\test_trainer.exe Hash Sha256" Hash="44E158A31177D01816F5A8114252DE1B56D0D8A200D434FF8B1317225D8A915C" />
+    <Allow ID="ID_ALLOW_A_77" FriendlyName="%BUILDROOT%\\Release\\test_trainer.exe Hash Page Sha1" Hash="69351E9B7CD4762AC77517E694992990FEA48951" />
+    <Allow ID="ID_ALLOW_A_78" FriendlyName="%BUILDROOT%\\Release\\test_trainer.exe Hash Page Sha256" Hash="C2070CA168418231C94DB9E28F80D88C48D65B0089BA84934F1FCC2AAD5393B2" />
+    <Allow ID="ID_ALLOW_A_79" FriendlyName="%BUILDROOT%\\Release\\test_training.exe Hash Sha1" Hash="9FB90C048117A8BC492AD1B598129ADC35C994E4" />
+    <Allow ID="ID_ALLOW_A_7A" FriendlyName="%BUILDROOT%\\Release\\test_training.exe Hash Sha256" Hash="C134D00C089551A8A5E7965EC6539E89B8A1D0093A3EB55F5854EEC7C637E2AC" />
+    <Allow ID="ID_ALLOW_A_7B" FriendlyName="%BUILDROOT%\\Release\\test_training.exe Hash Page Sha1" Hash="0FB34CF3E2606FFFD26FB95B5FD232CF28D04E33" />
+    <Allow ID="ID_ALLOW_A_7C" FriendlyName="%BUILDROOT%\\Release\\test_training.exe Hash Page Sha256" Hash="C87F7225FC8DBCDAA6EC17F86C4EC29FF3C4B6EE615BF4A1BE17453EC3F49F5D" />
   </FileRules>
   <!--Signers-->
   <Signers />

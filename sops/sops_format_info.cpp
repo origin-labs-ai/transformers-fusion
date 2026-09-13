@@ -10,6 +10,11 @@
 #include <cstring>
 
 // ── Format data (duplicated from sops.h to avoid quant_core dependency) ─────
+// NOTE (v3 naming): the labels below are the pre-v3 display snapshot
+// (QUANT_Q1, QUANT4_G, ...). They are display strings for the sops_info
+// tool only — NOT the format registry truth, which lives in
+// include/quant/types.h (v3 QG*/Q_MX_* names, FORMAT_COUNT=105). Do not
+// add new formats here; do not parse these labels anywhere.
 
 struct FormatInfo {
     const char* name;
@@ -19,28 +24,28 @@ struct FormatInfo {
 
 static const FormatInfo base_formats[] = {
     {"QUANT1",             1.0,   32.000},
-    {"QUANT_Q0",         1.50,  21.333},
+    {"Q1_5",         1.50,  21.333},
     {"QUANT_Q1",     2.0,   16.000},
     {"QUANT2",             2.0,   16.000},
     {"QUANT4",             4.0,    8.000},
     {"QUANT8",             8.0,    4.000},
     {"QUANT16",           16.0,    2.000},
     {"QUANT32",           32.0,    1.000},
-    {"QUANT1_G",         1.0,   32.000},
-    {"QUANT2_G",         2.625, 12.190},
+    {"QG1",         1.0,   32.000},
+    {"QG2",         2.625, 12.190},
     {"QUANT4_G",         4.50,   7.111},
     {"QUANT8_G",         8.50,   3.765},
     {"QUANT16_G",       16.0,    2.000},
-    {"QUANT_Q0_G",     1.50,  21.333},
+    {"QG_1_5",     1.50,  21.333},
     {"QUANT_Q1_G", 2.0,   16.000},
 };
 static constexpr int NUM_BASE = 15;
 
 static const FormatInfo mix_formats[] = {
-    {"QUANT8+QUANT2_1_99",      2.06,  15.534},
+    {"QUANT8+Q2_1_99",      2.06,  15.534},
     {"QUANT8+QUANT4_5_95",      4.20,   7.619},
-    {"QUANT4+QUANT2_10_90",     2.20,  14.545},
-    {"QUANT8+QUANT2_10_90",     2.60,  12.308},
+    {"QUANT4+Q2_10_90",     2.20,  14.545},
+    {"QUANT8+Q2_10_90",     2.60,  12.308},
     {"QUANT+QUANT8_5_95",     7.675,  4.169},
     {"QUANT16+QUANT4_1_99",     4.12,   7.767},
     {"QUANT16+QUANT8_5_95",     8.40,   3.810},
@@ -256,7 +261,7 @@ int main() {
 
     printf("================================================================\n");
     printf("  QUANT FORMAT INFO — Complete Reference\n");
-    printf("  InNova SOPS Library\n");
+    printf("  Transcender SOPS Library\n");
     printf("================================================================\n\n");
 
     print_base_formats(params);

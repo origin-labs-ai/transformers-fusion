@@ -832,3 +832,21 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 |---|---|---|
 | U1-U11 | `DSP_HEXAGONBackend` fail-loud stubs: 11 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 80%-production push round 3 — 2026-09-13 (first real Linux build+test, WSL2/GCC15)
+
+The "Linux green owed" item is now CLOSED for the CI PR-gate set. First real
+Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
+
+| # | Item | State |
+|---|---|---|
+| L-cfg | `tests/CMakeLists.txt` referenced `test_gpu` in COST block unconditionally; `test_gpu` exists only on WIN32 → CMake configure error on Linux | **FIXED.** COST assignment guarded with `if(WIN32)` |
+| L-d3d | `gpu_compute.cpp` / `gpu_compute_full.cpp` unconditionally included `<windows.h>`+D3D12 (fatal on Linux) | **FIXED.** D3D body under `#if defined(_WIN32)`; POSIX gets fail-closed `DirectXCompute` (init false, compute throws — backend layer already treats it as unavailable); `gpu_compute_full.cpp` compiles empty off-Windows (zero callers tree-wide, documented) |
+| L-cast | `gpu_compute_zendnn.cpp` C-style fn-ptr casts rejected by GCC | **FIXED.** `void*` symbol storage + `memcpy` fn-call bridge |
+| L-sock | `expert_parallel.cpp` Winsock-only TCP transport (fatal on Linux) | **FIXED.** POSIX socket shim (`SOCKET`/`int`, `closesocket`/`close`, WSA no-op, FIONBIO→fcntl, `Sleep`/`fopen_s` portable) — same code, both platforms |
+| L-http | `hf_streamer.cpp` unguarded `<windows.h>`/`<winhttp.h>` + `_popen`/`curl.exe` | **FIXED.** WinHTTP guarded; POSIX uses `popen`/`curl`; dead header/session state removed |
+| L-dirent | `production_api.cpp` POSIX branch missed `<dirent.h>` + local `struct dirent` shadow | **FIXED.** Include + `::dirent` |
+| L-skew | `is_avx2/avx512_available()` returned the CPU flag even in scalar builds → auto-select picked dead CPU_AVX2 → benchmark 0.0 → T5 FAIL (probe/build skew, invisible on MSVC-forced-AVX2 Windows) | **FIXED.** Availability now requires compiled support AND CPU flag (also fixes the reverse: AVX2 binary on pre-AVX2 CPU no longer claims support) |
+| L-select | Auto-select preferred PARTIAL Vulkan (no GEMM) over full CPU_SCALAR → T5 gemm contract FAIL | **FIXED.** PARTIAL Vulkan is opt-in only (`BackendType::GPU_VULKAN`); default is always FULL/gemm-capable |
+| L-suite | Full Linux suite (CI PR-gate exclusion set) | **64/64 PASSED, 0 failed** (`ctest -E 'test_protected\|test_gpu\|test_training\|test_native_quant\|test_moe_training\|paged_kv_1t_test'` — same exclusions CI uses; `test_gpu*`/`test_training*` substring-matched). Windows Release still **72/72 green** |
+| Owed | Excluded heavies (protected/training/native_quant/moe_training/paged_kv_1t) = nightly set per CI design; macOS still pending (no runner here) | Linux CI workflow files unchanged and now plausible (tree compiles on GCC) |

@@ -9,6 +9,7 @@
 #include "adapters/gguf_bridge.h"
 #include "adapters/safetensors_bridge.h"
 #include "adapters/ptq_bridge.h"
+#include "quant/detail/cli_parse.h"
 
 #include <iostream>
 #include <cstring>
@@ -50,8 +51,22 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--input") == 0 && i + 1 < argc)   input_path = argv[++i];
         else if (strcmp(argv[i], "--output") == 0 && i + 1 < argc) cfg.output_path = argv[++i];
-        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc)   cfg.target_bpw = (float)std::atof(argv[++i]);
-        else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc) cfg.block_size = std::atoi(argv[++i]);
+        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) {
+            float v = quant::cli_parse::parse_float("--bpw", argv[++i]);
+            if (!(v >= 0.5f) || !(v <= 32.0f)) {
+                std::fprintf(stderr, "Error: --bpw must be in [0.5, 32], got '%s'\n", argv[i]);
+                return 2;
+            }
+            cfg.target_bpw = v;
+        }
+        else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc) {
+            int bs = quant::cli_parse::parse_int("--block-size", argv[++i]);
+            if (bs < 32 || bs > 8192) {
+                std::fprintf(stderr, "Error: --block-size must be in [32, 8192], got '%s'\n", argv[i]);
+                return 2;
+            }
+            cfg.block_size = bs;
+        }
         else if (strcmp(argv[i], "--adaptive") == 0)              cfg.adaptive = true;
         else if (strcmp(argv[i], "--verbose") == 0)               cfg.verbose = true;
     }

@@ -81,6 +81,19 @@ If you're new to Transcender, start here:
 | [USAGE.md](USAGE.md) | How to use Transcender for inference and training | Users |
 | [RESEARCH.md](RESEARCH.md) | Research papers and algorithms that inspired the design | Researchers |
 
+### 📑 Reports & Notes
+
+| Document | Description |
+|----------|-------------|
+| [COMPARISON_CHARTS.md](COMPARISON_CHARTS.md) | Measured format-vs-baseline charts, generated from `bench_format_comparison.csv` |
+| [COMPETITOR_ANALYSIS.md](COMPETITOR_ANALYSIS.md) | Head-to-head vs GGUF/AWQ/GPTQ/BitNet with honest gaps |
+| [P1P73_REPORT.md](P1P73_REPORT.md) | P1–P73 merged capability report (wired features + honest flags) |
+| [P13_SPECULATIVE_V2_REMOVED.md](P13_SPECULATIVE_V2_REMOVED.md) | Record of the removed SpeculativeDecoderV2 ghost declaration |
+| [STRATEGY.md](STRATEGY.md) | Hardware/fleet/market strategy register (numbers UNVERIFIED until measured) |
+| [THEOREM_CENDER.md](THEOREM_CENDER.md) | Cender theorem note |
+| [LAUNCH_KIT.md](LAUNCH_KIT.md) | Community outreach kit (measured-facts-only rule) |
+| [dataset_manifest.schema.json](../tools/dataset_manifest.schema.json) | Training-data provenance manifest schema (backs `test_data_trust`) |
+
 ---
 
 ## 📄 Per-File Documentation

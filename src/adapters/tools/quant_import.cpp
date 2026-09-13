@@ -2,7 +2,7 @@
 // quant_import.cpp — CLI: auto-detect format & import -> single-format QUANT file
 // ============================================================================
 // Usage:
-//   quant_import --input <path> --output <out.quant> [--format QUANT_Q1_G]
+//   quant_import --input <path> --output <out.quant> [--format Q2]
 //              [--bpw 2.0] [--block-size 256] [--verbose]
 //
 // Detects input format by magic bytes / extension, then dispatches to the
@@ -17,6 +17,7 @@
 #include "adapters/safetensors_bridge.h"
 #include "quant/quant_format.h"
 #include "quant/block_codec.h"
+#include "quant/detail/cli_parse.h"
 
 #include <iostream>
 #include <cstring>
@@ -43,52 +44,44 @@ static std::string to_upper(std::string s) {
 
 // Nearest single format for a requested --bpw.
 static quant::Format nearest_format_for_bpw(float bpw) {
-    if (bpw <= 1.25f) return quant::Format::QUANT1;
-    if (bpw <= 1.75f) return quant::Format::QUANT_Q0;
-    if (bpw <= 3.0f)  return quant::Format::QUANT_Q1_G;
-    if (bpw <= 6.0f)  return quant::Format::QUANT4_G;
-    if (bpw <= 12.0f) return quant::Format::QUANT8_G;
-    if (bpw <= 24.0f) return quant::Format::QUANT16_G;
-    return quant::Format::QUANT32;
+    if (bpw <= 1.25f) return quant::Format::Q1;
+    if (bpw <= 1.75f) return quant::Format::Q1_5;
+    if (bpw <= 3.0f)  return quant::Format::Q2;
+    if (bpw <= 6.0f)  return quant::Format::QG4;
+    if (bpw <= 12.0f) return quant::Format::QG8;
+    if (bpw <= 24.0f) return quant::Format::QG16;
+    return quant::Format::Q32;
 }
 
-// Parse every QUANT/QUANT single format plus the TWI_MIX (MIX_*) and QUAD_MIX
-// (QUAD_*) compound formats. Compounds set `out` to the member wire format
-// (highest tier) and `out_compound` to the compound RegFormat id.
+// Parse every Q-series single format plus the Q_MX/QG_MX compound formats.
+// Compounds set `out` to the mix wire format and `out_compound` to the
+// compound RegFormat id.
 static bool parse_format_name(const char* name, quant::Format& out, quant::RegFormat& out_compound) {
     std::string s = to_upper(name);
     bool is_compound = false;
 
-    // ---- QUANT / QUANT singles ----
-    if (s == "QUANT1")              { out = quant::Format::QUANT1; }
-    else if (s == "QUANT2")         { out = quant::Format::QUANT2; }
-    else if (s == "QUANT4")         { out = quant::Format::QUANT4; }
-    else if (s == "QUANT8")         { out = quant::Format::QUANT8; }
-    else if (s == "QUANT16")        { out = quant::Format::QUANT16; }
-    else if (s == "QUANT32")        { out = quant::Format::QUANT32; }
-    else if (s == "QUANT1_G")     { out = quant::Format::QUANT1_G; }
-    else if (s == "QUANT2_G")     { out = quant::Format::QUANT2_G; }
-    else if (s == "QUANT4_G")     { out = quant::Format::QUANT4_G; }
-    else if (s == "QUANT8_G")     { out = quant::Format::QUANT8_G; }
-    else if (s == "QUANT16_G")    { out = quant::Format::QUANT16_G; }
-    else if (s == "QUANT_Q1") { out = quant::Format::QUANT_Q1; }
-    else if (s == "QUANT_Q1_G") { out = quant::Format::QUANT_Q1_G; }
-    else if (s == "QUANT_Q0")     { out = quant::Format::QUANT_Q0; }
-    else if (s == "QUANT_Q0_G") { out = quant::Format::QUANT_Q0_G; }
-    // ---- TWI_MIX (two-tier) compounds ---- 
-    else if (s == "MIX_QUANT8_QUANT2_01_99")  { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT8_QUANT2_01_99; is_compound = true; }
-    else if (s == "MIX_QUANT8_QUANT4_05_95")  { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT8_QUANT4_05_95; is_compound = true; }
-    else if (s == "MIX_QUANT4_QUANT2_10_90")  { out = quant::Format::QUANT4;   out_compound = quant::RegFormat::MIX_QUANT4_QUANT2_10_90; is_compound = true; }
-    else if (s == "MIX_QUANT8_QUANT2_10_90")  { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT8_QUANT2_10_90; is_compound = true; }
-    else if (s == "MIX_QUANT_Q0_QUANT8_05_95") { out = quant::Format::QUANT8;   out_compound = quant::RegFormat::MIX_QUANT_Q0_QUANT8_05_95; is_compound = true; }
-    else if (s == "MIX_QUANT16_QUANT4_01_99") { out = quant::Format::QUANT16;  out_compound = quant::RegFormat::MIX_QUANT16_QUANT4_01_99; is_compound = true; }
-    else if (s == "MIX_QUANT16_QUANT8_05_95") { out = quant::Format::QUANT16;  out_compound = quant::RegFormat::MIX_QUANT16_QUANT8_05_95; is_compound = true; }
-    else if (s == "MIX_QUANT32_QUANT8_01_99") { out = quant::Format::QUANT32;  out_compound = quant::RegFormat::MIX_QUANT32_QUANT8_01_99; is_compound = true; }
-    else if (s == "QUANT_MIX_Q0") { out = quant::Format::QUANT2; out_compound = quant::RegFormat::QUANT_TWI_MIX_Q0; is_compound = true; }
-    // ---- QUAD_MIX (four-tier) compounds ----
-    else if (s == "QUAD_QUANT2_QUANT4_QUANT8_QUANT16") { out = quant::Format::QUANT16; out_compound = quant::RegFormat::QUAD_QUANT2_QUANT4_QUANT8_QUANT16; is_compound = true; }
-    else if (s == "QUAD_QUANT4_QUANT8_QUANT16_QUANT32") { out = quant::Format::QUANT32; out_compound = quant::RegFormat::QUAD_QUANT4_QUANT8_QUANT16_QUANT32; is_compound = true; }
-    else if (s == "QUANT_MIX_Q1") { out = quant::Format::QUANT4; out_compound = quant::RegFormat::QUANT_QUAD_MIX_Q0; is_compound = true; }
+    // ---- Q-series singles (Q2 covers the two Q1 aliases) ----
+    if (s == "Q1")              { out = quant::Format::Q1; }
+    else if (s == "Q2")         { out = quant::Format::Q2; }
+    else if (s == "Q4")         { out = quant::Format::Q4; }
+    else if (s == "Q8")         { out = quant::Format::Q8; }
+    else if (s == "Q16")        { out = quant::Format::Q16; }
+    else if (s == "Q32")        { out = quant::Format::Q32; }
+    else if (s == "QG1")     { out = quant::Format::QG1; }
+    else if (s == "QG2")     { out = quant::Format::QG2; }
+    else if (s == "QG4")     { out = quant::Format::QG4; }
+    else if (s == "QG8")     { out = quant::Format::QG8; }
+    else if (s == "QG16")    { out = quant::Format::QG16; }
+    else if (s == "Q1_5")     { out = quant::Format::Q1_5; }
+    else if (s == "QG_1_5") { out = quant::Format::QG_1_5; }
+    // ---- QG_MX compounds (adaptive, four-tier) ----
+    else if (s == "QG_MX_3_5" || s == "QG_MX_3.5")   { out = quant::Format::QG_MX_3_5;   out_compound = quant::RegFormat::QG_MX_3_5;   is_compound = true; }
+    else if (s == "QG_MX_4_5" || s == "QG_MX_4.5")   { out = quant::Format::QG_MX_4_5;   out_compound = quant::RegFormat::QG_MX_4_5;   is_compound = true; }
+    else if (s == "QG_MX_6_5" || s == "QG_MX_6.5")   { out = quant::Format::QG_MX_6_5;   out_compound = quant::RegFormat::QG_MX_6_5;   is_compound = true; }
+    else if (s == "QG_MX_8_5" || s == "QG_MX_8.5")   { out = quant::Format::QG_MX_8_5;   out_compound = quant::RegFormat::QG_MX_8_5;   is_compound = true; }
+    else if (s == "QG_MX_12_5" || s == "QG_MX_12.5") { out = quant::Format::QG_MX_12_5;  out_compound = quant::RegFormat::QG_MX_12_5;  is_compound = true; }
+    else if (s == "QG_MX_16_5" || s == "QG_MX_16.5") { out = quant::Format::QG_MX_16_5;  out_compound = quant::RegFormat::QG_MX_16_5;  is_compound = true; }
+    else if (s == "QG_MX_24_5" || s == "QG_MX_24.5") { out = quant::Format::QG_MX_24_5;  out_compound = quant::RegFormat::QG_MX_24_5;  is_compound = true; }
     else return false;
 
     if (!is_compound) out_compound = quant::format_to_regformat(out);
@@ -324,25 +317,29 @@ int main(int argc, char** argv) {
             "                        sharded safetensors directory / index.json)\n"
             "  --output <path>       Output QUANT file\n"
             "  --format <name>       Quantization format for ALL blocks\n"
-            "                        (default: QUANT_MIX_Q1, exactly 2.0 BPW,\n"
-            "                        adaptive QUAD_MIX)\n"
-            "                        Singles: QUANT1/2/4/8/16/32[_G], QUANT_Q0[_G],\n"
-            "                        QUANT_Q1[_G]. Compounds: MIX_* (TWI_MIX),\n"
-            "                        QUAD_* (QUAD_MIX), QUANT_MIX_Q0 (1.75 BPW exact)\n"
-            "                        and QUANT_MIX_Q1 (2.0 BPW exact) mix member\n"
+            "                        (default: QG_MX_4_5, adaptive QG_MX)\n"
+            "                        Singles: Q1/Q2/Q4/Q8/Q16/Q32, QG1/QG2/QG4/QG8/QG16,\n"
+            "                        Q1_5, QG_1_5, Q2. Compounds: QG_MX_3_5/4_5/6_5/8_5/\n"
+            "                        12_5/16_5/24_5 (adaptive QG_MX), QG_MX_3_5 (3.5 BPW)\n"
+            "                        and QG_MX_4_5 (4.5 BPW) mix member\n"
             "                        formats adaptively by measured benefit per byte\n"
             "                        under a hard BPW budget (never exceeded).\n"
-            "  --bpw <float>         Target bits-per-weight. 1.75 -> QUANT_MIX_Q0,\n"
-            "                        2.0 -> QUANT_MIX_Q1, other values map to the\n"
-            "                        nearest single format (default: 2.0 -> QUANT_MIX_Q1)\n"
+            "  --bpw <float>         Named MIX profile selector (legacy shorthand):\n"
+            "                        1.75 -> QG_MX_3_5 (wire spend 3.78125 BPW),\n"
+            "                        2.0 -> QG_MX_4_5 (wire spend 4.5 BPW).\n"
+            "                        Other values map to the nearest single\n"
+            "                        format at its wire BPW. NOTE: the MIX profiles\n"
+            "                        spend their wire BPW, not the shorthand number\n"
+            "                        (target_bpw is set to the wire spend below).\n"
+            "                        (default: 2.0 -> QG_MX_4_5)\n"
             "  --block-size <N>      Block size (default: 256)\n"
             "  --verbose             Print per-tensor stats\n"
             "  -h, --help            Show this help\n\n"
-            "Formats: QUANT_MIX_Q1 (2.0, adaptive QUAD_MIX), QUANT_MIX_Q0 (1.75,\n"
-            "         adaptive TWI_MIX), QUANT_Q1_G (2.0), QUANT_Q0 (1.5),\n"
-            "         QUANT1 (1.0), QUANT2_G (2.625), QUANT4_G (4.5), QUANT8_G (8.5),\n"
-            "         QUANT16_G (16.0), QUANT32 (32.0), + all GRP/single variants,\n"
-            "         MIX_* (TWI_MIX) and QUAD_* (QUAD_MIX) compounds\n"
+            "Formats: QG_MX_4_5 (4.5, adaptive QG_MX), QG_MX_3_5 (3.5,\n"
+            "         adaptive QG_MX), Q2 (2.0), Q1_5 (1.5),\n"
+            "         Q1 (1.0), QG2 (2.625), QG4 (4.5), QG8 (8.5),\n"
+            "         QG16 (16.0), Q32 (32.0), + all GRP/single variants,\n"
+            "         QG_MX_* (QG_MX) compounds\n"
             "Supported input formats (auto-detected):\n"
             "  GGUF, Safetensors (single file OR sharded dir/index.json),\n"
             "  raw FP32/FP16, raw FP8 (E4M3/E5M2), existing .quant\n");
@@ -351,10 +348,10 @@ int main(int argc, char** argv) {
 
     BridgeConfig cfg;
     std::fprintf(stderr, "[A] cfg constructed\n");
-    // Default format: QUANT_MIX_Q1 — exactly 2.0 BPW, adaptive QUAD_MIX.
-    // --bpw 1.75 selects QUANT_MIX_Q0 (exactly 1.75 BPW, adaptive TWI_MIX).
-    cfg.format = quant::Format::QUANT4;
-    cfg.compound = quant::RegFormat::QUANT_QUAD_MIX_Q0;
+    // Default format: QG_MX_4_5 — adaptive QG_MX.
+    // --bpw 1.75 selects QG_MX_3_5 (adaptive QG_MX).
+    cfg.format = quant::Format::Q4;
+    cfg.compound = quant::RegFormat::QG_MX_4_5;
     cfg.target_bpw = 2.0f;
     cfg.block_size = 256;
     std::string input_path;
@@ -363,10 +360,17 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--input") == 0 && i + 1 < argc)   input_path = argv[++i];
         else if (strcmp(argv[i], "--output") == 0 && i + 1 < argc) cfg.output_path = argv[++i];
-        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) { cfg.target_bpw = (float)std::atof(argv[++i]); bpw_given = true; }
+        else if (strcmp(argv[i], "--bpw") == 0 && i + 1 < argc) {
+            float v = quant::cli_parse::parse_float("--bpw", argv[++i]);
+            if (!(v >= 0.5f) || !(v <= 32.0f)) {
+                std::fprintf(stderr, "Error: --bpw must be in [0.5, 32], got '%s'\n", argv[i]);
+                return 2;
+            }
+            cfg.target_bpw = v; bpw_given = true;
+        }
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc) {
             quant::Format f;
-            quant::RegFormat comp = quant::format_to_regformat(quant::Format::QUANT_Q1_G);
+            quant::RegFormat comp = quant::format_to_regformat(quant::Format::Q2);
             if (!parse_format_name(argv[++i], f, comp)) {
                 std::fprintf(stderr, "Error: unknown format '%s'\n", argv[i]);
                 return 1;
@@ -376,17 +380,26 @@ int main(int argc, char** argv) {
             cfg.target_bpw = quant::format_bpw(f);
             bpw_given = false;
         }
-        else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc) cfg.block_size = std::atoi(argv[++i]);
+        else if (strcmp(argv[i], "--block-size") == 0 && i + 1 < argc) {
+            int bs = quant::cli_parse::parse_int("--block-size", argv[++i]);
+            if (bs < 32 || bs > 8192) {
+                std::fprintf(stderr, "Error: --block-size must be in [32, 8192], got '%s'\n", argv[i]);
+                return 2;
+            }
+            cfg.block_size = bs;
+        }
         else if (strcmp(argv[i], "--verbose") == 0) cfg.verbose = true;
     }
 
     if (bpw_given) {
         if (std::fabs(cfg.target_bpw - 1.75f) < 0.01f) {
-            cfg.format = quant::Format::QUANT2;
-            cfg.compound = quant::RegFormat::QUANT_TWI_MIX_Q0;   // QUANT_MIX_Q0, 1.75 exact
+            cfg.format = quant::Format::Q2;
+            cfg.compound = quant::RegFormat::QG_MX_3_5;   // QG_MX_3_5 via --bpw 1.75
+            cfg.target_bpw = quant::format_bpw(quant::Format::QG_MX_3_5);  // wire 3.78125
         } else if (std::fabs(cfg.target_bpw - 2.0f) < 0.01f) {
-            cfg.format = quant::Format::QUANT4;
-            cfg.compound = quant::RegFormat::QUANT_QUAD_MIX_Q0;  // QUANT_MIX_Q1, 2.0 exact
+            cfg.format = quant::Format::Q4;
+            cfg.compound = quant::RegFormat::QG_MX_4_5;  // QG_MX_4_5 via --bpw 2.0
+            cfg.target_bpw = quant::format_bpw(quant::Format::QG_MX_4_5);  // wire 4.5
         } else {
             cfg.format = nearest_format_for_bpw(cfg.target_bpw);
             cfg.compound = quant::format_to_regformat(cfg.format);

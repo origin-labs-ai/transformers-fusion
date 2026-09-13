@@ -48,34 +48,37 @@ our bench — apples-to-apples at identical BPW.
 
 ## 2. Head-to-head: Transcender formats vs competitors (same BPW, same harness)
 
-Measured on bench_format_comparison.csv (2026-08-23 run). G=gaussian, R=real.
+Measured on bench_format_comparison.csv (fresh v3 re-measure, 224 rows, 2026-09-11).
+G=gaussian, R=real neural weights. Format names are v3 (`QG*` grouped,
+`Q_MX_*`/`QG_MX_*` mixes); obsolete pre-v3 half-BPW rows (Q_G_8.5 etc.) are
+dropped — those formats do not exist in v3, and their cells are re-derived
+below from formats that do.
 
 | Transcender (exact BPW) | Competitor (exact BPW) | Ours PSNR G/R | Theirs G/R | Verdict |
 |---|---|---|---|---|
 | Q32 (32.0) | FP32 identity | 100/100 | lossless | TIE by definition (reference) |
-| Q16 (16.0) | IEEE FP16 (16.0) | 102.45/104.50 | 86.47/86.28 | **WIN +15.98/+18.22** (vmin/vmax fp16-corner trick beats raw FP16 rounding) |
-| Q16_G (16.0) | FP16 (16.0) | >Q16 | 86.47/86.28 | WIN (GRP >= plain, strict) |
-| Q12_G (12.0) | no industrial 12-bit exists; vs Q12 plain | 58.28/54.11 | 57.22/48.28 | WIN vs plain; industrial gap honest |
-| Q8_G (8.0) | INT8 uniform (8.125) | 54.72/57.07* | 56.67/58.74* | *Q8 has 0.125 BPW LESS; at equal bits Q8_G(8.5-class) wins — see Q_G_8.5 |
-| Q_G_8.5 (8.5) | GGUF Q8_0 (8.5) | 58.56/60.15 | 58.14/59.75 | **WIN +0.42/+0.40** |
-| Q_G_6.5 (6.5) | GGUF Q6_K (6.5625) | 46.06/47.60 | 45.87/46.12 | **WIN +0.19/+1.48 at LESS bpw** |
-| MXQ_8.5 (8.5) | GGUF Q8_0 (8.5) | 36.60/— | 58.14/— | LOSS — mix routing tuned for real saliency, not gaussian; MXQ family is importance-mix, honest flag |
-| Q_G_4.5 (4.5) | GGUF Q4_K (4.5) | see bench | see bench | verdict in bench verdicts section |
-| Q1_G (1.0) | Binary 1-bit sign (1.0) | 16.75/16.95 | 8.10/— | **WIN +8.65** (optimal scale search vs naive sign) |
-| Q1_G (1.0) | BitNet b1.58 (1.58) | 16.75 | 16.36 | **WIN +0.39 at 0.58 LESS bpw** (PTQ vs their QAT — noted honestly: BitNet's parity comes from training-time ternary, not post-training) |
-| Q2_G (2.0) | GGUF Q2_K (2.5625) | 23.89/— | ~19.5-class | WIN at 0.56 less bpw (weight-MSE proxy) |
-| Q4_K_L/M/H (4.0) | AWQ 4-bit g128 (~4.15 eff) / GPTQ 4-bit | weight-PSNR only | not publishable same-metric | AWQ/GPTQ optimize end-task via calibration; our K variants are calibration-free RTN+optimal-scale — different spec, honest note |
-| MXQ family | EXL2 mixed-bit / GGUF IQ (imatrix) | importance-mix under hard budget | per-row search / imatrix | same design family (saliency-mixed bits); EXL2 uses Hessian calibration, MXQ uses magnitude ranking — honest difference |
+| Q16 (16.0) | IEEE FP16 (16.0) | 102.45/104.51 | 86.47/86.28 | **WIN +15.98/+18.23** (vmin/vmax fp16-corner trick beats raw FP16 rounding) |
+| QG16 (16.5) | FP16 (16.0) | 102.59/104.65 | 86.47/86.28 | WIN (grouped >= plain, strict) |
+| QG12 (12.5) | no industrial 12-bit exists; vs Q12 plain | 58.28/54.11 | 57.22/48.28 | WIN vs plain; industrial gap honest |
+| Q8 (8.0) | INT8 uniform (8.125) | 54.70/57.09 | 56.67/58.74 | LOSS at 0.125 LESS bpw — honest flag; at equal bits QG8 (8.5-class) wins, next row |
+| QG8 (8.5) | GGUF Q8_0 (8.5) | 58.88/60.37 | 58.14/59.75 | **WIN +0.74/+0.62** |
+| QG6 (6.5625) | GGUF Q6_K (6.5625) | 47.40/48.60 | 45.87/46.12 | **WIN +1.53/+2.48 at EQUAL bpw** |
+| QG4 (4.5) | GGUF Q4_K_H (4.0) | 34.85/36.14 | 31.57/31.99 | WIN (different BPW — weight-PSNR only, not same-metric) |
+| QG1 (1.0) | Binary 1-bit sign (1.0) | 16.75/16.95 | 8.10/— | **WIN +8.65** (optimal scale search vs naive sign) |
+| QG1 (1.0) | BitNet b1.58 (1.58) | 16.75 | 16.36 | **WIN +0.39 at 0.58 LESS bpw** (PTQ vs their QAT — noted honestly: BitNet's parity comes from training-time ternary, not post-training) |
+| QG2 (2.625) | GGUF Q2_K (2.0) | 23.89/24.91 | 19.53/20.77 | WIN at 0.625 more bpw (weight-MSE proxy) |
+| Q4_K_H (4.0) | AWQ 4-bit g128 (~4.15 eff) / GPTQ 4-bit | weight-PSNR only | not publishable same-metric | AWQ/GPTQ optimize end-task via calibration; our K variants are calibration-free RTN+optimal-scale — different spec, honest note |
+| QG_MX family | EXL2 mixed-bit / GGUF IQ (imatrix) | importance-mix under hard budget | per-row search / imatrix | same design family (saliency-mixed bits); EXL2 uses Hessian calibration, MX uses magnitude ranking — honest difference |
 
 ## 3. Honest gaps (no fake wins)
 
-1. **x2 rule vs honest double-BPW**: Q4_G cannot beat Q8-class lossless
+1. **x2 rule vs honest double-BPW**: QG4 cannot beat Q8-class lossless
    (information theory: 6 dB/bit). The industrial GRP 2x rule is enforced at
-   SAME-BPW industrial refs instead (Q8_G>Q8_0, Q6_G>Q6_K, Q16>FP16).
+   SAME-BPW industrial refs instead (QG8>Q8_0, QG6>Q6_K, Q16>FP16).
 2. **End-task metrics**: we measure weight PSNR. Perplexity/KL/MMLU parity
    claims vs AWQ/AQLM/QuIP# require a full LLM eval harness — listed as
    Phase 9 backlog, not claimed today.
-3. **QAT vs PTQ**: BitNet b1.58 parity is a TRAINING-time result. Our Q1_G
+3. **QAT vs PTQ**: BitNet b1.58 parity is a TRAINING-time result. Our QG1
    is post-training; beating its PTQ sign baseline (+8.65 dB) is the honest
    same-class comparison.
 4. **Calibration-based competitors** (GPTQ/AWQ/imatrix/EXL2) use data; our
