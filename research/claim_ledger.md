@@ -1014,3 +1014,31 @@ root-caused from step timings + annotations (log download needs admin rights):
 | Apple-src | `immintrin.h` / `__builtin_cpu_supports` on Apple Clang ARM | Portability-agent audit (34 sites): 32 already guarded, 2 truly unconditional | **FIXED + COMMITTED.** `7d56066` (`exp_avx2.h` arch-gated include + use-guard, MSVC-verified via `quant_math` build) + `a4b0a99` (`kernel_production.cpp` `__builtin_cpu_supports` x86-gated, MSVC-verified via `quant_kernel` build). Both guard-only, zero runtime/ABI change on x86 |
 
 Still open after round 6: `CI Full` rerun result (triggered by the push); `macos.yml` dedicated workflow (shares the AVX2 fix via `macos.yml`'s own `QUANT_AVX2=OFF`, but its 50s failure needs the rerun to confirm); docker 1s failure (log access denied — rerun owed).
+
+## CI-fix round 7 — 2026-09-13 (macOS exact error → fix, owner-provided log)
+
+Owner pasted the `macos.yml` Build log. It compiled 73/374 TUs fine
+(core/math/codec/tokenizer + `quant_core`/`quant_math`/`quant_format` libs
+linked) then died at `[73/374]` on `gpu_compute_metal.cpp`:
+
+```
+src/backend/gpu_compute_metal.cpp:296:46: error: 'Impl' is a private member
+of 'quant::gpu::GPUComputeMetal'
+```
+
+`dispatch_kernel()` was a file-static free function taking
+`GPUComputeMetal::Impl*` — `Impl` is a PRIVATE nested struct, so naming it
+in a free-function signature is ill-formed. MSVC and GCC accept it; Apple
+Clang rejects it (correctly). **FIXED (commit `dc5209b`, pushed):**
+`dispatch_kernel` is now a `static` member of `Impl` (same signature, all 11
+member-function call sites work unqualified). Guard-only in effect: zero
+runtime/ABI change on any platform; Linux GCC syntax-check clean; the
+declaration sits where `id`/`MTLSize`/`vector` are unconditionally visible
+so non-Apple builds are unaffected. macOS rerun owed to confirm.
+
+Side evidence from the same log: the entire SIMD/math/codec/kernel tree
+(incl. all `immintrin.h` consumers) compiled clean on Apple Clang ARM64 —
+the portability-agent's guard audit is corroborated: no AVX2-source error
+appeared. The 5 remaining warnings in view (`-Wswitch` U16, unused fields,
+`-Wcast-function-type-mismatch` on `objc_msgSend`, unused `hexagon_nn_*`)
+are warnings, not errors — hardening backlog, not CI blockers.
