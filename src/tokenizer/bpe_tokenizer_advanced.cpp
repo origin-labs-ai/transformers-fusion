@@ -378,12 +378,15 @@ std::vector<int> MultiLingualTokenizer::encode_utf8_bytes(const std::string& tex
 }
 
 std::string MultiLingualTokenizer::decode_utf8_bytes(const std::vector<int>& ids) const {
+    // BUGFIX (bug census): `id < vocab_.size()` without id >= 0 LOWER bound
+    // in one branch history — negative ids indexed from the end (UB-ish).
+    // Both bounds enforced now (negative ids silently skipped, like decode()).
     std::string result;
     for (int id : ids) {
         if (id >= 0 && id < 256) {
             result += (char)(unsigned char)id;
-        } else if (id < (int)vocab_.size()) {
-            result += vocab_[id];
+        } else if (id >= 256 && id < (int)vocab_.size()) {
+            result += vocab_[(size_t)id];
         }
     }
     return result;

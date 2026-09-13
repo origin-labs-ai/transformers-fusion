@@ -424,12 +424,20 @@ std::string Qwen35Tokenizer::token_to_bytes(const std::string& token) const {
             }
         }
         if (found) continue;
-        // Handle <0xHH> hex escape sequences
-        if (token.compare(pos, 3, "<0x") == 0 && pos + 5 <= token.size() &&
+        // Handle <0xHH> hex escape sequences.
+        // BUGFIX (bug census): sscanf %2x accepts 1-digit hex ("<0xA>") and
+        // does no range validation — hand-rolled exact-2-hex parse instead.
+        if (token.compare(pos, 3, "<0x") == 0 && pos + 6 <= token.size() &&
             token[pos + 5] == '>') {
-            unsigned int v;
-            if (sscanf(token.c_str() + pos + 3, "%2x", &v) == 1) {
-                out += (char)v;
+            auto hex = [](char c) -> int {
+                if (c >= '0' && c <= '9') return c - '0';
+                if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+                return -1;
+            };
+            int hi = hex(token[pos + 3]), lo = hex(token[pos + 4]);
+            if (hi >= 0 && lo >= 0) {
+                out += (char)(hi * 16 + lo);
                 pos += 6;
                 continue;
             }

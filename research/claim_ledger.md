@@ -703,3 +703,28 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Z1 | `deallocate_cpu` always VirtualFree (malloc fallback → heap corruption) | Source-tracked free |
 | Z2 | `get_owned_state` const& to shared/thread-local mutable (cross-thread view + dangling) | By-value snapshot (callers: none, safe) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 80%-production push round 1 — 2026-09-13 (C-15 narrowed further: true KV truncate)
+
+C-15's last open code item was "true KV truncate" (`rewind_kv` best-effort via
+`resize`, which wiped the whole cache). Closed this round with a real primitive:
+
+| # | Item | State |
+|---|---|---|
+| K-trunc | `KVCache::truncate(new_len)` implemented | **IMPLEMENTED + TESTED.** `include/quant/kv_cache.h` decl + `src/model/kv_cache.cpp` def: clamps to `[0, current_pos]`, moves `current_pos` back, zeroes vacated tail rows (fp32 path) or tail values + block scales (FP8-quantized path), keeps buffers + `max_seq_len_` intact. Beyond-pos = no-op, negative = 0. Exact rollback is possible because cache rows are positional — no K/V snapshot copy needed |
+| K-rewind | `SpeculativeDecoder::rewind_kv` upgraded from wipe to exact rewind | **FIXED.** Now calls `truncate()` clamped to the checkpoint length (`src/inference/speculative_decoder.cpp`); stale best-effort notes replaced. `checkpoint_kv` documented as length-marker by design |
+| K-test | Sham `test_speculative_decoding` (vocab-equality only) replaced | **REAL TESTS.** `tests/test_inference_opt.cpp`: `test_kv_truncate` (append 6 → truncate 3 → intact rows + re-append lands at 3 + clamp no-ops) and `test_speculative_decoding` with deterministic FixedDraft/FixedTarget pairs (accept path 3/3 + KV growth; reject path 1 rejection + rewind to checkpoint; `generate()` 6/6 + acceptance 1.0). Linked `quant_speculative` in `tests/CMakeLists.txt` |
+| C-15 status | PARTIAL → narrowed | Remaining: draft-present acceptance bench (numbers, not code). V2 ghost stays removed (tombstone + `docs/P13_SPECULATIVE_V2_REMOVED.md`) |
+
+Verification: `test_inference_opt.exe` → `[KV Truncate Test] Passed.`,
+`[Speculative Decoding Test] Passed.`, `[Flash Attention Test] Passed.`,
+`Optimized Inference Test Passed!` (this round, Release).
+
+## 1000-bug sweep round 28 — 2026-09-13 (tokenizer decode/sscanf)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| T1 | `decode_utf8_bytes` missing `id >= 256` lower bound (negative-id UB-ish) | Both bounds enforced |
+| T2 | Qwen `<0xHH>` via sscanf (1-digit accept, no range check) | Exact-2-hex hand parse |
+| Note | Transient `SpeculativeDecoder` C2011 during parallel build (external C-15 truncate work landing mid-build); clean on rebuild | Full suite green after |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
