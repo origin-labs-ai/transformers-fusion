@@ -5,8 +5,12 @@
 // math_avx2_tensor.cpp, math_avx2_tiled.cpp ("kept self-contained" drift
 // risk — three copies of polynomial constants). Include under
 // #if defined(QUANT_AVX2) after <immintrin.h>.
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || \
+    defined(_M_X64) || defined(_M_IX86)
 #include <immintrin.h>
+#endif
 
+#if defined(QUANT_AVX2) || defined(__AVX2__)
 namespace quant {
 namespace math {
 namespace detail {
@@ -40,3 +44,4 @@ inline __m256 exp_ps(__m256 x) {
 } // namespace detail
 } // namespace math
 } // namespace quant
+#endif // defined(QUANT_AVX2) || defined(__AVX2__)
