@@ -1017,6 +1017,19 @@ root-caused from step timings + annotations (log download needs admin rights):
 
 Still open after round 6: `CI Full` rerun result (triggered by the push); `macos.yml` dedicated workflow (shares the AVX2 fix via `macos.yml`'s own `QUANT_AVX2=OFF`, but its 50s failure needs the rerun to confirm); docker 1s failure (log access denied — rerun owed).
 
+## CI-fix round 9 — 2026-09-13 (macOS BUILD GREEN + ios env-coupled fix)
+
+Historic: the `macos.yml` Build step went **SUCCESS** (3-min compile+link)
+on run `34764029183` — the Metal static-member fix + portability guards
+work on Apple Clang ARM64. First-ever macOS build green. The Wave-7 gate
+then failed on ONE test, same environment-coupling class as the Ubuntu
+android case:
+
+| # | Failure | Root cause | Fix (commit `3d62a61`, pushed) |
+|---|---|---|---|
+| M-wave7 | `test_production.cpp:202`: `ios deploy returns false (not on macOS)` on macOS runner | `deploy_ios()` returns true when `xcodebuild` runs — macOS CI hosts ship Xcode, bare boxes don't | Same contract-pinning as android: expect `xcodebuild`-detectability on `__APPLE__` (`system()` probe, mirroring the impl), false elsewhere. Verified Windows **36/36** + Linux **36/36** |
+| Scoreboard | Windows CI job FULL SUCCESS; Ubuntu GCC-13 + Clang-18 Quick SUCCESS; Clang coverage SUCCESS; clang-tidy SUCCESS; Docker SUCCESS; macOS Build SUCCESS + Wave-7 3/4 (ios fix in rerun) | Remaining: macOS Wave-7 rerun, Full-suite rerun, `ci_full` macOS leg (44s fail — same source, rerun owed) | — |
+
 ## CI-fix round 7 — 2026-09-13 (macOS exact error → fix, owner-provided log)
 
 Owner pasted the `macos.yml` Build log. It compiled 73/374 TUs fine
