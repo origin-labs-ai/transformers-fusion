@@ -1728,28 +1728,23 @@ public:
     // present (perf-invalid fallback REMOVED), unavailable-throw when no
     // device. Previous warn+CPU path let callers mistake CPU GFLOPS for
     // Vulkan GFLOPS.
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "gemm", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "gemm", "GEMM SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "gemv", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "gemv", "GEMV SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "softmax", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "softmax", "softmax SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "layer_norm", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "layer_norm", "layer_norm SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "rms_norm", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "rms_norm", "rms_norm SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
@@ -1837,8 +1832,7 @@ public:
         vk_->free(db);
         vk_->free(dc);
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         if (!vk_ || !vk_->is_initialized()) throw_unavailable("GPU_VULKAN", "scale", "no Vulkan device on this host");
         throw_unavailable("GPU_VULKAN", "scale", "scale SPIR-V shader not implemented (relu/gelu/silu/add/mul only)");
     }
@@ -1993,8 +1987,7 @@ public:
             for (int64_t i = 0; i < C.numel(); ++i) c[i] = t[i];
         }
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_HIP", "gemv", "no HIP/ROCm runtime on this host");
         throw_unavailable("GPU_HIP", "gemv", "no launch_gemv in GpuComputeHip (gemm/relu/silu/gelu/softmax/rmsnorm/add/mul only)");
     }
@@ -2006,8 +1999,7 @@ public:
         int rows = (int)x.dim(0), cols = (int)(x.numel() / x.dim(0));
         hip_->launch_softmax(y.data<float>(), rows, cols);
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_HIP", "layer_norm", "no HIP/ROCm runtime on this host");
         throw_unavailable("GPU_HIP", "layer_norm", "no layernorm kernel in GpuComputeHip (PARTIAL gap)");
     }
@@ -2947,13 +2939,15 @@ BackendConfig select_optimal_backend(const HardwareProfile& hw,
         return cfg;
     }
 
-    // Vulkan PARTIAL last-resort before generic CPU: relu-family ops are
-    // REAL on a live device. Callers needing GEMM must handle the throw.
-    if (hw.has_vulkan) {
-        cfg.type = BackendType::GPU_VULKAN;
-        cfg.device_name = "GPU_VULKAN";
-        return cfg;
-    }
+    // NOTE: PARTIAL Vulkan (relu-family only, throws on GEMM) is deliberately
+    // NOT auto-selected. auto_select_backend promises a FULL backend
+    // (gemm-capable; enforced by test_backends_realonly T5), and a default
+    // that cannot GEMM is a hostile default. Request GPU_VULKAN explicitly
+    // (BackendType::GPU_VULKAN) for its relu-family strengths. Found via the
+    // WSL/Linux bring-up: a scalar+Vulkan box auto-selected Vulkan and T5
+    // failed with 0.0 GFLOPS on gemm.
+
+    // Fallback: scalar CPU
 
     // iGPU shared memory for large models on systems with DirectX
     if (hw.has_directx) {

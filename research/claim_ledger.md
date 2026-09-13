@@ -817,3 +817,11 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 |---|---|---|
 | U1-U22 | `GPU_VIRTGPUBackend` + `GPU_WEBGPUBackend` fail-loud stubs: 22 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 39 — 2026-09-13 (Vulkan + HIP stubs)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U8 | Vulkan shader-missing + HIP gap stubs: 8 named-but-unused + `(void)` lines | Unnamed params |
+| Note | Transient file-lock on `backend.cpp` (parallel external agent holds it open); edit tool retried after re-read | Landed clean, full suite green |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
