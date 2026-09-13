@@ -2134,49 +2134,38 @@ public:
     ~NPUZDNNBackend() override { delete zd_; }
     BackendType type() const override { return BackendType::NPU_ZDNN; }
     const char* name() const override { return "NPU_ZDNN"; }
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("NPU_ZDNN", "gemm", "no zDNN runtime (s390x) on this host");
         throw_unavailable("NPU_ZDNN", "gemm", "zDNN matmul not wired (host triple-loop stub only)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "gemv", "zDNN kernels not implemented (stub backend)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("NPU_ZDNN", "softmax", "zDNN kernels not implemented (stub backend)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "layer_norm", "zDNN kernels not implemented (stub backend)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "rms_norm", "zDNN kernels not implemented (stub backend)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "relu", "zDNN kernels not implemented (stub backend)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "gelu", "zDNN kernels not implemented (stub backend)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "silu", "zDNN kernels not implemented (stub backend)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "add", "zDNN kernels not implemented (stub backend)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "mul", "zDNN kernels not implemented (stub backend)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_ZDNN", "scale", "zDNN kernels not implemented (stub backend)");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }

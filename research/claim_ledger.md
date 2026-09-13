@@ -850,3 +850,10 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | L-select | Auto-select preferred PARTIAL Vulkan (no GEMM) over full CPU_SCALAR → T5 gemm contract FAIL | **FIXED.** PARTIAL Vulkan is opt-in only (`BackendType::GPU_VULKAN`); default is always FULL/gemm-capable |
 | L-suite | Full Linux suite (CI PR-gate exclusion set) | **64/64 PASSED, 0 failed** (`ctest -E 'test_protected\|test_gpu\|test_training\|test_native_quant\|test_moe_training\|paged_kv_1t_test'` — same exclusions CI uses; `test_gpu*`/`test_training*` substring-matched). Windows Release still **72/72 green** |
 | Owed | Excluded heavies (protected/training/native_quant/moe_training/paged_kv_1t) = nightly set per CI design; macOS still pending (no runner here) | Linux CI workflow files unchanged and now plausible (tree compiles on GCC) |
+
+## 1000-bug sweep round 41 — 2026-09-13 (zDNN stub)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U11 | `NPU_ZDNNBackend` fail-loud stubs: 11 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
