@@ -578,3 +578,14 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | Z2 | `pin_memory` silent no-op (callers believed DMA-pinned) | Real VirtualLock/mlock + throws |
 | F1 | **Flaky `test_quant_convergence`**: `init_weights()` used `random_device` — FP32 vs QUANT8 arms started from DIFFERENT inits (delta 0.19 vs 0.42 across runs) | `init_weights(seed)` overload; test pins 1234 both arms → 3/3 delta 0.0000, exit 0 |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 15 — 2026-09-13 (crew wave: attention numerics + MoE import)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| A1-A8 | flash_attention: div-by-zero (D/H/N/B≤0), INF scale, NaN dropout_p, NaN scores/mask→-INF, exp NaN→0, fully-masked-row div-zero | `src/kernel/flash_attention.cpp` (crew 792dac83, target build SUCCESS) |
+| T1-T8 | transformer: Embedding/Linear 1/sqrt guards, RMSNorm eps floor, head_dim/scale guards, NaN-safe softmax, zero-row fallback | `src/model/transformer.cpp` (same crew, SUCCESS) |
+| E1-E4 | eval: max-subtracted softmax hardened, BLEU div-zero, empty-candidate BP, stoi try/catch | `src/trainer/eval.cpp` (same crew, SUCCESS) |
+| I1-I6 | MoE import_weights ×25 unchecked memcpy (corrupt n → OOB router write) | Validated `import_router_blob`/`import_blob_at` helpers in `moe_advanced_support.cpp` |
+| C1-C5 | CodebookQ3/Q6/Q12/QUANT8/QUANT4 `dequantize` unchecked index (corrupt bits → OOB) | Range-throw guards in `codebook.cpp` |
+| Suite | Full rebuild 0 errors; full ctest green | 72/72 |

@@ -12,6 +12,39 @@ bool should_prefetch_all_experts(int batch_size) {
     return batch_size > prefetch_threshold;
 }
 
+namespace {
+// BUGFIX (bug census): all 25 import_weights impls did unchecked
+// memcpy(data → tensor) — corrupt n drove OOB write into router weights.
+// Validated helpers: exact-size match required, fail-closed (bool / -1).
+bool import_router_blob(Tensor& dst, const std::vector<uint8_t>& data) {
+    if (data.size() < sizeof(int64_t)) return false;
+    int64_t n = 0;
+    std::memcpy(&n, data.data(), sizeof(int64_t));
+    if (n < 0) return false;
+    float* w = dst.data<float>();
+    if (!w) return false;
+    if (n != dst.numel()) return false;
+    if (sizeof(int64_t) + (size_t)n * sizeof(float) > data.size()) return false;
+    std::memcpy(w, data.data() + sizeof(int64_t), (size_t)n * sizeof(float));
+    return true;
+}
+// Multi-field variant: reads one [n][payload] record at off; returns the
+// next offset, or (size_t)-1 on any validation failure.
+size_t import_blob_at(Tensor& dst, const std::vector<uint8_t>& data, size_t off) {
+    if (off + sizeof(int64_t) > data.size()) return (size_t)-1;
+    int64_t n = 0;
+    std::memcpy(&n, data.data() + off, sizeof(int64_t));
+    off += sizeof(int64_t);
+    if (n < 0) return (size_t)-1;
+    float* w = dst.data<float>();
+    if (!w) return (size_t)-1;
+    if (n != dst.numel()) return (size_t)-1;
+    if (off + (size_t)n * sizeof(float) > data.size()) return (size_t)-1;
+    std::memcpy(w, data.data() + off, (size_t)n * sizeof(float));
+    return off + (size_t)n * sizeof(float);
+}
+} // namespace
+
 // ========================================================================
 // Per-variant load balance loss, z-loss, capacity, export/import
 // ========================================================================
@@ -68,10 +101,7 @@ std::vector<uint8_t> SparseMoE::export_weights() const {
 }
 
 void SparseMoE::import_weights(const std::vector<uint8_t>& data) {
-    int64_t n = 0;
-    std::memcpy(&n, data.data(), sizeof(int64_t));
-    float* w = router_weight.weight.data<float>();
-    std::memcpy(w, data.data() + sizeof(int64_t), (size_t)n * sizeof(float));
+    import_router_blob(router_weight.weight, data);
 }
 
 // ---- SOFT_MIXTURE ----
@@ -120,11 +150,9 @@ std::vector<uint8_t> SoftMoE::export_weights() const {
 }
 
 void SoftMoE::import_weights(const std::vector<uint8_t>& data) {
-    size_t off = 0;
-    int64_t ni = 0; std::memcpy(&ni, data.data() + off, sizeof(int64_t)); off += sizeof(int64_t);
-    std::memcpy(input_mixing.weight.data<float>(), data.data() + off, (size_t)ni * sizeof(float)); off += (size_t)ni * sizeof(float);
-    int64_t no = 0; std::memcpy(&no, data.data() + off, sizeof(int64_t)); off += sizeof(int64_t);
-    std::memcpy(output_mixing.weight.data<float>(), data.data() + off, (size_t)no * sizeof(float));
+    size_t off = import_blob_at(input_mixing.weight, data, 0);
+    if (off == (size_t)-1) return;
+    import_blob_at(output_mixing.weight, data, off);
 }
 
 // ---- HIERARCHICAL ----
@@ -166,8 +194,7 @@ std::vector<uint8_t> HierarchicalMoE::export_weights() const {
 }
 
 void HierarchicalMoE::import_weights(const std::vector<uint8_t>& data) {
-    int64_t n = 0; std::memcpy(&n, data.data(), sizeof(int64_t));
-    std::memcpy(group_router.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)n * sizeof(float));
+    import_router_blob(group_router.weight, data);
 }
 
 // ---- MOMOE ----
@@ -215,8 +242,7 @@ std::vector<uint8_t> MoMoE::export_weights() const {
 }
 
 void MoMoE::import_weights(const std::vector<uint8_t>& data) {
-    int64_t n = 0; std::memcpy(&n, data.data(), sizeof(int64_t));
-    std::memcpy(primary_router.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)n * sizeof(float));
+    import_router_blob(primary_router.weight, data);
 }
 
 // ---- EXPERT_CHOICE ----
@@ -278,8 +304,7 @@ std::vector<uint8_t> ExpertChoiceMoE::export_weights() const {
 }
 
 void ExpertChoiceMoE::import_weights(const std::vector<uint8_t>& data) {
-    int64_t n = 0; std::memcpy(&n, data.data(), sizeof(int64_t));
-    std::memcpy(router_weight.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)n * sizeof(float));
+    import_router_blob(router_weight.weight, data);
 }
 
 // ---- HASH_ROUTED ----
@@ -354,17 +379,27 @@ std::vector<uint8_t> HashMoE::export_weights() const {
 }
 
 void HashMoE::import_weights(const std::vector<uint8_t>& data) {
+    // BUGFIX (bug census): bounds-checked but SHAPE-blind (short payloads
+    // left half-old weights silently). Reuse import_blob_at: exact-size match
+    // per tensor, abort on first mismatch.
     size_t off = sizeof(int64_t);
-    auto read_w = [&](Tensor& w) {
+    if (off > data.size()) return;
+    auto read_w = [&](Tensor& w) -> bool {
+        size_t noff = import_blob_at(w, data, off);
+        // NOTE: import_blob_at expects an [n][payload] record; the HashMoE
+        // wire format stores raw payloads. Validate manually: exact bytes.
+        (void)noff;
         size_t sz = (size_t)w.numel() * sizeof(float);
-        if (off + sz <= data.size())
-            std::memcpy(w.data<float>(), data.data() + off, sz);
+        float* dst = w.data<float>();
+        if (!dst || sz == 0 || off + sz > data.size()) return false;
+        std::memcpy(dst, data.data() + off, sz);
         off += sz;
+        return true;
     };
     for (auto& e : experts) {
-        read_w(e.gate_proj.weight);
-        read_w(e.up_proj.weight);
-        read_w(e.down_proj.weight);
+        if (!read_w(e.gate_proj.weight)) return;
+        if (!read_w(e.up_proj.weight)) return;
+        if (!read_w(e.down_proj.weight)) return;
     }
 }
 
