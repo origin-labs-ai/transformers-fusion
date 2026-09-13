@@ -695,3 +695,11 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | C1 | `quant_generate` C-API `new+strcpy` (throw-leak + unchecked) | nothrow + null-check + memcpy |
 | K2 | `ByteLevelBPETokenizer::load` same unvalidated bug as BPE load | Caps + commit-on-success (fixed member types) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 27 — 2026-09-13 (offload free + state snapshot)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| Z1 | `deallocate_cpu` always VirtualFree (malloc fallback → heap corruption) | Source-tracked free |
+| Z2 | `get_owned_state` const& to shared/thread-local mutable (cross-thread view + dangling) | By-value snapshot (callers: none, safe) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

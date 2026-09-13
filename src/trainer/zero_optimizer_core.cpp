@@ -1,4 +1,4 @@
-﻿#define NOMINMAX
+#define NOMINMAX
 #include "quant/zero_optimizer.h"
 #include "quant/math.h"
 #include <algorithm>
@@ -338,10 +338,13 @@ float ZeroOptimizer::memory_savings_ratio() const {
     return full > 0 ? 1.0f - (float)owned / full : 0.0f;
 }
 
-const ZeroOptimizer::OptimizerState& ZeroOptimizer::get_owned_state(size_t idx) const {
-    static OptimizerState empty;
-    if (idx >= owned_params_.size()) return empty;
-    static thread_local OptimizerState os;
+ZeroOptimizer::OptimizerState ZeroOptimizer::get_owned_state(size_t idx) const {
+    // BUGFIX (bug census): returned const& to `static OptimizerState empty`
+    // (shared mutable across threads) and `static thread_local os` mutated on
+    // every call (caller holding the ref sees it change under them). Return a
+    // snapshot by value instead — the struct is small (tensors are views).
+    OptimizerState os;
+    if (idx >= owned_params_.size()) return os;
     auto& op = owned_params_[idx];
     os.param = params_[op.global_idx];
     os.m = op.m;
@@ -351,6 +354,8 @@ const ZeroOptimizer::OptimizerState& ZeroOptimizer::get_owned_state(size_t idx) 
     os.numel = op.m.numel();
     if (os.param && os.param->has_grad())
         os.grad = &os.param->grad();
+    else
+        os.grad = nullptr;
     return os;
 }
 
@@ -377,11 +382,17 @@ void* CPUOffloadEngine::allocate_cpu(int64_t size_bytes) {
 #ifdef _WIN32
     void* ptr = VirtualAlloc(nullptr, size_bytes,
                               MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!ptr) ptr = std::malloc(size_bytes);
+    if (!ptr) {
+        ptr = std::malloc(size_bytes);
+        if (ptr) cpu_malloc_fallback_ = true;
+    }
 #else
     void* ptr = nullptr;
     int ret = posix_memalign(&ptr, 64, size_bytes);
-    if (ret != 0) ptr = std::malloc(size_bytes);
+    if (ret != 0) {
+        ptr = std::malloc(size_bytes);
+        if (ptr) cpu_malloc_fallback_ = true;
+    }
 #endif
     if (ptr) std::memset(ptr, 0, size_bytes);
     return ptr;
@@ -389,6 +400,13 @@ void* CPUOffloadEngine::allocate_cpu(int64_t size_bytes) {
 
 void CPUOffloadEngine::deallocate_cpu(void* ptr) {
     if (!ptr) return;
+    // BUGFIX (bug census): always VirtualFree'd even when allocate_cpu fell
+    // back to malloc (heap corruption). Track the source and free correctly.
+    if (cpu_malloc_fallback_) {
+        cpu_malloc_fallback_ = false;
+        std::free(ptr);
+        return;
+    }
 #ifdef _WIN32
     VirtualFree(ptr, 0, MEM_RELEASE);
 #else

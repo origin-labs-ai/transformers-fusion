@@ -91,7 +91,7 @@ public:
         int global_idx = -1;
         int64_t numel = 0;
     };
-    const OptimizerState& get_owned_state(size_t idx) const;
+    OptimizerState get_owned_state(size_t idx) const;
     size_t num_owned() const { return owned_params_.size(); }
 
 private:
@@ -233,6 +233,10 @@ private:
     // CPU pinned memory pool
     void* cpu_pool_ = nullptr;
     int64_t cpu_pool_used_ = 0;
+    // BUGFIX (bug census): allocate_cpu falls back to malloc when
+    // VirtualAlloc/posix_memalign fails; deallocate_cpu must free with the
+    // matching call (VirtualFree on malloc'd memory = heap corruption).
+    bool cpu_malloc_fallback_ = false;
 
     // Async worker thread
     std::thread worker_thread_;
