@@ -1131,58 +1131,47 @@ public:
     // every compute op currently calls aclopExecuteV2 with NULL descriptors
     // (no-op, leaves C untouched) — claiming that as MatMul would be FAKE.
     // All compute ops fail loud until real tensor descriptors land.
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "gemm", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "gemm", "CANN MatMul descriptors not implemented (null-descriptor stub)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "gemv", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "gemv", "CANN MatMul descriptors not implemented (null-descriptor stub)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         if (!avail_) throw_unavailable("GPU_CANN", "softmax", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "softmax", "CANN SoftmaxV2 descriptors not implemented");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "layer_norm", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "layer_norm", "CANN LayerNorm descriptors not implemented");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "rms_norm", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "rms_norm", "CANN LayerNorm descriptors not implemented");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "relu", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "relu", "CANN Relu descriptors not implemented");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "gelu", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "gelu", "CANN Gelu descriptors not implemented");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "silu", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "silu", "CANN Swish descriptors not implemented");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "add", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "add", "CANN Add descriptors not implemented");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "mul", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "mul", "CANN Mul descriptors not implemented");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_CANN", "scale", "no Ascend CANN device on this host");
         throw_unavailable("GPU_CANN", "scale", "CANN Scale descriptors not implemented");
     }

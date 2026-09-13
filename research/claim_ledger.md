@@ -794,3 +794,10 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 |---|---|---|
 | U1-U12 | `CPUAVX512Backend` no-AVX512 stub + `GPU_SYCLBackend` fail-loud stubs: 22 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 36 — 2026-09-13 (CANN stub params)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U11 | `GPU_CANNBackend` fail-loud stubs: 11 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
