@@ -1000,6 +1000,7 @@ fix + `exp_avx2.h` Apple guard, a clean Windows MSVC Release tree
 | F-72 | `ctest --test-dir build-verify -C Release --timeout 600` | **100% tests passed, 0 failed out of 72** (Total Test time 176.89s) |
 | F-note | Stale `build/` dir (CMakeCache from another machine) is NOT evidence — superseded by `build-verify/` + `build-prod/` fresh configures | Old `build/Testing/` logs must not be cited |
 | F-linux | Fresh Linux full suite with ALL fixes (`test_production` android-contract + `exp_avx2.h` + `kernel_production` + Metal static-member): `ctest --test-dir build-final-lin --timeout 600` (WSL2/GCC15.2, Ninja) | **100% tests passed, 0 failed out of 71** (71 = 72 minus WIN32-only `test_gpu`; Total Test time 143.79s). Full build 374/374 targets green |
+| F-k3 | K3 deletions (`tools/k3_convert.cpp` + `src/math/math_avx2_tensor.cpp`, owner order) break nothing: fresh Windows MSVC configure + full build + `ctest --test-dir build-k3check -C Release` | **100% tests passed, 0 failed out of 72** (both files were unwired/excluded — zero build impact, as predicted) |
 
 ## CI-fix round 6 — 2026-09-13 (`CI Full` remaining red legs → fixes, pushed)
 
