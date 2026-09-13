@@ -1,0 +1,74 @@
+# L077: macOS CI (Phase 16 Wave 7).
+#
+# Dedicated Apple-Clang workflow. Distinct from ci_full.yml's macOS matrix leg:
+# ARM-safe flags (QUANT_AVX2=OFF — AVX2 is x86-only and would break Apple
+# Silicon), benchmarks off for speed, and an explicit Wave-7 gate that runs
+# the new contract/ECOSYSTEM suites by name so regressions fail loudly.
+name: CI macOS
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    name: "macOS / Apple Clang"
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install ninja || true
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: >
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DQUANT_BUILD_TESTS=ON
+          -DQUANT_BUILD_BENCHMARKS=OFF
+          -DQUANT_BUILD_TOOLS=ON
+          -DQUANT_AVX2=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Wave-7 gate (contract + missing-module + entry suites)
+        working-directory: build
+        run: >
+          ctest --output-on-failure
+          -R "test_server_contract|test_wave7_missing|test_unified_trainer|test_production"
+
+      - name: Full suite (PR exclusions mirror ci_full.yml)
+        working-directory: build
+        run: >
+          ctest --output-on-failure --timeout 120
+          --exclude-regex "test_protected|test_gpu|test_training|test_native_quant|test_moe_training|paged_kv_1t_test"
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          # Binaries land at the build root (no RUNTIME_OUTPUT_DIRECTORY set),
+          # test binaries under build/tests/.
+          path: |
+            build/tests/*
+            build/quant_serve
+            build/quant_server
+            build/quant_infer
+            build/quant_convert
+          retention-days: 14
