@@ -362,7 +362,12 @@ std::vector<int> Qwen35Tokenizer::bpe_encode(const std::string& word) const {
         }
         if (best_i < 0) break;
         uint64_t key = ((uint64_t)(uint32_t)seq[(size_t)best_i] << 32) | (uint32_t)seq[(size_t)best_i + 1];
-        seq[(size_t)best_i] = target.at(key);
+        // BUGFIX (bug census): .at() throws out_of_range when a merge rank
+        // exists but its target id was never registered (corrupt/partial
+        // tokenizer.json). Fail closed with the pair unmerged instead.
+        auto tgt = target.find(key);
+        if (tgt == target.end()) break;
+        seq[(size_t)best_i] = tgt->second;
         seq.erase(seq.begin() + best_i + 1);
     }
     return seq;
@@ -377,7 +382,11 @@ std::vector<int> Qwen35Tokenizer::encode(const std::string& text) {
         for (const auto& st : special_tokens_) {
             if (st.size() > n - pos) continue;
             if (text.compare(pos, st.size(), st) == 0) {
-                ids.push_back(token_to_id_.at(st));
+                // BUGFIX (bug census): same .at() throw as the merge loop —
+                // a special token listed but unregistered (partial vocab).
+                auto sit = token_to_id_.find(st);
+                if (sit == token_to_id_.end()) break;
+                ids.push_back(sit->second);
                 pos += st.size();
                 matched = true;
                 break;

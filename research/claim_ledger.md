@@ -890,3 +890,10 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 |---|---|---|
 | D1-D2 | `DirectXCompute::upload/download` unchecked `Map()` (removed device → null deref) | HRESULT + null fail-closed |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 46 — 2026-09-13 (Qwen .at() throws)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| Q1-Q2 | `.at()` throws on corrupt/partial tokenizer.json (merge target + special token) | find()+fail-closed (unmerged/break) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
