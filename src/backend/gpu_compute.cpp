@@ -514,8 +514,10 @@ void DirectXCompute::upload(const Tensor& src, void* dst) {
     if (!gpuRes) return;
 
     auto upload = impl_->create_buffer(sz, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-    void* mapped;
-    upload->Map(0, nullptr, &mapped);
+    void* mapped = nullptr;
+    // BUGFIX (bug census): Map() HRESULT + null mapped unchecked (GPU-removed
+    // device → null deref). Fail closed like the vulkan path.
+    if (!upload || FAILED(upload->Map(0, nullptr, &mapped)) || !mapped) return;
     memcpy(mapped, data, sz);
     upload->Unmap(0, nullptr);
 
@@ -543,8 +545,9 @@ void DirectXCompute::download(void* src, Tensor& dst) {
     impl_->flush();
 
     D3D12_RANGE rr = { 0, sz };
-    void* mapped;
-    readback->Map(0, &rr, &mapped);
+    void* mapped = nullptr;
+    // BUGFIX (bug census): same unchecked Map() as upload() above.
+    if (FAILED(readback->Map(0, &rr, &mapped)) || !mapped) return;
     memcpy(data, mapped, sz);
     readback->Unmap(0, nullptr);
 }

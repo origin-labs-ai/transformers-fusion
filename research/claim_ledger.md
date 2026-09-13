@@ -883,3 +883,10 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | R1 | `is_rpc_available` connect() discard undocumented (sync-success vs EINPROGRESS) | Documented: select() decides |
 | G1 | `gpu_memory_free` device_id discard undocumented | Documented single-device query |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 45 — 2026-09-13 (D3D12 Map guards)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| D1-D2 | `DirectXCompute::upload/download` unchecked `Map()` (removed device → null deref) | HRESULT + null fail-closed |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
