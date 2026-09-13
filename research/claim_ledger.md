@@ -913,3 +913,11 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 |---|---|---|
 | G1 | `generate()` ran cross-attention fusion then discarded it (`(void)fused` — image never influenced output) | Fused output feeds next-step embedding |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 49 — 2026-09-13 (PIMPL double-free)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| P1-P5 | 5 raw-`Impl*` classes implicitly copyable + vector-realloc moves stole pointers without nulling (double-free, esp. `vector<CrossAttentionBlock>`) | Copy deleted + stealing move ctors/assigns (header+impl for the 2 member-rich types) |
+| Note | My first inline moves default-constructed members (C2512: no default ctor) — fixed to memberwise `std::move` | Full suite green after |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

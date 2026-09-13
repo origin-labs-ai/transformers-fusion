@@ -387,6 +387,30 @@ CrossAttentionBlock::CrossAttentionBlock(const CrossAttentionLayerConfig& cfg)
 
 CrossAttentionBlock::~CrossAttentionBlock() { delete impl_; }
 
+// Move steals impl_ (declared in header); Linear/RMSNorm members move via
+// their own rules. Copy is deleted in the header (double-free guard).
+CrossAttentionBlock::CrossAttentionBlock(CrossAttentionBlock&& o) noexcept
+    : config(o.config), q_proj(std::move(o.q_proj)), k_proj(std::move(o.k_proj)),
+      v_proj(std::move(o.v_proj)), out_proj(std::move(o.out_proj)),
+      ffn_fc1(std::move(o.ffn_fc1)), ffn_fc2(std::move(o.ffn_fc2)),
+      norm1(std::move(o.norm1)), norm2(std::move(o.norm2)),
+      cross_norm(std::move(o.cross_norm)), impl_(o.impl_) {
+    o.impl_ = nullptr;
+}
+CrossAttentionBlock& CrossAttentionBlock::operator=(CrossAttentionBlock&& o) noexcept {
+    if (this != &o) {
+        delete impl_;
+        config = o.config;
+        q_proj = std::move(o.q_proj); k_proj = std::move(o.k_proj);
+        v_proj = std::move(o.v_proj); out_proj = std::move(o.out_proj);
+        ffn_fc1 = std::move(o.ffn_fc1); ffn_fc2 = std::move(o.ffn_fc2);
+        norm1 = std::move(o.norm1); norm2 = std::move(o.norm2);
+        cross_norm = std::move(o.cross_norm);
+        impl_ = o.impl_; o.impl_ = nullptr;
+    }
+    return *this;
+}
+
 Tensor CrossAttentionBlock::forward_self_attn(const Tensor& x) {
     // Real self-attention pass: attend x against itself. Self-attention is
     // just cross-attention with query == key == value == x, so reuse the
@@ -495,6 +519,34 @@ ModalityFusionEncoder::ModalityFusionEncoder(const MultimodalEncoderConfig& cfg)
 }
 
 ModalityFusionEncoder::~ModalityFusionEncoder() { delete impl_; }
+
+// Move steals impl_; vectors of CrossAttentionBlock move elementwise (their
+// new move ctors make realloc safe — this was the double-free vector).
+ModalityFusionEncoder::ModalityFusionEncoder(ModalityFusionEncoder&& o) noexcept
+    : config(o.config), text_cross_attn_layers(std::move(o.text_cross_attn_layers)),
+      image_cross_attn_layers(std::move(o.image_cross_attn_layers)),
+      audio_cross_attn_layers(std::move(o.audio_cross_attn_layers)),
+      shared_fusion_layers(std::move(o.shared_fusion_layers)),
+      text_proj(std::move(o.text_proj)), image_proj(std::move(o.image_proj)),
+      audio_proj(std::move(o.audio_proj)), output_proj(std::move(o.output_proj)),
+      output_norm(std::move(o.output_norm)), impl_(o.impl_) {
+    o.impl_ = nullptr;
+}
+ModalityFusionEncoder& ModalityFusionEncoder::operator=(ModalityFusionEncoder&& o) noexcept {
+    if (this != &o) {
+        delete impl_;
+        config = o.config;
+        text_cross_attn_layers = std::move(o.text_cross_attn_layers);
+        image_cross_attn_layers = std::move(o.image_cross_attn_layers);
+        audio_cross_attn_layers = std::move(o.audio_cross_attn_layers);
+        shared_fusion_layers = std::move(o.shared_fusion_layers);
+        text_proj = std::move(o.text_proj); image_proj = std::move(o.image_proj);
+        audio_proj = std::move(o.audio_proj); output_proj = std::move(o.output_proj);
+        output_norm = std::move(o.output_norm);
+        impl_ = o.impl_; o.impl_ = nullptr;
+    }
+    return *this;
+}
 
 void ModalityFusionEncoder::apply_modality_dropout(Tensor& text_emb, Tensor& image_emb,
                                                      Tensor& audio_emb,

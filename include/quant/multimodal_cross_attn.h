@@ -82,6 +82,28 @@ class VisionTransformer {
 public:
     VisionTransformer(const ViTConfig& cfg);
     ~VisionTransformer();
+    // BUGFIX (bug census): raw Impl* + implicit copy/move = double-free
+    // (vector realloc moves the pointer without nulling the source).
+    VisionTransformer(const VisionTransformer&) = delete;
+    VisionTransformer& operator=(const VisionTransformer&) = delete;
+    VisionTransformer(VisionTransformer&& o) noexcept
+        : config(std::move(o.config)), patch_embed(std::move(o.patch_embed)),
+          attn_qkv(std::move(o.attn_qkv)), attn_out(std::move(o.attn_out)),
+          mlp_fc1(std::move(o.mlp_fc1)), mlp_fc2(std::move(o.mlp_fc2)),
+          norm1(std::move(o.norm1)), norm2(std::move(o.norm2)),
+          final_norm(std::move(o.final_norm)), impl_(o.impl_) { o.impl_ = nullptr; }
+    VisionTransformer& operator=(VisionTransformer&& o) noexcept {
+        if (this != &o) {
+            delete impl_;
+            config = std::move(o.config); patch_embed = std::move(o.patch_embed);
+            attn_qkv = std::move(o.attn_qkv); attn_out = std::move(o.attn_out);
+            mlp_fc1 = std::move(o.mlp_fc1); mlp_fc2 = std::move(o.mlp_fc2);
+            norm1 = std::move(o.norm1); norm2 = std::move(o.norm2);
+            final_norm = std::move(o.final_norm);
+            impl_ = o.impl_; o.impl_ = nullptr;
+        }
+        return *this;
+    }
 
     Tensor forward(const Tensor& images);
     std::vector<Tensor> get_patch_features(const Tensor& images);
@@ -116,6 +138,27 @@ class AudioTransformer {
 public:
     AudioTransformer(const AudioEncoderConfig& cfg);
     ~AudioTransformer();
+    // BUGFIX (bug census): same raw-Impl double-free as VisionTransformer.
+    AudioTransformer(const AudioTransformer&) = delete;
+    AudioTransformer& operator=(const AudioTransformer&) = delete;
+    AudioTransformer(AudioTransformer&& o) noexcept
+        : config(std::move(o.config)), conv1(std::move(o.conv1)), conv2(std::move(o.conv2)),
+          attn_qkv(std::move(o.attn_qkv)), attn_out(std::move(o.attn_out)),
+          ffn_fc1(std::move(o.ffn_fc1)), ffn_fc2(std::move(o.ffn_fc2)),
+          norm1(std::move(o.norm1)), norm2(std::move(o.norm2)),
+          final_norm(std::move(o.final_norm)), impl_(o.impl_) { o.impl_ = nullptr; }
+    AudioTransformer& operator=(AudioTransformer&& o) noexcept {
+        if (this != &o) {
+            delete impl_;
+            config = std::move(o.config); conv1 = std::move(o.conv1); conv2 = std::move(o.conv2);
+            attn_qkv = std::move(o.attn_qkv); attn_out = std::move(o.attn_out);
+            ffn_fc1 = std::move(o.ffn_fc1); ffn_fc2 = std::move(o.ffn_fc2);
+            norm1 = std::move(o.norm1); norm2 = std::move(o.norm2);
+            final_norm = std::move(o.final_norm);
+            impl_ = o.impl_; o.impl_ = nullptr;
+        }
+        return *this;
+    }
 
     Tensor forward(const Tensor& spectrograms);
     Tensor encode(const Tensor& spectrograms);
@@ -140,6 +183,14 @@ class CrossAttentionBlock {
 public:
     CrossAttentionBlock(const CrossAttentionLayerConfig& cfg);
     ~CrossAttentionBlock();
+    // BUGFIX (bug census): same raw-Impl double-free; CRITICAL here because
+    // ModalityFusionEncoder stores these in vectors (realloc moves).
+    // NOTE: move still copies Linear/RMSNorm members (their own move rules
+    // apply); impl_ pointer is stolen + nulled.
+    CrossAttentionBlock(const CrossAttentionBlock&) = delete;
+    CrossAttentionBlock& operator=(const CrossAttentionBlock&) = delete;
+    CrossAttentionBlock(CrossAttentionBlock&& o) noexcept;
+    CrossAttentionBlock& operator=(CrossAttentionBlock&& o) noexcept;
 
     Tensor forward(const Tensor& query, const Tensor& key_value,
                    const std::string& modality_tag = "");
@@ -165,6 +216,11 @@ class ModalityFusionEncoder {
 public:
     ModalityFusionEncoder(const MultimodalEncoderConfig& cfg);
     ~ModalityFusionEncoder();
+    // BUGFIX (bug census): same raw-Impl double-free as the blocks above.
+    ModalityFusionEncoder(const ModalityFusionEncoder&) = delete;
+    ModalityFusionEncoder& operator=(const ModalityFusionEncoder&) = delete;
+    ModalityFusionEncoder(ModalityFusionEncoder&& o) noexcept;
+    ModalityFusionEncoder& operator=(ModalityFusionEncoder&& o) noexcept;
 
     Tensor fuse(const Tensor& text_emb, const Tensor& image_emb, const Tensor& audio_emb);
     Tensor fuse_early(const Tensor& text_emb, const Tensor& image_emb, const Tensor& audio_emb);
@@ -219,6 +275,28 @@ class MultimodalCrossAttention {
 public:
     MultimodalCrossAttention(const MultimodalEncoderConfig& cfg = MultimodalEncoderConfig());
     ~MultimodalCrossAttention();
+    // BUGFIX (bug census): same raw-Impl double-free as the encoders above.
+    MultimodalCrossAttention(const MultimodalCrossAttention&) = delete;
+    MultimodalCrossAttention& operator=(const MultimodalCrossAttention&) = delete;
+    MultimodalCrossAttention(MultimodalCrossAttention&& o) noexcept
+        : config(std::move(o.config)), vision_encoder(std::move(o.vision_encoder)),
+          audio_encoder(std::move(o.audio_encoder)),
+          text_embedding(std::move(o.text_embedding)),
+          fusion(std::move(o.fusion)),
+          contrastive_head(std::move(o.contrastive_head)), impl_(o.impl_) { o.impl_ = nullptr; }
+    MultimodalCrossAttention& operator=(MultimodalCrossAttention&& o) noexcept {
+        if (this != &o) {
+            delete impl_;
+            config = std::move(o.config);
+            vision_encoder = std::move(o.vision_encoder);
+            audio_encoder = std::move(o.audio_encoder);
+            text_embedding = std::move(o.text_embedding);
+            fusion = std::move(o.fusion);
+            contrastive_head = std::move(o.contrastive_head);
+            impl_ = o.impl_; o.impl_ = nullptr;
+        }
+        return *this;
+    }
 
     Tensor forward(const Tensor& text_tokens, const Tensor& image_tokens,
                    const Tensor& audio_tokens, bool training = false);
