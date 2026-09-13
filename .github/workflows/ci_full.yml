@@ -37,8 +37,15 @@ jobs:
             asan: false
             coverage: true
           - os: windows-latest
-            cc: clang-cl
-            cxx: clang-cl
+            # Plain MSVC (cl.exe via msvc-dev-cmd, no CC/CXX override).
+            # A clang-cl override was tried here and failed Configure in ~2s
+            # on windows-latest across runs (2026-09-13); the plain-MSVC
+            # Ninja pattern is proven green by build.yml's Windows job on the
+            # same image. Clang coverage stays via the clang-18 Linux leg.
+            # cc/cxx stay "msvc" (not empty): the Configure step maps "msvc"
+            # to UNSET env so CMake picks cl.exe from the msvc-dev-cmd PATH.
+            cc: msvc
+            cxx: msvc
             cmake_args: -DCMAKE_BUILD_TYPE=Release
             generator: Ninja
             asan: false
@@ -46,7 +53,11 @@ jobs:
           - os: macos-latest
             cc: clang
             cxx: clang++
-            cmake_args: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-march=native"
+            # ARM-safe: NO -march=native here (Apple Silicon = arm64; x86
+            # march flags are hard errors, 2026-09-13). The Configure step
+            # additionally forces -DQUANT_AVX2=OFF on macOS. Mirrors
+            # macos.yml's ARM-safe flags.
+            cmake_args: -DCMAKE_BUILD_TYPE=Release
             generator: Ninja
             asan: false
             coverage: false
@@ -104,15 +115,27 @@ jobs:
             build-${{ runner.os }}-
 
       - name: Configure CMake
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
+        # bash on all three OSes (Windows default is pwsh, which cannot run
+        # the POSIX conditionals below; Git Bash ships on windows-latest).
+        shell: bash
         run: |
+          # Compiler selection: "msvc" sentinel (Windows leg) = export
+          # NOTHING so CMake picks cl.exe from the msvc-dev-cmd PATH.
+          # (An empty-string CC export breaks compiler detection; an
+          # explicit clang-cl broke Configure in ~2s on windows-latest.)
+          if [ "${{ matrix.cc }}" != "msvc" ]; then
+            export CC="${{ matrix.cc }}" CXX="${{ matrix.cxx }}"
+          fi
+          # AVX2 is x86-only: force OFF on macOS (Apple Silicon ARM64) where
+          # -mavx2/-mavx/-mbmi2/-mfma are hard errors (2026-09-13). Mirrors
+          # macos.yml's ARM-safe flags. x86 legs keep ON for SIMD coverage.
+          AVX2_FLAG="-DQUANT_AVX2=ON"
+          if [ "${{ runner.os }}" = "macOS" ]; then AVX2_FLAG="-DQUANT_AVX2=OFF"; fi
           cmake -B build -G "${{ matrix.generator }}" ${{ matrix.cmake_args }} \
             -DQUANT_BUILD_TESTS=ON \
             -DQUANT_BUILD_BENCHMARKS=ON \
             -DQUANT_BUILD_TOOLS=ON \
-            -DQUANT_AVX2=ON \
+            $AVX2_FLAG \
             -DCMAKE_CXX_STANDARD=20
 
       - name: Build
@@ -156,6 +179,12 @@ jobs:
       - name: Code coverage (Linux Clang)
         if: runner.os == 'Linux' && matrix.coverage
         timeout-minutes: 15
+        # CC/CXX MUST be clang here: the coverage flags below
+        # (-fprofile-instr-generate -fcoverage-mapping) are Clang-only and
+        # the runner default cc is gcc (instant configure failure, 2026-09-13).
+        env:
+          CC: clang-18
+          CXX: clang++-18
         run: |
           cmake -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS="--coverage -fprofile-instr-generate -fcoverage-mapping" \
