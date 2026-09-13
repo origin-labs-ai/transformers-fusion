@@ -2,6 +2,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <cctype>
+#include <cerrno>
+#include <cmath>
 #include <cstdio>
 
 namespace quant {
@@ -26,9 +28,22 @@ public:
     }
 
 private:
+    // BUGFIX (bug census): unbounded recursion on nested [[[[... (stack
+    // overflow on attacker input). Depth cap 128 (OpenAI payloads nest < 10).
+    static constexpr int kMaxDepth = 128;
     const std::string& src_;
     size_t pos_;
     std::string* err_;
+    int depth_ = 0;
+
+    struct DepthGuard {
+        Parser* p;
+        bool ok;
+        explicit DepthGuard(Parser* pp) : p(pp), ok(false) {
+            if (pp->depth_ < kMaxDepth) { pp->depth_++; ok = true; }
+        }
+        ~DepthGuard() { if (ok) p->depth_--; }
+    };
 
     void set_error(const std::string& msg) {
         if (err_) *err_ = msg;
@@ -148,11 +163,32 @@ private:
         }
 
         std::string num_str = src_.substr(start, pos_ - start);
+        // BUGFIX (bug census): strtod/strtoll errno+endptr unchecked —
+        // "1e999" → inf silently, huge ints clamp to LLONG_MAX silently
+        // (attacker-controlled weights/configs). Validate + fail loud.
+        errno = 0;
         if (is_float) {
-            return JsonValue(std::strtod(num_str.c_str(), nullptr));
+            char* end = nullptr;
+            double v = std::strtod(num_str.c_str(), &end);
+            if (errno == ERANGE || !end || *end != '\0' || !std::isfinite(v)) {
+                set_error("number out of range: " + num_str);
+                throw std::runtime_error("json parse error");
+            }
+            return JsonValue(v);
         } else {
-            int64_t val = std::strtoll(num_str.c_str(), nullptr, 10);
-            return JsonValue(val);
+            // BUGFIX: bare "-" (no digits) reached strtoll → 0 silently.
+            if (num_str.empty() || num_str == "-") {
+                set_error("bad number: " + num_str);
+                throw std::runtime_error("json parse error");
+            }
+            char* end = nullptr;
+            errno = 0;
+            long long v = std::strtoll(num_str.c_str(), &end, 10);
+            if (errno == ERANGE || !end || *end != '\0') {
+                set_error("integer out of range: " + num_str);
+                throw std::runtime_error("json parse error");
+            }
+            return JsonValue((int64_t)v);
         }
     }
 
@@ -179,6 +215,8 @@ private:
     }
 
     JsonValue parse_object() {
+        DepthGuard g(this);
+        if (!g.ok) { set_error("max nesting depth exceeded"); throw std::runtime_error("json parse error"); }
         expect('{');
         std::unordered_map<std::string, JsonValue> result;
         skip_ws();
@@ -200,6 +238,8 @@ private:
     }
 
     JsonValue parse_array() {
+        DepthGuard g(this);
+        if (!g.ok) { set_error("max nesting depth exceeded"); throw std::runtime_error("json parse error"); }
         expect('[');
         std::vector<JsonValue> result;
         skip_ws();

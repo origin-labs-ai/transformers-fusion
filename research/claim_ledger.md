@@ -939,3 +939,11 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | T1 | `iso8601_now` unchecked localtime/gmtime/mktime (failure → silent epoch stamp) | Return-checked + -1-guarded |
 | T2 | Appending to a corrupt chain silently (`(void)rep`) | Loud stderr warning with break line |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 52 — 2026-09-13 (JSON parser hardening)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| J1-J2 | `strtod/strtoll` errno+endptr unchecked (`1e999`→inf, huge ints clamp, bare `-`→0, all silent) | ERANGE/endptr/finite validation, fail-loud |
+| J3 | Unbounded nesting recursion (`[[[[...` → stack overflow on attacker input) | Depth cap 128 (RAII guard) |
+| Suite | Rebuild 0 errors; full ctest green (contract 56/56 incl.) | 72/72 |
