@@ -923,3 +923,11 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | P1-P5 | 5 raw-`Impl*` classes implicitly copyable + vector-realloc moves stole pointers without nulling (double-free, esp. `vector<CrossAttentionBlock>`) | Copy deleted + stealing move ctors/assigns (header+impl for the 2 member-rich types) |
 | Note | My first inline moves default-constructed members (C2512: no default ctor) — fixed to memberwise `std::move` | Full suite green after |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 50 — 2026-09-13 (throwing-new audit)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| N1 | `TreeDecoder` throwing `new Node` (no catch above → terminate) | nothrow + skip |
+| N2-N4 | `ModelZoo::load` 3× throwing `new DenseModel` (no catch above → terminate on OOM) | nothrow + nullptr |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

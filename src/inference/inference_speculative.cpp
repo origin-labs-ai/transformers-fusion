@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <new>
 #include <set>
 #include <random>
 #include <sstream>
@@ -268,7 +269,10 @@ void TreeDecoder::expand_node(Node* n, int depth, int max_depth) {
     }
 
     for (int i = 0; i < k; i++) {
-        Node* child = new Node;
+        // BUGFIX (bug census): throwing new in a worker thread with no catch
+        // above (decode() has none) = terminate. nothrow + skip on OOM.
+        Node* child = new (std::nothrow) Node;
+        if (!child) break;
         child->token = candidates[(size_t)i].second;
         child->score = n->score + candidates[(size_t)i].first;
         child->parent = n;

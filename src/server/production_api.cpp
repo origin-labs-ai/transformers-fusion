@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <climits>
+#include <new>
 #include <algorithm>
 #include <chrono>
 
@@ -350,7 +351,10 @@ Model* ModelZoo::load(const std::string& name) {
 
     for (auto& m : snap) {
         if (m.name == name || m.path.find(name) != std::string::npos) {
-            auto* model = new DenseModel();
+            // BUGFIX (bug census): throwing new with no catch above (3 sites:
+            // cached/direct/zoo-path) = terminate on OOM. nothrow + nullptr.
+            auto* model = new (std::nothrow) DenseModel();
+            if (!model) return nullptr;
             try {
                 model->load(m.path);
                 return model;
@@ -363,7 +367,8 @@ Model* ModelZoo::load(const std::string& name) {
     }
 
     // Try direct path
-    auto* model = new DenseModel();
+    auto* model = new (std::nothrow) DenseModel();
+    if (!model) return nullptr;
     try {
         model->load(name);
         return model;
@@ -377,7 +382,8 @@ Model* ModelZoo::load(const std::string& name) {
 #ifdef _WIN32
     direct_path += ".quant";
 #endif
-    model = new DenseModel();
+    model = new (std::nothrow) DenseModel();
+    if (!model) return nullptr;
     try {
         model->load(direct_path);
         {
