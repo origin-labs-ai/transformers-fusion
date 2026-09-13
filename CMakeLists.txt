@@ -60,9 +60,8 @@ add_library(quant_math
   src/math/math_avx2_vec.cpp
   src/math/simd_math.cpp
 )
-# NOTE (P18): src/math/math_avx2_tensor.cpp was a byte-identical duplicate of
-# math_avx2.cpp (gemm/gemv/dot/axpy/norm/asum/relu → LNK2005) — DELETED,
-# do not re-add. See exp_avx2.h for the shared AVX2 exp approximation.
+# NOTE: src/math/math_avx2_tensor.cpp kept on disk but excluded from build:
+# it duplicates gemm/gemv/dot/axpy/norm/asum/relu symbols from math_avx2.cpp (LNK2005). P18.
 if(QUANT_AVX512)
   target_sources(quant_math PRIVATE src/math/math_avx512.cpp)
 endif()

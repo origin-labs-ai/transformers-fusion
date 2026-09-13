@@ -1043,3 +1043,28 @@ the portability-agent's guard audit is corroborated: no AVX2-source error
 appeared. The 5 remaining warnings in view (`-Wswitch` U16, unused fields,
 `-Wcast-function-type-mismatch` on `objc_msgSend`, unused `hexagon_nn_*`)
 are warnings, not errors — hardening backlog, not CI blockers.
+
+## CI-fix round 8 — 2026-09-13 (triple-log day: metal-next, docker-parse, win-cache)
+
+Owner pasted all three logs at once. Every one root-caused:
+
+| # | Failure | Root cause | Fix (commit `c0269da` + `d437078`, pushed) |
+|---|---|---|---|
+| M-next | macOS `gpu_compute_metal.cpp`: 11× `use of undeclared identifier 'dispatch_kernel'` | Round-7 fix made it an `Impl` static member but left the 11 call sites in `GPUComputeMetal::` methods unqualified — invisible to member lookup | All 11 calls → `Impl::dispatch_kernel(...)` (in `6ed98d9`) |
+| D-parse | Docker `Build Docker image` instant fail | `HEALTHCHECK ... CMD-SHELL ...` — `CMD-SHELL` is not a valid HEALTHCHECK type (parse error on Dockerfile line 65) | `CMD-SHELL` → `CMD` shell-form (in `d437078`); plus `.dockerignore` + diagnose step |
+| W-cache | `ci_full` Windows leg Configure ~2s fail while cache-less `build.yml` stays green on the same image | `actions/cache` restores a STALE `build/` (old generator / ex-`clang-cl` `CC/CXX` via the `build-Windows-` restore-prefix); re-configure against the poisoned `CMakeCache` dies instantly. Cache key hashed only sources, not the workflow file | Cache key now hashes `.github/workflows/ci_full.yml` too — compiler/shell/flag edits bust the cache (in `c0269da`) |
+| M-link | macOS link (predicted next): `ld: _objc_getClass/_objc_msgSend/_sel_registerName not found` | `gpu_compute_metal.cpp` calls the ObjC runtime directly but no Apple target links libobjc (Windows links d3d12, CUDA legs define-only) | `target_link_libraries(quant_gpu PUBLIC "-lobjc")` under `if(APPLE)` (in `c0269da`) — pre-emptive, from the same owner log (link step never reached, but the symbols are provably unlinked) |
+
+## CI-fix round 8 notes — 2026-09-13 (K3 revert; ledger is mine)
+
+A parallel agent's K3-cleanup work (deleting `tools/k3_convert.cpp` +
+`src/math/math_avx2_tensor.cpp` + doc/note rewrites) landed staged inside
+my `6ed98d9` commit and as working-tree edits. Owner order: K3 work DELETED
+(reverted). `tools/k3_convert.cpp` (106 lines) and
+`src/math/math_avx2_tensor.cpp` (616 lines) restored byte-identical from
+`6ed98d9^`; `CMakeLists.txt` P18 note restored ("kept on disk but excluded
+from build"); `CHANGELOG.md` / `docs/K3_MXFP4_BRIDGE.md` /
+`include/quant/detail/exp_avx2.h` working-tree rewrites reverted to HEAD.
+My committed fixes (`-lobjc`, cache-key, Metal calls, docker tag, bash
+shells) untouched — verified intact by count (5× `shell: bash`, 2×
+lowercase tag, 12× `Impl::dispatch_kernel`).
