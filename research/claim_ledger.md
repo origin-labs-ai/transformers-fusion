@@ -660,3 +660,11 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | S1-S2 | `serve` built legacy `.vocab` path (Qwen uses tokenizer.json dir) → always empty tokenizer, silent; batch/workers/tokens parsed but never forwarded | Model-dir resolution + loud degraded-vocab warning; thread-pool forwarded, rest noted |
 | B1-B2 | `bench --size` unbounded (typo → 3× size³ OOM/hang); inference bench empty-vocab silent | Clamp 1..4096 (verified live exit 2); .vocab attempt + warning |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 23 — 2026-09-13 (train tool)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| T1 | Whole-data-file slurp into one string (OOM on large corpora) | 64MiB capped chunked sample + warning; training streams from disk |
+| T2 | `--config` dead flag (stored, never opened) | Honest note (hyperparams from CLI) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

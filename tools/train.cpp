@@ -1,4 +1,4 @@
-﻿#include "quant/model.h"
+#include "quant/model.h"
 #include "quant/transformer.h"
 #include "quant/tokenizer.h"
 #include "quant/trainer.h"
@@ -117,14 +117,40 @@ int main(int argc, char** argv) {
     std::cout << "Model created: " << model.param_count() << " params\n";
 
     quant::BPETokenizer tokenizer;
-    std::ifstream data_file(args.data_path);
+    std::ifstream data_file(args.data_path, std::ios::binary | std::ios::ate);
     if (!data_file.is_open()) {
         std::cerr << "Error: cannot open " << args.data_path << std::endl;
         return 1;
     }
+    // BUGFIX (bug census): whole file slurped into one string (OOM on large
+    // corpora). Cap the slurp; bigger corpora need the streaming DataLoader
+    // path (UnifiedTrainer reads data_path itself — the slurp below only
+    // trains the inline BPE vocab, which needs a sample, not the corpus).
+    static constexpr std::streamsize kMaxSlurp = (std::streamsize)64 << 20; // 64 MiB
+    std::streamsize fsize = data_file.tellg();
+    data_file.seekg(0);
+    if (fsize > kMaxSlurp) {
+        std::cerr << "[Warning] data file >64MiB: vocab training samples first 64MiB; "
+                     "training itself streams from disk.\n";
+    }
     std::stringstream ss;
-    ss << data_file.rdbuf();
+    {
+        char chunk[1 << 16];
+        std::streamsize left = (fsize < 0 || fsize > kMaxSlurp) ? kMaxSlurp : fsize;
+        while (left > 0 && data_file) {
+            std::streamsize want = left < (std::streamsize)sizeof(chunk) ? left : (std::streamsize)sizeof(chunk);
+            data_file.read(chunk, want);
+            std::streamsize got = data_file.gcount();
+            if (got <= 0) break;
+            ss.write(chunk, got);
+            left -= got;
+        }
+    }
     std::string corpus = ss.str();
+    if (!args.config_path.empty()) {
+        std::cout << "[Note] --config accepted but not wired into UnifiedTrainer "
+                     "(hyperparams come from CLI flags).\n";
+    }
 
     std::vector<std::string> texts = {corpus};
     tokenizer.train(texts, static_cast<int>(cfg.vocab_size));
