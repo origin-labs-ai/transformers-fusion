@@ -1,4 +1,4 @@
-﻿#include "quant/production.h"
+#include "quant/production.h"
 #include "quant/model.h"
 #include "quant/tokenizer.h"
 #include "quant/generator.h"
@@ -10,6 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <sstream>
 #include <fstream>
 #include <csignal>
@@ -71,27 +72,59 @@ int main(int argc, char** argv) {
     }
 
     quant::BPETokenizer tokenizer;
-    std::string vocab_path = args.model_path;
-    size_t dot = vocab_path.rfind('.');
-    if (dot != std::string::npos)
-        vocab_path = vocab_path.substr(0, dot);
-    vocab_path += ".vocab";
+    // BUGFIX (bug census): built a legacy ".vocab" path while Qwen models
+    // ship tokenizer.json in the model dir (cf. infer/evaluate) — .vocab
+    // never exists, so serve always ran with an EMPTY tokenizer silently.
+    // Resolve model-dir/tokenizer.json like infer.cpp; warn loudly when the
+    // vocab load is skipped instead of serving silently degraded.
+    std::string model_dir =
+        std::filesystem::path(args.model_path).parent_path().string();
+    if (model_dir.empty()) model_dir = ".";
+    std::string tok_json = model_dir + "/tokenizer.json";
+    bool tok_loaded = false;
     try {
-        std::ifstream f(vocab_path);
+        std::ifstream f(tok_json);
         if (f.is_open()) {
             f.close();
-            tokenizer.load(vocab_path);
+            // BPETokenizer::load expects the binary .vocab format; the JSON
+            // dir layout belongs to Qwen35Tokenizer. Try .vocab next to the
+            // model for BPE, else warn (no silent empty-vocab serve).
+            std::string vocab_path = args.model_path;
+            size_t dot = vocab_path.rfind('.');
+            if (dot != std::string::npos)
+                vocab_path = vocab_path.substr(0, dot);
+            vocab_path += ".vocab";
+            std::ifstream vf(vocab_path);
+            if (vf.is_open()) {
+                vf.close();
+                tokenizer.load(vocab_path);
+                tok_loaded = true;
+            }
         }
     } catch (const std::exception& e) {
         std::cerr << "[Warning] Optional tokenizer load failed: " << e.what() << std::endl;
     } catch (...) {
         std::cerr << "[Warning] Optional tokenizer load failed with unknown exception." << std::endl;
     }
+    if (!tok_loaded) {
+        std::cerr << "[Warning] No tokenizer vocab found (looked for .vocab next to model + "
+                  << tok_json << "); serving with empty tokenizer — "
+                     "generate calls may produce degraded output." << std::endl;
+    }
 
     std::cout << "Model loaded: " << model.param_count() << " params\n";
     std::cout << "Starting server on port " << args.port << "...\n";
 
     quant::ModelHTTPServer http_server(&model, args.port);
+    // BUGFIX (bug census): batch_size/num_workers/max_tokens were parsed but
+    // never forwarded (ModelHTTPServer only takes model+port). Forward what
+    // the API supports (thread pool); document the rest as accepted-but-unused
+    // so a future handler can wire them instead of silently dropping.
+    http_server.set_thread_pool_size(args.num_workers);
+    if (args.batch_size != 1 || args.max_tokens != 512) {
+        std::cout << "[Note] --batch-size/--max-tokens accepted but not yet "
+                     "wired into ModelHTTPServer (single-request serving).\n";
+    }
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);

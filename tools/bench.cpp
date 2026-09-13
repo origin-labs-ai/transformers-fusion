@@ -1,4 +1,4 @@
-﻿#include "quant/kernel.h"
+#include "quant/kernel.h"
 #include "quant/model.h"
 #include "quant/tokenizer.h"
 #include "quant/generator.h"
@@ -10,6 +10,7 @@
 #include <string>
 #include <cstring>
 #include <chrono>
+#include <fstream>
 #include <vector>
 #include <cmath>
 
@@ -30,6 +31,13 @@ static BenchArgs parse_args(int argc, char** argv) {
             args.run_kernels = true;
         } else if (strcmp(argv[i], "--size") == 0 && i + 1 < argc) {
             args.size = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
+            // BUGFIX (bug census): unbounded --size drove adjacent Tensor
+            // allocs (size^3 floats ×3 tensors → OOM/hang on typos like
+            // --size 1000000). Clamp to a sane bench range.
+            if (args.size <= 0 || args.size > 4096) {
+                std::cerr << "Error: --size needs 1..4096\n";
+                exit(2);
+            }
         } else if (strcmp(argv[i], "--inference") == 0) {
             args.run_inference = true;
         } else if (strcmp(argv[i], "--model") == 0 && i + 1 < argc) {
@@ -109,6 +117,27 @@ static void bench_inference(const std::string& model_path, const std::string& pr
     }
 
     quant::BPETokenizer tokenizer;
+    // BUGFIX (bug census): default-constructed BPETokenizer with no vocab
+    // load — inference bench measured empty-vocab output. Try the model dir's
+    // .vocab next to the model; warn when missing (degraded measurement).
+    {
+        std::string vp = model_path;
+        size_t dot = vp.rfind('.');
+        if (dot != std::string::npos) vp = vp.substr(0, dot);
+        vp += ".vocab";
+        std::ifstream vf(vp, std::ios::binary);
+        if (vf.good()) {
+            vf.close();
+            try { tokenizer.load(vp); }
+            catch (const std::exception& e) {
+                std::cerr << "[Warning] tokenizer load failed: " << e.what()
+                          << " (empty-vocab bench)\n";
+            }
+        } else {
+            std::cerr << "[Warning] no .vocab next to model (looked for " << vp
+                      << "); bench runs with empty vocab\n";
+        }
+    }
     quant::Generator gen(&model, &tokenizer);
 
     quant::SamplerConfig cfg;
