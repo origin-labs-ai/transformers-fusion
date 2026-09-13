@@ -478,30 +478,48 @@ HTTPRequest HTTPServer::parse_http_request(const std::string& raw) {
 
     size_t pos = 0;
     bool first_line = true;
-    while (pos < header_section.size()) {
-        auto eol = header_section.find('\n', pos);
-        if (eol == std::string_view::npos) break;
-        std::string_view line = header_section.substr(pos, eol - pos);
-        pos = eol + 1;
+    // BUGFIX (bug census): per-request local (was a member — stale key from
+    // a previous request on the same server object folded continuations into
+    // the wrong request's headers).
+    std::string last_header_key;
+    // BUGFIX (bug census): the FINAL header line was silently dropped —
+    // header_section excludes the trailing "\r\n\r\n", so the last line has
+    // no '\n' and the loop below `break`s before parsing it (every request's
+    // last header, e.g. Host, was lost). Iterate lines + tail.
+    auto handle_line = [&](std::string_view line) {
         if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        if (line.empty()) break;
-
+        if (line.empty()) return;
         if (first_line) {
             first_line = false;
             auto sp1 = line.find(' ');
+            // BUGFIX (bug census): `find(' ', sp1+1)` with sp1==npos wraps to
+            // a huge pos (UB-ish); malformed request lines also left stale
+            // path/method. Validate before splitting.
+            if (sp1 == std::string_view::npos) return;
             auto sp2 = line.find(' ', sp1 + 1);
-            if (sp1 != std::string_view::npos) {
-                req.method = std::string(line.substr(0, sp1));
-                if (sp2 != std::string_view::npos) {
-                    req.path = std::string(line.substr(sp1 + 1, sp2 - sp1 - 1));
-                } else {
-                    req.path = std::string(line.substr(sp1 + 1));
-                }
+            req.method = std::string(line.substr(0, sp1));
+            if (sp2 != std::string_view::npos) {
+                req.path = std::string(line.substr(sp1 + 1, sp2 - sp1 - 1));
+            } else {
+                req.path = std::string(line.substr(sp1 + 1));
             }
+            // BUGFIX (bug census): header continuation lines (obs-fold,
+            // leading SP/HT) were parsed as new headers (colon search on a
+            // continuation). Fold them into the previous value per RFC 7230.
             auto qmark = req.path.find('?');
             if (qmark != std::string::npos) {
                 req.query_params = parse_query_string(req.path.substr(qmark + 1));
                 req.path = req.path.substr(0, qmark);
+            }
+        } else if (!line.empty() && (line.front() == ' ' || line.front() == '\t')) {
+            // Continuation of the previous header value (obs-fold, RFC 7230).
+            if (!last_header_key.empty()) {
+                auto jt = req.headers.find(last_header_key);
+                if (jt != req.headers.end()) {
+                    auto vs = line.find_first_not_of(" \t");
+                    if (vs != std::string_view::npos)
+                        jt->second += std::string(" ") + std::string(line.substr(vs));
+                }
             }
         } else {
             auto colon = line.find(':');
@@ -519,24 +537,63 @@ HTTPRequest HTTPServer::parse_http_request(const std::string& raw) {
                     std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(),
                                    [](unsigned char c) { return (char)std::tolower(c); });
                     req.headers[lower_key] = std::string(v_trimmed);
+                    last_header_key = lower_key;
                 }
             }
         }
+    };
+    while (pos < header_section.size()) {
+        auto eol = header_section.find('\n', pos);
+        if (eol == std::string_view::npos) {
+            handle_line(header_section.substr(pos)); // trailing tail (no '\n')
+            break;
+        }
+        handle_line(header_section.substr(pos, eol - pos));
+        pos = eol + 1;
     }
     return req;
 }
 
 std::unordered_map<std::string, std::string>
 HTTPServer::parse_query_string(const std::string& qs) {
+    // BUGFIX (bug census): no %XX/+ decoding — clients sending %20 got
+    // literal percent-sequences in param values. Decodes per RFC 3986
+    // (malformed % sequences pass through literally, never throw).
+    auto decode = [](const std::string& s) {
+        std::string out;
+        out.reserve(s.size());
+        for (size_t i = 0; i < s.size(); i++) {
+            if (s[i] == '+') {
+                out += ' ';
+            } else if (s[i] == '%' && i + 2 < s.size()) {
+                auto hex = [](char c) -> int {
+                    if (c >= '0' && c <= '9') return c - '0';
+                    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+                    return -1;
+                };
+                int hi = hex(s[i + 1]), lo = hex(s[i + 2]);
+                if (hi >= 0 && lo >= 0) {
+                    out += (char)(hi * 16 + lo);
+                    i += 2;
+                    continue;
+                }
+                out += s[i];
+            } else {
+                out += s[i];
+            }
+        }
+        return out;
+    };
     std::unordered_map<std::string, std::string> result;
     std::istringstream ss(qs);
     std::string pair;
     while (std::getline(ss, pair, '&')) {
         auto eq = pair.find('=');
         if (eq != std::string::npos)
-            result[pair.substr(0, eq)] = pair.substr(eq + 1);
-        else
-            result[pair] = "";
+            result[decode(pair.substr(0, eq))] = decode(pair.substr(eq + 1));
+        else if (!pair.empty())
+            result[decode(pair)] = "";
     }
     return result;
 }

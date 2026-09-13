@@ -190,6 +190,40 @@ static void test_live_server_smoke() {
     sock_cleanup();
 }
 
+static void test_query_decode() {
+    TEST_SUITE("bug census: query %XX/+ decoding + obs-fold continuation");
+    HTTPServer s(0);
+    auto q = s.parse_query_string_public("q=hello%20world&plus=a%2Bb+c&bad=%ZZ&empty=&flag");
+    TEST_CHECK(q["q"] == "hello world", "%20 decodes to space");
+    TEST_CHECK(q["plus"] == "a+b c", "%2B decodes, + decodes to space");
+    TEST_CHECK(q["bad"] == "%ZZ", "malformed % passes through literally");
+    TEST_CHECK(q["empty"] == "", "empty value decodes");
+    TEST_CHECK(q["flag"] == "", "bare flag decodes to empty");
+
+    HTTPRequest r = s.parse_http_request_public(
+        "GET /v1/models?x=1 HTTP/1.1\r\n"
+        "X-Long: first\r\n"
+        "  second\r\n"
+        "\tthird\r\n"
+        "Host: y\r\n\r\n");
+    TEST_CHECK(r.method == "GET", "method parsed");
+    TEST_CHECK(r.path == "/v1/models", "path split from query");
+    TEST_CHECK(r.query_params["x"] == "1", "query param parsed");
+    auto it = r.headers.find("x-long");
+    TEST_CHECK(it != r.headers.end() && it->second == "first second third",
+               "obs-fold continuation folded into previous header");
+
+    HTTPRequest bad = s.parse_http_request_public("GARBAGE-NO-SPACES\r\nHost: y\r\n\r\n");
+    TEST_CHECK(bad.method.empty(), "malformed request line leaves method empty (no wrap)");
+
+    HTTPRequest nocont = s.parse_http_request_public(
+        "GET / HTTP/1.1\r\n"
+        "  orphan continuation\r\n"
+        "Host: y\r\n\r\n");
+    TEST_CHECK(nocont.headers.find("host") != nocont.headers.end(),
+               "orphan continuation without prior header is dropped safely");
+}
+
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("Transcender - OpenAI Server Contract (L076) Test Suite\n");
@@ -202,6 +236,7 @@ int main() {
     test_hardening_setters();
     test_legacy_status_text();
     test_parse_content_length();
+    test_query_decode();
     test_live_server_smoke();
 
     printf("\n======================================================\n");

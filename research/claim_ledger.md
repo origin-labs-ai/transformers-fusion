@@ -607,3 +607,15 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | K1 | `BPETokenizer::load` unvalidated vs/len/merges (negative → OOM, short reads → corrupt vocab) | Bounds caps + stream checks + commit-only-on-success |
 | Crew verdicts | Tokenizer crew: no BUGFIX markers found (nothing delivered). Server crew: no chunked/pipelined/continuation/query-decode code found (nothing delivered). Sampler crew: delivered (S1-S8 verified on disk) | Honest grading: silent crews scored as no-delivery, areas stay open |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 18 — 2026-09-13 (HTTP parser: 5 bugs, 1 caught by new test)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| H1 | Query strings: no `%XX`/`+` decoding (`%20` stayed literal) | RFC 3986 decode (malformed % passes through) |
+| H2 | Obs-fold continuation lines parsed as new headers | Folded into previous value (RFC 7230) |
+| H3 | `find(' ', npos+1)` wrap on malformed request lines | Validate sp1 before splitting |
+| H4 | `last_header_key` was a MEMBER (stale key folded continuations into wrong request) | Per-request local |
+| H5 | **Final header line silently dropped** (no `\n` in section → `break` before parse; every request lost its last header) — caught by my own new orphan-continuation test | Lines+tail iteration |
+| T16 | New `test_query_decode` suite (11 asserts: decode/continuation/malformed/orphan) | `test_server_contract` 53/53 (was 42/42) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

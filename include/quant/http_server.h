@@ -188,6 +188,13 @@ private:
 
     HTTPRequest parse_http_request(const std::string& raw);
     std::unordered_map<std::string, std::string> parse_query_string(const std::string& qs);
+public:
+    // Test hooks (pure parsing, no sockets): exposed for contract tests.
+    HTTPRequest parse_http_request_public(const std::string& raw) { return parse_http_request(raw); }
+    std::unordered_map<std::string, std::string> parse_query_string_public(const std::string& qs) {
+        return parse_query_string(qs);
+    }
+private:
 
     void handle_health(int fd);
     void handle_models(int fd, const HTTPRequest& req);
