@@ -1,0 +1,274 @@
+#include "quant/gpu_compute_zdnn.h"
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+#include <immintrin.h>
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+namespace quant {
+
+namespace {
+    void* load_lib(const char* name) {
+#ifdef _WIN32
+        return LoadLibraryA(name);
+#else
+        return dlopen(name, RTLD_LAZY);
+#endif
+    }
+    void* get_sym(void* handle, const char* name) {
+#ifdef _WIN32
+        return (void*)GetProcAddress((HMODULE)handle, name);
+#else
+        return dlsym(handle, name);
+#endif
+    }
+}
+
+GpuComputeZDnn::GpuComputeZDnn() : lib_handle_(nullptr) {}
+
+GpuComputeZDnn::~GpuComputeZDnn() {}
+
+bool GpuComputeZDnn::init() {
+#ifdef _WIN32
+    lib_handle_ = load_lib("zdnn.dll");
+#else
+    lib_handle_ = load_lib("libzdnn.so");
+#endif
+
+    if (!lib_handle_) return false;
+
+    zdnn_init_ = (decltype(zdnn_init_))get_sym(lib_handle_, "zdnn_init");
+    zdnn_matmul_ = (decltype(zdnn_matmul_))get_sym(lib_handle_, "zdnn_matmul");
+    zdnn_add_ = (decltype(zdnn_add_))get_sym(lib_handle_, "zdnn_add");
+    zdnn_relu_ = (decltype(zdnn_relu_))get_sym(lib_handle_, "zdnn_relu");
+
+    if (zdnn_init_) {
+        zdnn_init_();
+        return true;
+    }
+    return false;
+}
+
+void* GpuComputeZDnn::alloc(size_t size) {
+    return new uint8_t[size];
+}
+
+void GpuComputeZDnn::free(void* ptr) {
+    delete[] static_cast<uint8_t*>(ptr);
+}
+
+void GpuComputeZDnn::copy_to_device(void* dst, const void* src, size_t size) {
+    std::memcpy(dst, src, size);
+}
+
+void GpuComputeZDnn::copy_to_host(void* dst, const void* src, size_t size) {
+    std::memcpy(dst, src, size);
+}
+
+void GpuComputeZDnn::launch_gemm(int m, int n, int k, const float* a, const float* b, float* c) {
+    // Host path (alpha=1, beta=0). Real zdnn_matmul needs zDNN tensor
+    // descriptors (not built) — NPU_ZDNN compute fails loud via backend.
+    reference_gemm(1.0f, a, b, 0.0f, c, m, n, k);
+}
+
+// ========================================================================
+// Host reference kernels. Tuning: s390x z14/z15 L1 is 128KB with 256B
+// lines; host mirror uses narrow 16-row tiles with wide K-streaming
+// (BK=256) matching the NNPA data-layout streaming pattern. i-k-j order.
+// AVX2 (8-wide) on host for elementwise work; transcendentals scalar.
+// Beta/alpha-correct, null-guarded.
+// ========================================================================
+
+void GpuComputeZDnn::reference_gemm(float alpha, const float* a, const float* b,
+                                     float beta, float* c, int m, int n, int k) {
+    if (!a || !b || !c || m <= 0 || n <= 0 || k <= 0) return;
+    const int total = m * n;
+    if (beta != 0.0f) {
+        for (int i = 0; i < total; ++i) c[i] *= beta;
+    } else {
+        for (int i = 0; i < total; ++i) c[i] = 0.0f;
+    }
+    constexpr int BM = 16, BN = 64, BK = 256;
+    for (int m0 = 0; m0 < m; m0 += BM) {
+        const int m1 = (m0 + BM < m) ? m0 + BM : m;
+        for (int n0 = 0; n0 < n; n0 += BN) {
+            const int n1 = (n0 + BN < n) ? n0 + BN : n;
+            for (int k0 = 0; k0 < k; k0 += BK) {
+                const int k1 = (k0 + BK < k) ? k0 + BK : k;
+                for (int i = m0; i < m1; ++i) {
+                    float* crow = c + i * n;
+                    const float* arow = a + i * k;
+                    for (int l = k0; l < k1; ++l) {
+                        const float aval = alpha * arow[l];
+                        if (aval == 0.0f) continue;
+                        const float* brow = b + l * n;
+                        int j = n0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+                        const __m256 av = _mm256_set1_ps(aval);
+                        for (; j + 8 <= n1; j += 8) {
+                            const __m256 bv = _mm256_loadu_ps(brow + j);
+                            const __m256 cv = _mm256_loadu_ps(crow + j);
+                            _mm256_storeu_ps(crow + j, _mm256_add_ps(_mm256_mul_ps(av, bv), cv));
+                        }
+#endif
+                        for (; j < n1; ++j) crow[j] += aval * brow[j];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void GpuComputeZDnn::reference_gemv(float alpha, const float* A, const float* x,
+                                     float beta, float* y, int m, int n) {
+    if (!A || !x || !y || m <= 0 || n <= 0) return;
+    for (int i = 0; i < m; ++i) {
+        const float* row = A + i * n;
+        float s = 0.0f;
+        int j = 0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+        __m256 acc = _mm256_setzero_ps();
+        for (; j + 8 <= n; j += 8) {
+            const __m256 av = _mm256_loadu_ps(row + j);
+            const __m256 xv = _mm256_loadu_ps(x + j);
+            acc = _mm256_add_ps(acc, _mm256_mul_ps(av, xv));
+        }
+        float tail[8];
+        _mm256_storeu_ps(tail, acc);
+        s = tail[0] + tail[1] + tail[2] + tail[3] + tail[4] + tail[5] + tail[6] + tail[7];
+#endif
+        for (; j < n; ++j) s += row[j] * x[j];
+        y[i] = alpha * s + beta * y[i];
+    }
+}
+
+void GpuComputeZDnn::reference_relu(const float* x, float* y, size_t n) {
+    if (!x || !y) return;
+    size_t i = 0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+    const __m256 z = _mm256_setzero_ps();
+    for (; i + 8 <= n; i += 8) {
+        const __m256 v = _mm256_loadu_ps(x + i);
+        _mm256_storeu_ps(y + i, _mm256_max_ps(v, z));
+    }
+#endif
+    for (; i < n; ++i) y[i] = x[i] > 0.0f ? x[i] : 0.0f;
+}
+
+void GpuComputeZDnn::reference_gelu(const float* x, float* y, size_t n) {
+    if (!x || !y) return;
+    constexpr float c0 = 0.7978845608028654f;
+    constexpr float c1 = 0.044715f;
+    for (size_t i = 0; i < n; ++i) {
+        const float v = x[i];
+        y[i] = 0.5f * v * (1.0f + std::tanh(c0 * (v + c1 * v * v * v)));
+    }
+}
+
+void GpuComputeZDnn::reference_silu(const float* x, float* y, size_t n) {
+    if (!x || !y) return;
+    for (size_t i = 0; i < n; ++i) {
+        const float v = x[i];
+        y[i] = v / (1.0f + std::exp(-v));
+    }
+}
+
+void GpuComputeZDnn::reference_add(const float* a, const float* b, float* c, size_t n) {
+    if (!a || !b || !c) return;
+    size_t i = 0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+    for (; i + 8 <= n; i += 8) {
+        const __m256 av = _mm256_loadu_ps(a + i);
+        const __m256 bv = _mm256_loadu_ps(b + i);
+        _mm256_storeu_ps(c + i, _mm256_add_ps(av, bv));
+    }
+#endif
+    for (; i < n; ++i) c[i] = a[i] + b[i];
+}
+
+void GpuComputeZDnn::reference_mul(const float* a, const float* b, float* c, size_t n) {
+    if (!a || !b || !c) return;
+    size_t i = 0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+    for (; i + 8 <= n; i += 8) {
+        const __m256 av = _mm256_loadu_ps(a + i);
+        const __m256 bv = _mm256_loadu_ps(b + i);
+        _mm256_storeu_ps(c + i, _mm256_mul_ps(av, bv));
+    }
+#endif
+    for (; i < n; ++i) c[i] = a[i] * b[i];
+}
+
+void GpuComputeZDnn::reference_scale(float s, const float* x, float* y, size_t n) {
+    if (!x || !y) return;
+    size_t i = 0;
+#if defined(QUANT_AVX2) || defined(__AVX2__)
+    const __m256 sv = _mm256_set1_ps(s);
+    for (; i + 8 <= n; i += 8) {
+        const __m256 v = _mm256_loadu_ps(x + i);
+        _mm256_storeu_ps(y + i, _mm256_mul_ps(sv, v));
+    }
+#endif
+    for (; i < n; ++i) y[i] = s * x[i];
+}
+
+void GpuComputeZDnn::reference_softmax(const float* x, float* y, int rows, int cols) {
+    if (!x || !y || rows <= 0 || cols <= 0) return;
+    for (int r = 0; r < rows; ++r) {
+        const float* xr = x + r * cols;
+        float* yr = y + r * cols;
+        float mx = xr[0];
+        for (int c = 1; c < cols; ++c) mx = (std::max)(mx, xr[c]);
+        float sum = 0.0f;
+        for (int c = 0; c < cols; ++c) {
+            yr[c] = std::exp(xr[c] - mx);
+            sum += yr[c];
+        }
+        const float inv = 1.0f / (sum + 1e-10f);
+        for (int c = 0; c < cols; ++c) yr[c] *= inv;
+    }
+}
+
+void GpuComputeZDnn::reference_rms_norm(const float* x, const float* gamma, float* y,
+                                         float eps, int rows, int cols) {
+    if (!x || !gamma || !y || rows <= 0 || cols <= 0) return;
+    for (int r = 0; r < rows; ++r) {
+        const float* xr = x + r * cols;
+        float* yr = y + r * cols;
+        float ss = 0.0f;
+        for (int c = 0; c < cols; ++c) ss += xr[c] * xr[c];
+        const float rs = 1.0f / std::sqrt(ss / cols + eps);
+        for (int c = 0; c < cols; ++c) yr[c] = xr[c] * rs * gamma[c];
+    }
+}
+
+void GpuComputeZDnn::reference_layer_norm(const float* x, const float* gamma, const float* beta,
+                                           float* y, float eps, int rows, int cols) {
+    if (!x || !gamma || !beta || !y || rows <= 0 || cols <= 0) return;
+    for (int r = 0; r < rows; ++r) {
+        const float* xr = x + r * cols;
+        float* yr = y + r * cols;
+        float mn = 0.0f;
+        for (int c = 0; c < cols; ++c) mn += xr[c];
+        mn /= cols;
+        float vr = 0.0f;
+        for (int c = 0; c < cols; ++c) {
+            const float d = xr[c] - mn;
+            vr += d * d;
+        }
+        vr /= cols;
+        const float iv = 1.0f / std::sqrt(vr + eps);
+        for (int c = 0; c < cols; ++c) yr[c] = (xr[c] - mn) * iv * gamma[c] + beta[c];
+    }
+}
+
+} // namespace quant
