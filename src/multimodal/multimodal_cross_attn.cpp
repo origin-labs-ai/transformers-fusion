@@ -397,7 +397,14 @@ Tensor CrossAttentionBlock::forward_self_attn(const Tensor& x) {
 
 Tensor CrossAttentionBlock::forward(const Tensor& query, const Tensor& key_value,
                                      const std::string& modality_tag) {
-    (void)modality_tag;
+    // NOTE (bug census): modality_tag intentionally unused — routing happens
+    // in the fusion encoder above (per-modality projection), not here.
+    (void)modality_tag; // documented-unused: routing is upstream
+    // BUGFIX (bug census): H/hd/scale unchecked (H==0 → div-zero; D%H
+    // truncation → wrong head math). Guarded.
+    if (config.num_heads <= 0 || config.hidden_size <= 0 ||
+        config.hidden_size % config.num_heads != 0)
+        throw Error("CrossAttentionBlock::forward: hidden_size must be a positive multiple of num_heads");
     int64_t Tq = query.dim(0);
     int64_t D = config.hidden_size;
     int64_t Tk = key_value.dim(0);
@@ -436,15 +443,17 @@ Tensor CrossAttentionBlock::forward(const Tensor& query, const Tensor& key_value
 
     Tensor proj_out = out_proj.forward(output);
 
-    float* od2 = new float[Tq * D]();
+    // BUGFIX (bug census): raw new[]+memcpy+delete[] (throw between = leak;
+    // Tq*D overflow on hostile dims). std::vector (RAII + checked size).
+    std::vector<float> od2;
+    od2.assign((size_t)Tq * (size_t)D, 0.0f);
     const float* pd = proj_out.data<float>();
     const float* qd2 = query.data<float>();
     for (int64_t i = 0; i < Tq * D; i++)
-        od2[i] = qd2[i] + pd[i];
+        od2[(size_t)i] = qd2[i] + pd[i];
 
     Tensor residual({Tq, D});
-    std::memcpy(residual.data<float>(), od2, (size_t)(Tq * D) * sizeof(float));
-    delete[] od2;
+    std::memcpy(residual.data<float>(), od2.data(), (size_t)(Tq * D) * sizeof(float));
 
     Tensor normed = norm1.forward(residual);
 
@@ -596,19 +605,41 @@ Tensor ModalityFusionEncoder::fuse_late(const Tensor& text_emb, const Tensor& im
 
     Tensor pooled({3, D});
     pooled.zero_();
-    float* pd = pooled.data<float>();
 
-    for (int64_t d = 0; d < D; d++) {
-        float sum = 0;
-        int count = 0;
-        if (n_text > 0) { sum += pd[d]; count++; }
-        if (n_image > 0) { sum += pd[d]; count++; }
-        if (n_audio > 0) { sum += pd[d]; count++; }
-        (void)count;
+    // NOTE (bug census): the sum/count loop below was dead code ((void)count,
+    // pooled rows never filled from the projections, function returned an
+    // all-zero `combined`). Mean-pool is now real: accumulate each present
+    // modality's mean row into pooled, then average into combined.
+    {
+        float* pd = pooled.data<float>();
+        auto acc_mean = [&](const Tensor& p, int64_t n, int64_t row) {
+            if (n <= 0) return;
+            const float* src = p.data<float>();
+            for (int64_t d = 0; d < D; d++) {
+                double s = 0;
+                for (int64_t t = 0; t < n; t++) s += src[t * D + d];
+                pd[row * D + d] = (float)(s / (double)n);
+            }
+        };
+        acc_mean(text_p, n_text, 0);
+        acc_mean(image_p, n_image, 1);
+        acc_mean(audio_p, n_audio, 2);
     }
 
     Tensor combined({1, D});
     combined.zero_();
+    {
+        float* cd = combined.data<float>();
+        const float* pd = pooled.data<float>();
+        int present = (n_text > 0) + (n_image > 0) + (n_audio > 0);
+        for (int64_t d = 0; d < D; d++) {
+            double s = 0;
+            if (n_text > 0) s += pd[d];
+            if (n_image > 0) s += pd[D + d];
+            if (n_audio > 0) s += pd[2 * D + d];
+            cd[d] = present > 0 ? (float)(s / (double)present) : 0.0f;
+        }
+    }
     return combined;
 }
 

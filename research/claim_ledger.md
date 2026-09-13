@@ -897,3 +897,12 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 |---|---|---|
 | Q1-Q2 | `.at()` throws on corrupt/partial tokenizer.json (merge target + special token) | find()+fail-closed (unmerged/break) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 47 — 2026-09-13 (multimodal: leak, div-zero, dead fusion)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| M1 | `new float[]`+memcpy+`delete[]` residual (throw-leak + overflow) | `std::vector` RAII |
+| M2 | `forward()` H==0 div-zero + D%H truncation (wrong head math) | Positive-multiple guard (throws) |
+| M3 | Fusion pooled/combined all-zero (dead sum loop, `(void)count`) — function returned zeros always | Real mean-pool over present modalities |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
