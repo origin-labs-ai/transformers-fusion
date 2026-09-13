@@ -88,9 +88,12 @@ static std::string iso8601_now() {
     auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
     std::tm tmv{};
 #if defined(_WIN32)
-    localtime_s(&tmv, &tt);
+    // BUGFIX (bug census): localtime_s/gmtime_s/mktime return codes were
+    // unchecked — failure left tmv/utc zeroed (epoch timestamp, silent).
+    // Fail closed to epoch+offset-unknown instead.
+    if (localtime_s(&tmv, &tt) != 0) tmv = {};
 #else
-    localtime_r(&tt, &tmv);
+    if (localtime_r(&tt, &tmv) == nullptr) tmv = {};
 #endif
     std::ostringstream os;
     os << std::put_time(&tmv, "%Y-%m-%dT%H:%M:%S") << '.' << std::setw(3)
@@ -102,8 +105,12 @@ static std::string iso8601_now() {
     static long cached = 0;
     if (!got_off) {
         struct tm utc{};
-        gmtime_s(&utc, &tt);
-        cached = (long)((mktime(&tmv) - mktime(&utc)) / 60);
+        if (gmtime_s(&utc, &tt) == 0) {
+            std::tm tmv_copy = tmv, utc_copy = utc;
+            std::time_t t_local = mktime(&tmv_copy), t_utc = mktime(&utc_copy);
+            if (t_local != (std::time_t)-1 && t_utc != (std::time_t)-1)
+                cached = (long)((t_local - t_utc) / 60);
+        }
         got_off = true;
     }
     off_min = cached;
@@ -174,7 +181,14 @@ TelemetryWriter::TelemetryWriter(const std::string& path) : impl_(new Impl) {
     ChainReport rep = r.verify_chain();
     if (!r.events().empty()) impl_->last_hash = r.events().back().hash;
     else impl_->last_hash = "0";
-    (void)rep;
+    // BUGFIX (bug census): chain-broken input was (void)rep-discarded —
+    // appending to a corrupt chain silently. Warn loudly instead.
+    if (!rep.chain_valid) {
+        std::fprintf(stderr, "[telemetry] WARNING: existing chain %s broken at line %llu "
+                             "(%llu skipped); appending anyway (audit trail preserved)\n",
+                     path.c_str(), (unsigned long long)rep.first_bad_line,
+                     (unsigned long long)rep.skipped_lines);
+    }
 }
 
 TelemetryWriter::~TelemetryWriter() { close(); }

@@ -931,3 +931,11 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 | N1 | `TreeDecoder` throwing `new Node` (no catch above → terminate) | nothrow + skip |
 | N2-N4 | `ModelZoo::load` 3× throwing `new DenseModel` (no catch above → terminate on OOM) | nothrow + nullptr |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 51 — 2026-09-13 (telemetry time + chain)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| T1 | `iso8601_now` unchecked localtime/gmtime/mktime (failure → silent epoch stamp) | Return-checked + -1-guarded |
+| T2 | Appending to a corrupt chain silently (`(void)rep`) | Loud stderr warning with break line |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
