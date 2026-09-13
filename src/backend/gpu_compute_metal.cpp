@@ -336,7 +336,7 @@ void GPUComputeMetal::gemm(float alpha, const void* A, const void* B, float beta
     MTLSize grid = { (size_t)N, (size_t)M, 1 };
     MTLSize block = { 16, 16, 1 };
     uint32_t uM = M, uN = N, uK = K;
-    dispatch_kernel(impl_, impl_->f_gemm, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_gemm, grid, block,
         {{(id)A, 0}, {(id)B, 0}, {(id)C, 0}},
         {{&alpha, sizeof(alpha)}, {&beta, sizeof(beta)},
          {&uM, sizeof(uM)}, {&uN, sizeof(uN)}, {&uK, sizeof(uK)}});
@@ -353,7 +353,7 @@ void GPUComputeMetal::relu(const void* x, void* y, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_relu, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_relu, grid, block,
         {{(id)x, 0}, {(id)y, 0}},
         {{&uN, sizeof(uN)}});
 #endif
@@ -365,7 +365,7 @@ void GPUComputeMetal::gelu(const void* x, void* y, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_gelu, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_gelu, grid, block,
         {{(id)x, 0}, {(id)y, 0}},
         {{&uN, sizeof(uN)}});
 #endif
@@ -377,7 +377,7 @@ void GPUComputeMetal::silu(const void* x, void* y, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_silu, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_silu, grid, block,
         {{(id)x, 0}, {(id)y, 0}},
         {{&uN, sizeof(uN)}});
 #endif
@@ -389,7 +389,7 @@ void GPUComputeMetal::softmax(const void* x, void* y, int64_t rows, int64_t cols
     MTLSize grid = { (size_t)rows, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t r = rows, c = cols;
-    dispatch_kernel(impl_, impl_->f_softmax, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_softmax, grid, block,
         {{(id)x, 0}, {(id)y, 0}},
         {{&r, sizeof(r)}, {&c, sizeof(c)}});
 #endif
@@ -401,7 +401,7 @@ void GPUComputeMetal::rms_norm(const void* x, const void* weight, void* y, int64
     MTLSize grid = { (size_t)rows, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t r = rows, c = cols;
-    dispatch_kernel(impl_, impl_->f_rmsnorm, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_rmsnorm, grid, block,
         {{(id)x, 0}, {(id)weight, 0}, {(id)y, 0}},
         {{&r, sizeof(r)}, {&c, sizeof(c)}, {&eps, sizeof(eps)}});
 #endif
@@ -417,7 +417,7 @@ void GPUComputeMetal::add(const void* a, const void* b, void* c, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_add, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_add, grid, block,
         {{(id)a, 0}, {(id)b, 0}, {(id)c, 0}},
         {{&uN, sizeof(uN)}});
 #endif
@@ -429,7 +429,7 @@ void GPUComputeMetal::mul(const void* a, const void* b, void* c, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_mul, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_mul, grid, block,
         {{(id)a, 0}, {(id)b, 0}, {(id)c, 0}},
         {{&uN, sizeof(uN)}});
 #endif
@@ -441,7 +441,7 @@ void GPUComputeMetal::scale(float s, const void* x, void* y, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_scale, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_scale, grid, block,
         {{(id)x, 0}, {(id)y, 0}},
         {{&s, sizeof(s)}, {&uN, sizeof(uN)}});
 #endif
@@ -453,7 +453,7 @@ void GPUComputeMetal::fill(float val, void* x, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_fill, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_fill, grid, block,
         {{(id)x, 0}},
         {{&val, sizeof(val)}, {&uN, sizeof(uN)}});
 #endif
@@ -465,7 +465,7 @@ void GPUComputeMetal::copy_buf(const void* src, void* dst, int64_t n) {
     MTLSize grid = { (size_t)n, 1, 1 };
     MTLSize block = { 256, 1, 1 };
     uint32_t uN = n;
-    dispatch_kernel(impl_, impl_->f_copy, grid, block,
+    Impl::dispatch_kernel(impl_, impl_->f_copy, grid, block,
         {{(id)src, 0}, {(id)dst, 0}},
         {{&uN, sizeof(uN)}});
 #endif

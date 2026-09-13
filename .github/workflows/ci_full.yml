@@ -143,6 +143,10 @@ jobs:
 
       - name: Quick tests
         timeout-minutes: 10
+        # bash on all OSes: the multi-line script uses POSIX `\`
+        # continuations + `--flags` which pwsh (Windows default) parses as
+        # unary operators (ParserError, 2026-09-13). No-op on Linux/macOS.
+        shell: bash
         run: |
           # D7 W5 aligned PR exclusion (speed only; full suite runs in nightly-full-asan, no excludes):
           # - test_protected: heavy integrity/monolith test linking many libs (300s TIMEOUT), too slow for PR gate.
@@ -163,6 +167,7 @@ jobs:
       - name: ASAN/UBSAN build (Linux GCC)
         if: runner.os == 'Linux' && matrix.asan
         timeout-minutes: 30
+        shell: bash
         run: |
           cmake -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
@@ -185,6 +190,7 @@ jobs:
         env:
           CC: clang-18
           CXX: clang++-18
+        shell: bash
         run: |
           cmake -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS="--coverage -fprofile-instr-generate -fcoverage-mapping" \
@@ -202,6 +208,7 @@ jobs:
       - name: Performance benchmarks
         if: runner.os == 'Linux'
         timeout-minutes: 10
+        shell: bash
         run: |
           cmake --build build --target bench_kernels 2>/dev/null || true
           if [ -f ./build/bench_kernels ]; then
@@ -250,10 +257,10 @@ jobs:
           du -sh . 2>/dev/null; df -h / | tail -1
       - name: Build Docker image
         run: |
-          docker build -t Transcender-cpp:ci .
+          docker build -t transcender-cpp:ci .
       - name: Test Docker image
         run: |
-          docker run --rm Transcender-cpp:ci --help 2>&1 || true
+          docker run --rm transcender-cpp:ci --help 2>&1 || true
 
   # D7 W5: nightly full ASAN+UBSAN suite — NO excludes (covers all PR-skipped patterns).
   # Sharded via `ctest -R` across matrix shards; union of shards = full suite.
