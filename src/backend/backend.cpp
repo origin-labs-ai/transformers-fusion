@@ -2279,53 +2279,43 @@ public:
             for (int64_t i = 0; i < C.numel(); ++i) c[i] = t[i];
         }
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "gemv", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "gemv", "no OpenCL GEMV kernel (GEMM kernel only)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "softmax", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "softmax", "no OpenCL softmax kernel (GEMM kernel only)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "layer_norm", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "layer_norm", "no OpenCL layer_norm kernel (GEMM kernel only)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "rms_norm", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "rms_norm", "no OpenCL rms_norm kernel (GEMM kernel only)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "relu", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "relu", "no OpenCL relu kernel (GEMM kernel only)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "gelu", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "gelu", "no OpenCL gelu kernel (GEMM kernel only)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "silu", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "silu", "no OpenCL silu kernel (GEMM kernel only)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "add", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "add", "no OpenCL add kernel (GEMM kernel only)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "mul", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "mul", "no OpenCL mul kernel (GEMM kernel only)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_OPENCL", "scale", "no OpenCL platform/device on this host");
         throw_unavailable("GPU_OPENCL", "scale", "no OpenCL scale kernel (GEMM kernel only)");
     }
