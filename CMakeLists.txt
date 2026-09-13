@@ -60,8 +60,9 @@ add_library(quant_math
   src/math/math_avx2_vec.cpp
   src/math/simd_math.cpp
 )
-# NOTE: src/math/math_avx2_tensor.cpp kept on disk but excluded from build:
-# it duplicates gemm/gemv/dot/axpy/norm/asum/relu symbols from math_avx2.cpp (LNK2005). P18.
+# NOTE (P18): src/math/math_avx2_tensor.cpp was a byte-identical duplicate of
+# math_avx2.cpp (gemm/gemv/dot/axpy/norm/asum/relu → LNK2005) — DELETED,
+# do not re-add. See exp_avx2.h for the shared AVX2 exp approximation.
 if(QUANT_AVX512)
   target_sources(quant_math PRIVATE src/math/math_avx512.cpp)
 endif()
@@ -339,6 +340,15 @@ option(QUANT_CUDA "Enable CUDA compute backend (dynamically loaded)" ON)
 if(QUANT_CUDA)
   target_compile_definitions(quant_gpu PRIVATE QUANT_USE_CUDA)
   target_compile_definitions(quant_backend PRIVATE QUANT_USE_CUDA)
+endif()
+
+# Apple ObjC runtime: gpu_compute_metal.cpp calls objc_getClass/objc_msgSend/
+# sel_registerName directly (dynamic Metal dispatch, no Metal SDK needed).
+# These live in libobjc (/usr/lib) — NOT auto-linked for plain C++ targets,
+# so every Apple link otherwise dies with "_objc_getClass/_objc_msgSend/
+# _sel_registerName not found" (macOS CI, bench_hardware link, 2026-09-13).
+if(APPLE)
+  target_link_libraries(quant_gpu PUBLIC "-lobjc")
 endif()
 
 if(QUANT_BUILD_TOOLS)

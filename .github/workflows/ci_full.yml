@@ -109,7 +109,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build
-          key: build-${{ runner.os }}-${{ matrix.cc }}-${{ hashFiles('CMakeLists.txt', 'src/**', 'include/**') }}
+          # Workflow file itself is hashed: compiler/shell/flag edits in this
+          # file MUST bust the cache, else a stale CMakeCache (old generator
+          # or old CC/CXX, e.g. ex-clang-cl entries via the `build-Windows-`
+          # restore-prefix) poisons re-configure → instant Configure failure
+          # (2026-09-13: ci_full Windows leg died in ~2s while cache-less
+          # build.yml stayed green on the same image).
+          key: build-${{ runner.os }}-${{ matrix.cc }}-${{ hashFiles('CMakeLists.txt', '.github/workflows/ci_full.yml', 'src/**', 'include/**') }}
           restore-keys: |
             build-${{ runner.os }}-${{ matrix.cc }}-
             build-${{ runner.os }}-
