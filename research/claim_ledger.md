@@ -589,3 +589,13 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | I1-I6 | MoE import_weights ×25 unchecked memcpy (corrupt n → OOB router write) | Validated `import_router_blob`/`import_blob_at` helpers in `moe_advanced_support.cpp` |
 | C1-C5 | CodebookQ3/Q6/Q12/QUANT8/QUANT4 `dequantize` unchecked index (corrupt bits → OOB) | Range-throw guards in `codebook.cpp` |
 | Suite | Full rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 16 — 2026-09-13 (untracked tree + crew wave 2)
+
+| # | Item | Evidence |
+|---|---|---|
+| U1 | **105 built source files were never `git add`ed** (`src/inference/`, `src/tokenizer/`, `src/server/`, most of `src/agi|backend|codec|core|model|trainer`) — census counted 538 tracked, real tree is bigger | Staged + committed in `a364eb6`; build + 72/72 prove they compile and pass |
+| S1-S8 | Sampler numerics (greedy/temp/penalty/top_k/top_p guards, exp-overflow clamp, nth_element UB, degenerate-sum fallback, reseed) | `src/inference/sampler.cpp` (crew 26036be8; full build + suite green) |
+| Z1-? | Tokenizer edge cases | Crew c6f344f7 (silent; changes in tree, build+suite green) |
+| V1-? | Server parsing gaps (chunked/pipelined/continuation/case/query-decode) | Crew 9910cc5c (silent; changes in tree, build+suite green) |
+| Suite | Full rebuild 0 errors; full ctest green | 72/72 |
