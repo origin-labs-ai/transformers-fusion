@@ -328,8 +328,7 @@ class CPUAVX512Backend : public ComputeBackend {
 public:
     BackendType type() const override { return BackendType::CPU_AVX512; }
     const char* name() const override { return "CPU_AVX512"; }
-    void gemm(float a, const Tensor& A, const Tensor& B, float b, Tensor& C) override {
-        (void)a; (void)A; (void)B; (void)b; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("CPU_AVX512", "gemm", "built without QUANT_AVX512");
     }
     void gemv(float a, const Tensor& A, const Tensor& x, float b, Tensor& y) override { fallback.gemv(a,A,x,b,y); }
@@ -1056,58 +1055,47 @@ public:
     // gpu_compute_sycl.cpp (requires DPC++ to dispatch). Calling them as
     // "SYCL GPU" would be FAKE, so they fail loud. Previous silent
     // math:: fallback REMOVED.
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "gemm", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "gemm", "SYCL device GEMM kernel not implemented (DPC++ compiler required)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "gemv", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "gemv", "SYCL device GEMV kernel not implemented (DPC++ compiler required)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "softmax", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "softmax", "SYCL device softmax kernel not implemented");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "layer_norm", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "layer_norm", "SYCL device layer_norm kernel not implemented");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "rms_norm", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "rms_norm", "SYCL device rms_norm kernel not implemented");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "relu", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "relu", "SYCL device relu kernel not implemented");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "gelu", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "gelu", "SYCL device gelu kernel not implemented");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "silu", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "silu", "SYCL device silu kernel not implemented");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "add", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "add", "SYCL device add kernel not implemented");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "mul", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "mul", "SYCL device mul kernel not implemented");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         if (!avail_) throw_unavailable("GPU_SYCL", "scale", "no SYCL GPU runtime on this host");
         throw_unavailable("GPU_SYCL", "scale", "SYCL device scale kernel not implemented");
     }
