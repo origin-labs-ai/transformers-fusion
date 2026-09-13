@@ -1,4 +1,4 @@
-﻿#include "quant/backend.h"
+#include "quant/backend.h"
 #include "quant/math.h"
 #include "quant/kernel.h"
 #include "quant/gpu_compute.h"
@@ -1214,8 +1214,7 @@ public:
         catch (const std::runtime_error&) { throw; }
         catch (...) { throw_unavailable("RPC", "gemm", "RPC transport failed mid-call"); }
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!rpc_live()) throw_unavailable("RPC", "gemv", "no RPC server reachable (127.0.0.1:9000)");
         throw_unavailable("RPC", "gemv", "no GEMV opcode in RPC protocol (OP_GEMM..OP_MUL only)");
     }
@@ -1225,8 +1224,7 @@ public:
         catch (const std::runtime_error&) { throw; }
         catch (...) { throw_unavailable("RPC", "softmax", "RPC transport failed mid-call"); }
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!rpc_live()) throw_unavailable("RPC", "layer_norm", "no RPC server reachable (127.0.0.1:9000)");
         throw_unavailable("RPC", "layer_norm", "no LAYER_NORM opcode in RPC protocol");
     }
@@ -1266,8 +1264,7 @@ public:
         catch (const std::runtime_error&) { throw; }
         catch (...) { throw_unavailable("RPC", "mul", "RPC transport failed mid-call"); }
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         if (!rpc_live()) throw_unavailable("RPC", "scale", "no RPC server reachable (127.0.0.1:9000)");
         throw_unavailable("RPC", "scale", "no SCALE opcode in RPC protocol");
     }
@@ -1304,7 +1301,8 @@ public:
             C.zero_();
             for (int64_t mt = 0; mt < M; mt += tile_m) {
                 int64_t m_end = std::min(mt + tile_m, M);
-                int64_t m_size = m_end - mt; (void)m_size;
+                // NOTE (bug census): m_size was dead ((void)-discarded) — the
+                // slice bounds below already encode it. Removed, not hidden.
                 Tensor A_tile = A.reshape({(int64_t)M, K}).slice(0, mt, m_end);
                 Tensor C_tile = C.reshape({(int64_t)M, N}).slice(0, mt, m_end);
                 math::gemm(alpha, A_tile, B, beta, C_tile);
@@ -1350,7 +1348,8 @@ public:
         int64_t start = rank_ * rows_per_device;
         int64_t end = std::min(start + rows_per_device, M);
         if (start >= M) return;
-        int64_t local_rows = end - start; (void)local_rows;
+        // NOTE (bug census): local_rows was dead ((void)-discarded) — the
+        // slice bounds below already encode it. Removed, not hidden.
         Tensor A_local = A.reshape({(int64_t)M, K}).slice(0, start, end);
         Tensor C_local = C.reshape({(int64_t)M, N}).slice(0, start, end);
         local_backend.gemm(alpha, A_local, B, beta, C_local);
@@ -1431,49 +1430,38 @@ public:
     // every compute op fails loud. Previous silent math:: fallback REMOVED.
     // If a future host loads openvino_c AND real graph kernels land, flip
     // these to dispatch; until then PARTIAL at best (init probe REAL).
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!ov_ || !ov_->is_initialized()) throw_unavailable("NPU_OPENVINO", "gemm", "no OpenVINO runtime on this host");
         throw_unavailable("NPU_OPENVINO", "gemm", "OpenVINO graph kernels not implemented (CPU triple-loop stub only)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "gemv", "no OpenVINO GEMV kernel (stub backend)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("NPU_OPENVINO", "softmax", "no OpenVINO softmax kernel (stub backend)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "layer_norm", "no OpenVINO layer_norm kernel (stub backend)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "rms_norm", "no OpenVINO rms_norm kernel (stub backend)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "relu", "no OpenVINO relu kernel (stub backend)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "gelu", "no OpenVINO gelu kernel (stub backend)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "silu", "no OpenVINO silu kernel (stub backend)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "add", "no OpenVINO add kernel (stub backend)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "mul", "no OpenVINO mul kernel (stub backend)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("NPU_OPENVINO", "scale", "no OpenVINO scale kernel (stub backend)");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }
