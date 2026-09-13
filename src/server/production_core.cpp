@@ -7,6 +7,7 @@
 #include <cstring>
 #include <ctime>
 #include <thread>
+#include <new>
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -212,8 +213,15 @@ char* quant_generate(QuantModel* model, const char* prompt, int max_tokens) {
     }
 
     std::string result = bpe.decode(output);
-    char* cstr = new char[result.size() + 1];
-    std::strcpy(cstr, result.c_str());
+    // BUGFIX (bug census): new+strcpy pair (throw between = leak; strcpy
+    // unchecked). new(nothrow)+null-check+memcpy (bounded by construction).
+    char* cstr = new (std::nothrow) char[result.size() + 1];
+    if (!cstr) {
+        g_last_error = "out of memory";
+        errno = ENOMEM;
+        return nullptr;
+    }
+    std::memcpy(cstr, result.c_str(), result.size() + 1);
     return cstr;
 }
 

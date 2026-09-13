@@ -770,17 +770,26 @@ static std::string read_file_contents(const fs::path& path) {
 }
 
 static std::string escape_path(const std::string& p) {
+    // BUGFIX (bug census): Windows branch wrapped in quotes but did NOT
+    // escape embedded quotes (cmd injection via crafted task paths); POSIX
+    // branch missed $,`,\,",',!,*,?,#,~,=,<,>,newline. Quote + escape fully.
 #ifdef _WIN32
-    return "\"" + p + "\"";
-#else
-    std::string escaped = p;
-    for (size_t i = 0; i < escaped.size(); i++) {
-        if (escaped[i] == ' ' || escaped[i] == '(' || escaped[i] == ')' ||
-            escaped[i] == '&' || escaped[i] == '|' || escaped[i] == ';') {
-            escaped.insert(escaped.begin() + i, '\\');
-            i++;
-        }
+    std::string out = "\"";
+    for (char c : p) {
+        if (c == '"') out += "\"\""; // cmd.exe quote escape
+        else out += c;
     }
+    out += "\"";
+    return out;
+#else
+    std::string escaped;
+    escaped.reserve(p.size() + 2);
+    escaped += '\'';
+    for (char c : p) {
+        if (c == '\'') escaped += "'\\''"; // close, escape, reopen
+        else escaped += c;
+    }
+    escaped += '\'';
     return escaped;
 #endif
 }

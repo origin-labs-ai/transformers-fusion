@@ -686,3 +686,12 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | B2 | `kv_cache` dead `bo` remainder `(void)`-discarded | Removed + documented (block-scale only) |
 | B3-B4 | `quant/dequant_lattice` bare `(void)fmt/budget_bits` hid intent | Documented-unused (dispatch on bits; informational) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 26 — 2026-09-13 (shell escape, C-API, tokenizer load)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| S1 | `escape_path` missed `$`, backtick, quotes, `*?#~` (shell injection via task paths) | Single-quote wrap (POSIX) + quote-double (Win) |
+| C1 | `quant_generate` C-API `new+strcpy` (throw-leak + unchecked) | nothrow + null-check + memcpy |
+| K2 | `ByteLevelBPETokenizer::load` same unvalidated bug as BPE load | Caps + commit-on-success (fixed member types) |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

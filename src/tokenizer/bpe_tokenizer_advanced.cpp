@@ -261,26 +261,45 @@ void ByteLevelBPETokenizer::save(const std::string& path) const {
 }
 
 void ByteLevelBPETokenizer::load(const std::string& path) {
+    // BUGFIX (bug census): same unvalidated vs/len/merges as BPETokenizer::load
+    // (negative → OOM, short reads → corrupt). Same caps + commit-on-success.
+    static constexpr int kMaxVocab = 1 << 20, kMaxTokLen = 1 << 16, kMaxMerges = 1 << 24;
     std::ifstream f(path, std::ios::binary);
-    int vs; f.read((char*)&vs, sizeof(vs));
-    vocab_.resize(vs);
-    token_to_id_.clear();
-    id_to_token_.resize(vs);
+    if (!f) return;
+    int vs = 0;
+    f.read((char*)&vs, sizeof(vs));
+    if (!f || vs < 0 || vs > kMaxVocab) return;
+    std::vector<std::string> vocab((size_t)vs);
+    std::unordered_map<std::string, int> t2i;
+    std::vector<std::string> i2t((size_t)vs);
     for (int i = 0; i < vs; i++) {
-        int len; f.read((char*)&len, sizeof(len));
-        vocab_[i].resize(len);
-        f.read(&vocab_[i][0], len);
-        token_to_id_[vocab_[i]] = i;
-        id_to_token_[i] = vocab_[i];
+        int len = 0;
+        f.read((char*)&len, sizeof(len));
+        if (!f || len < 0 || len > kMaxTokLen) return;
+        vocab[(size_t)i].resize((size_t)len);
+        if (len > 0) {
+            f.read(&vocab[(size_t)i][0], len);
+            if (!f) return;
+        }
+        t2i[vocab[(size_t)i]] = i;
+        i2t[(size_t)i] = vocab[(size_t)i];
     }
-    int ms; f.read((char*)&ms, sizeof(ms));
-    merges_.clear();
+    int ms = 0;
+    f.read((char*)&ms, sizeof(ms));
+    if (!f || ms < 0 || ms > kMaxMerges) return;
+    std::map<std::pair<int,int>, int> merges;
     for (int i = 0; i < ms; i++) {
-        int a, b, c; f.read((char*)&a, sizeof(a));
+        int a = 0, b = 0, c = 0;
+        f.read((char*)&a, sizeof(a));
         f.read((char*)&b, sizeof(b));
         f.read((char*)&c, sizeof(c));
-        merges_[{a,b}] = c;
+        if (!f) return;
+        merges[{a,b}] = c;
     }
+    vocab_ = std::move(vocab);
+    token_to_id_ = std::move(t2i);
+    id_to_token_ = std::move(i2t);
+    merges_ = std::move(merges);
 }
 
 MultiLingualTokenizer::MultiLingualTokenizer() {
