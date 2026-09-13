@@ -779,3 +779,11 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 |---|---|---|
 | D1-D3 | Bare `(void)hook_installed/weight/global_rank` hid intent | `[[maybe_unused]]` / documented-unused (shape/signature/leadership notes) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 34 — 2026-09-13 (stub unnamed params + stale-binary flake)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U11 | `CPUAVX2Backend` no-AVX2 stub: 11 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
+| F1 | `test_hybrid_scheduler` "Not Run"/FAIL was a stale-binary artifact (parallel-build exe lock), not a code bug | Fresh rebuild → 12/12; full suite green after |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

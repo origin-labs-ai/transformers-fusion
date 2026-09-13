@@ -1,4 +1,4 @@
-#include "quant/backend.h"
+﻿#include "quant/backend.h"
 #include "quant/math.h"
 #include "quant/kernel.h"
 #include "quant/gpu_compute.h"
@@ -229,48 +229,37 @@ class CPUAVX2Backend : public ComputeBackend {
 public:
     BackendType type() const override { return BackendType::CPU_AVX2; }
     const char* name() const override { return "CPU_AVX2"; }
-    void gemm(float a, const Tensor& A, const Tensor& B, float b, Tensor& C) override {
-        (void)a; (void)A; (void)B; (void)b; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("CPU_AVX2", "gemm", "built without QUANT_AVX2");
     }
-    void gemv(float a, const Tensor& A, const Tensor& x, float b, Tensor& y) override {
-        (void)a; (void)A; (void)x; (void)b; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("CPU_AVX2", "gemv", "built without QUANT_AVX2");
     }
-    void softmax(const Tensor& x, Tensor& y, int a) override {
-        (void)x; (void)y; (void)a;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("CPU_AVX2", "softmax", "built without QUANT_AVX2");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& b, float e, Tensor& y) override {
-        (void)x; (void)g; (void)b; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("CPU_AVX2", "layer_norm", "built without QUANT_AVX2");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("CPU_AVX2", "rms_norm", "built without QUANT_AVX2");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "relu", "built without QUANT_AVX2");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "gelu", "built without QUANT_AVX2");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "silu", "built without QUANT_AVX2");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "add", "built without QUANT_AVX2");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "mul", "built without QUANT_AVX2");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("CPU_AVX2", "scale", "built without QUANT_AVX2");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }
