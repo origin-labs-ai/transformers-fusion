@@ -141,3 +141,7 @@ SESSION-*.jsonl
 
 # Local install verification prefix (cmake --install self-check)
 install_test/
+
+# Local CI-repro scratch logs (ctest/build output captures)
+build-*-*.txt
+build-*.log
