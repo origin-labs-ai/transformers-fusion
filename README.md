@@ -29,6 +29,9 @@ EVERYTHING IS OUR OWN — zero dependency, maximum control.
 | Windows 11 | Clang 22.1.7 (clang-cl) | ✅ 90+ build targets (C-08 VERIFIED ≈111), 72 ctest cases — 72/72 green 2026-09-11 (C-07 VERIFIED this round) |
 | Linux | GCC ≥ 12 / Clang ≥ 16 | ✅ 90+ build targets (C-08 VERIFIED ≈111), CI PR-gate set 64/64 + FULL heavies 71/71 green on WSL2/GCC15 2026-09-13 (80%-push round 3; GitHub-hosted run owed on push) |
 | macOS (target) | Apple Clang | ⏳ Pending |
+| GitHub Actions `CI Build` | MSVC (Ninja) + GCC-13 + Clang-18 | ✅ 3/3 jobs green 2026-09-13 (Windows Ninja fix + android-contract fix CI-proven; run `34759805003`) |
+| GitHub Actions `CI Full` Ubuntu legs | GCC-13 + Clang-18 | ✅ Quick tests green both legs 2026-09-13 (android fix CI-proven) |
+| GitHub Actions `CI macOS` | Apple Clang (ARM64) | 🔴 Build fail — `gpu_compute_metal.cpp` private-`Impl` error root-caused, fix pushed (`dc5209b`); rerun in progress |
 
 ### Quick Start
 
