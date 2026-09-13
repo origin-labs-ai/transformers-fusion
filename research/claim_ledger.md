@@ -764,3 +764,11 @@ The "committed CSV + visuals rerun owed" item (round C-24/A-02) is now closed:
 | F1 | `FSDPBlock::gather_and_install` fresh-ctx barrier per call (single-thread deadlock pattern) + null memcpy | Local gather when ws≤1 (documented shared-ctx future); null guards |
 | M1-M2 | MoE expert-parallel grad div-by-zero ×2 (`num_expert_parallel_ranks==0` default → inf/NaN) | `>1` guard + null grad check |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 32 — 2026-09-13 (inference logprobs + generator)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| L1 | `compute_logprobs` V≤0 div-zero, null deref, NaN logits → NaN probs | Guards + finite-only max/sum, -50 fallback |
+| G1 | `generate_tokens` empty input → zero-shape + pointer underflow | Fail-closed empty |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

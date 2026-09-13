@@ -15,6 +15,9 @@ Generator::Generator(Model* model, Tokenizer* tokenizer)
 
 std::vector<int> Generator::generate_tokens(const std::vector<int>& input_ids,
                                               const SamplerConfig& cfg) {
+    // BUGFIX (bug census): empty input_ids → seq_len=0 → zero-shape Tensor
+    // + (seq_len-1)*vocab pointer underflow. Fail closed (empty out).
+    if (input_ids.empty() || !model_) return {};
     int64_t seq_len = input_ids.size();
     int64_t B = 1;
     
