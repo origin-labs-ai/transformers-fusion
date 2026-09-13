@@ -640,3 +640,15 @@ Seven crews swept by defect class (memory/integer/errors/concurrency/API/CLI/tes
 | T2 | `test_training` trailing `TEST_CHECK(true)` | Removed (asserts above are the proof) |
 | T3 | `test_training_features` pass-on-failure (`true` after `CHECK(false)`) | Clean-step count assert |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 21 — 2026-09-13 (quantize/infer/evaluate tools)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| Q1-Q4 | `quantize --format`: duplicated QG alternatives, lowercase `qg*` rejected, `--help` names rejected, unknown fail-open → Q8 | Canonical lowercase + aliases; unknown throws (exit 2, verified live) |
+| Q5-Q6 | Default `"quant8"` always warned; `--num-bits` dead flag; `--help` fiction | Default `q8`; num-bits validated 1..32; help rewritten to real names |
+| Q7-Q8 | `--per-layer` malformed entries ignored; empty tensors silent-skip exit 0 | Malformed → exit 2; skips warn |
+| Q9 | Q32 fallback return unchecked (double-failure corrupt block) | Abort with error |
+| I1-I2 | `infer --seed` bare strtoull + unchecked env set; bare-filename model → empty tokenizer dir | errno/endptr validation (exit 2); `.` default |
+| E1 | `evaluate` stride 0 hang with `--context 1` | Clamp stride ≥ 1 |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

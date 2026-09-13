@@ -1,4 +1,4 @@
-﻿#include "quant/model.h"
+#include "quant/model.h"
 #include "quant/eval.h"
 #include "quant/qwen35_tokenizer.h"
 #include "quant/metrics.h"
@@ -104,7 +104,11 @@ int main(int argc, char** argv) {
 
     if (args.task == "perplexity" || args.task == "all") {
         if (!eval_tokens.empty()) {
-            auto r = evaluator.evaluate_perplexity(eval_tokens, "perplexity", args.context_size, args.context_size / 2);
+            // BUGFIX (bug census): context_size/2 stride is 0 when --context
+            // 1 (hang in evaluator). Clamp stride >= 1.
+            int stride = args.context_size / 2;
+            if (stride < 1) stride = 1;
+            auto r = evaluator.evaluate_perplexity(eval_tokens, "perplexity", args.context_size, stride);
             std::cout << "Perplexity: " << r.perplexity
                       << " (tokens: " << r.total_tokens << ")\n";
         }

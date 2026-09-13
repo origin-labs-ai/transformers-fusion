@@ -1,4 +1,4 @@
-﻿#include "quant/quant_format.h"
+#include "quant/quant_format.h"
 #include "quant/quant_engines.h"
 #include "quant/codebook.h"
 #include "quant/kernel.h"
@@ -7,6 +7,7 @@
 #include "quant/block_codec.h"
 
 #include "quant/detail/cli_parse.h"
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -18,28 +19,34 @@
 using namespace quant;
 
 static Format parse_format(const std::string& s) {
-    if (s == "q1" || s == "Q1") return Format::Q1;
-    if (s == "q2" || s == "Q2") return Format::Q2;
-    if (s == "q3" || s == "Q3") return Format::Q3;
-    if (s == "q4" || s == "Q4") return Format::Q4;
-    if (s == "q6" || s == "Q6") return Format::Q6;
-    if (s == "q8" || s == "Q8") return Format::Q8;
-    if (s == "q12" || s == "Q12") return Format::Q12;
-    if (s == "q16" || s == "Q16") return Format::Q16;
-    if (s == "q24" || s == "Q24") return Format::Q24;
-    if (s == "q32" || s == "Q32" || s == "fp32" || s == "FP32") return Format::Q32;
-    if (s == "q1_g" || s == "QG1" || s == "q1_grp" || s == "QG1") return Format::QG1;
-    if (s == "q2_g" || s == "QG2" || s == "q2_grp" || s == "QG2") return Format::QG2;
-    if (s == "q3_g" || s == "QG3" || s == "q3_grp" || s == "QG3") return Format::QG3;
-    if (s == "q4_g" || s == "QG4" || s == "q4_grp" || s == "QG4") return Format::QG4;
-    if (s == "q6_g" || s == "QG6" || s == "q6_grp" || s == "QG6") return Format::QG6;
-    if (s == "q8_g" || s == "QG8" || s == "q8_grp" || s == "QG8") return Format::QG8;
-    if (s == "q12_g" || s == "QG12" || s == "q12_grp" || s == "QG12") return Format::QG12;
-    if (s == "q16_g" || s == "QG16" || s == "q16_grp" || s == "QG16") return Format::QG16;
-    if (s == "q24_g" || s == "QG24" || s == "q24_grp" || s == "QG24") return Format::QG24;
-    if (s == "quad_3_5" || s == "QUAD_MIX_3_5") return Format::QG_MX_3_5;
-    std::cerr << "Warning: unknown format '" << s << "' — defaulting to Q8\n";
-    return Format::Q8;
+    // BUGFIX (bug census): duplicated QG alternatives, lowercase qg* never
+    // matched, quant1/quant*/quad names from --help rejected, and unknown
+    // fail-open defaulted to Q8 with a warning. Now: canonical v3 names +
+    // common aliases; unknown is a hard error (no silent misquantize).
+    // NOTE: throws on unknown — parse_args lets it propagate as a usage error.
+    auto lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return (char)std::tolower(c); });
+    if (lower == "q1") return Format::Q1;
+    if (lower == "q2") return Format::Q2;
+    if (lower == "q3") return Format::Q3;
+    if (lower == "q4") return Format::Q4;
+    if (lower == "q6") return Format::Q6;
+    if (lower == "q8" || lower == "quant8") return Format::Q8;
+    if (lower == "q12") return Format::Q12;
+    if (lower == "q16" || lower == "fp16") return Format::Q16;
+    if (lower == "q24") return Format::Q24;
+    if (lower == "q32" || lower == "fp32") return Format::Q32;
+    if (lower == "qg1" || lower == "q1_g" || lower == "q1_grp") return Format::QG1;
+    if (lower == "qg2" || lower == "q2_g" || lower == "q2_grp") return Format::QG2;
+    if (lower == "qg3" || lower == "q3_g" || lower == "q3_grp") return Format::QG3;
+    if (lower == "qg4" || lower == "q4_g" || lower == "q4_grp") return Format::QG4;
+    if (lower == "qg6" || lower == "q6_g" || lower == "q6_grp") return Format::QG6;
+    if (lower == "qg8" || lower == "q8_g" || lower == "q8_grp") return Format::QG8;
+    if (lower == "qg12" || lower == "q12_g" || lower == "q12_grp") return Format::QG12;
+    if (lower == "qg16" || lower == "q16_g" || lower == "q16_grp") return Format::QG16;
+    if (lower == "qg24" || lower == "q24_g" || lower == "q24_grp") return Format::QG24;
+    throw std::runtime_error("unknown format '" + s + "'");
 }
 
 static Format s_default_format = Format::Q8;
@@ -47,9 +54,9 @@ static Format s_default_format = Format::Q8;
 struct QuantArgs {
     std::string input_path;
     std::string output_path;
-    std::string format = "quant8";
+    std::string format = "q8"; // BUGFIX: was "quant8" which parse_format rejected (always warned + fell back)
     std::string per_layer_format;
-    int num_bits = 8;
+    int num_bits = 8; // BUGFIX: parsed but never read downstream — kept for compat, validated
 };
 
 static QuantArgs parse_args(int argc, char** argv) {
@@ -61,21 +68,29 @@ static QuantArgs parse_args(int argc, char** argv) {
             args.output_path = argv[++i];
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc) {
             args.format = argv[++i];
-            s_default_format = parse_format(args.format);
+            try {
+                s_default_format = parse_format(args.format);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                exit(2);
+            }
         } else if (strcmp(argv[i], "--per-layer") == 0 && i + 1 < argc)
             args.per_layer_format = argv[++i];
-        else if (strcmp(argv[i], "--num-bits") == 0 && i + 1 < argc)
+        else if (strcmp(argv[i], "--num-bits") == 0 && i + 1 < argc) {
             args.num_bits = quant::cli_parse::parse_int(argv[i-1], argv[++i]);
-        else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            if (args.num_bits <= 0 || args.num_bits > 32) {
+                std::cerr << "Error: --num-bits needs 1..32\n";
+                exit(2);
+            }
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             std::cout << "Usage: quant_quantize --input model.quant --output quantized.quant [options]\n";
             std::cout << "Options:\n";
-            std::cout << "  --format <f>       Target format (default: quant8)\n";
-            std::cout << "                     Formats: fp32, fp16, quant1, quant1_g, quant2,\n";
-            std::cout << "                     quant2_g, quant4, quant4_g, quant8, quant8_g,\n";
-            std::cout << "                     quant (1.50 bpw), quant_q0_g,\n";
-            std::cout << "                     quant_sparse, quant_sparse_g\n";
+            std::cout << "  --format <f>       Target format (default: q8)\n";
+            std::cout << "                     Formats: q1 q2 q3 q4 q6 q8 q12 q16 q24 q32/fp32,\n";
+            std::cout << "                     qg1 qg2 qg3 qg4 qg6 qg8 qg12 qg16 qg24 (aliases:\n";
+            std::cout << "                     qN_g, qN_grp, any case; quant8 = q8, fp16 = q16)\n";
             std::cout << "  --per-layer <csv>  Per-layer formats (name=fmt,name=fmt,...)\n";
-            std::cout << "  --num-bits N       Number of bits (default: 8)\n";
+            std::cout << "  --num-bits N       Bits hint 1..32 (default: 8; informational)\n";
             exit(0);
         }
     }
@@ -104,8 +119,16 @@ int main(int argc, char** argv) {
             if (eq != std::string::npos) {
                 std::string name = item.substr(0, eq);
                 std::string fmt = item.substr(eq + 1);
-                per_layer[name] = parse_format(fmt);
+                try {
+                    per_layer[name] = parse_format(fmt);
+                } catch (const std::exception& e) {
+                    std::cerr << "Error: layer '" << name << "': " << e.what() << "\n";
+                    return 2;
+                }
                 std::cout << "  Layer '" << name << "' -> " << fmt << "\n";
+            } else if (!item.empty()) {
+                std::cerr << "Error: --per-layer entry '" << item << "' needs name=fmt\n";
+                return 2;
             }
         }
     }
@@ -134,7 +157,12 @@ int main(int argc, char** argv) {
 
     for (const auto& name : tensor_names) {
         Tensor tensor = reader.read_tensor(name);
-        if (tensor.numel() == 0) continue;
+        // BUGFIX (bug census): empty tensors silently `continue`d yet the
+        // tool exited 0 (silent skip). Count + warn instead.
+        if (tensor.numel() == 0) {
+            std::cerr << "Warning: skipping empty tensor '" << name << "'\n";
+            continue;
+        }
 
         Format fmt = s_default_format;
         auto it = per_layer.find(name);
@@ -162,14 +190,20 @@ int main(int argc, char** argv) {
             // truth for on-disk payloads. This keeps the tool's output
             // byte-identical in layout to everything the reader decodes
             // (quantize_block_all/dequantize_block_all), for every format.
+            // BUGFIX (bug census): the Q32 fallback return was unchecked —
+            // double-failure wrote a corrupt block. Abort loudly instead.
             if (!quantize_block_all(fmt, data + block_start, (int)block_size,
                                     block.indices, block.codebook)) {
                 std::cerr << "Warning: " << name << " block " << b
                           << ": format unsupported by canonical codec, "
                              "writing raw Q32\n";
                 block.format = Format::Q32;
-                quantize_block_all(Format::Q32, data + block_start,
-                                   (int)block_size, block.indices, block.codebook);
+                if (!quantize_block_all(Format::Q32, data + block_start,
+                                        (int)block_size, block.indices, block.codebook)) {
+                    std::cerr << "Error: " << name << " block " << b
+                              << ": Q32 fallback encode failed — aborting\n";
+                    return 1;
+                }
             }
 
             writer.write_block(block);
