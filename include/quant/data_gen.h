@@ -81,6 +81,9 @@ private:
     int stage_sample_count_ = 0;
     double running_accuracy_ = 0.0;
     int accuracy_samples_ = 0;
+    // BUGFIX (bug census): set_progress_fn silently discarded its callback
+    // (training progress invisible). Stored + invoked on stage transitions.
+    std::function<void(const std::string&, int, double)> progress_fn_;
 
     bool should_promote() const;
 };

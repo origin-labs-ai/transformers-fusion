@@ -1020,7 +1020,12 @@ void HTTPServer::handle_completions(int fd, const HTTPRequest& req) {
         if (parsed.has("top_k") && parsed["top_k"].is_number())
             top_k = (int)parsed["top_k"].as_float_checked();
     }
-    (void)temperature; (void)top_p; (void)top_k;
+    // BUGFIX (bug census): temperature/top_p/top_k were parsed then
+    // (void)-discarded — the generate callback takes (prompt, max_tokens,
+    // stream) only, so sampling params NEVER reached generation. Documented
+    // as accepted-but-unwired (callback signature is the contract); the
+    // parse+validate above still rejects non-numeric junk loudly.
+    (void)temperature; (void)top_p; (void)top_k; // documented-unused: callback takes (prompt,max_tokens,stream)
 
     max_tokens = std::max((int64_t)1, std::min(max_tokens, (int64_t)4096));
 
@@ -1178,7 +1183,9 @@ void HTTPServer::handle_chat_completions(int fd, const HTTPRequest& req) {
             }
         }
     }
-    (void)temperature;
+    // BUGFIX (bug census): same accepted-but-unwired sampling param as the
+    // completions endpoint above (callback takes prompt/max_tokens/stream).
+    (void)temperature; // documented-unused: callback takes (prompt,max_tokens,stream)
     if (!has_messages || transcript.empty()) {
         send_openai_error(fd, 400, "messages array with at least one message is required",
                           "invalid_request_error", "missing_messages");

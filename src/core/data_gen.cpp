@@ -387,6 +387,10 @@ void CurriculumGenerator::report_accuracy(double accuracy) {
         stage_sample_count_ = 0;
         running_accuracy_ = 0.0;
         accuracy_samples_ = 0;
+        if (progress_fn_) {
+            const auto& st = stages_[(size_t)current_stage_idx_];
+            progress_fn_(st.name, st.difficulty, st.accuracy_threshold);
+        }
     }
 }
 
@@ -430,7 +434,8 @@ bool CurriculumGenerator::is_complete() const {
 }
 
 void CurriculumGenerator::set_progress_fn(std::function<void(const std::string&, int, double)> fn) {
-    (void)fn;
+    // BUGFIX (bug census): was (void)fn — callback silently dropped.
+    progress_fn_ = std::move(fn);
 }
 
 // ==================== TokenizerEvaluator ====================

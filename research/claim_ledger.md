@@ -857,3 +857,13 @@ Linux build of the tree (WSL2 Ubuntu, GCC 15.2, `build-wsl/`, benchmarks off):
 |---|---|---|
 | U1-U11 | `NPU_ZDNNBackend` fail-loud stubs: 11 named-but-unused params + `(void)` lines | Unnamed params (idiomatic, zero lines) |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 42 — 2026-09-13 (MUSA + sampling/curriculum stubs)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| U1-U11 | `GPU_MUSABackend` fail-loud stubs: 11 named-but-unused params | Unnamed params |
+| S1 | temperature/top_p/top_k parsed then discarded on BOTH endpoints (sampling never reached generation) | Documented accepted-but-unwired (callback signature is the contract) |
+| C1 | `CurriculumGenerator::set_progress_fn` silently dropped callback | Stored + invoked on stage promotion |
+| F1 | `make_causal_mask` double `(void)B` (leftover duplicate) | Single documented discard |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |

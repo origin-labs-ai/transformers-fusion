@@ -24,12 +24,14 @@ namespace {
 
 // Causal attention mask identical to DenseModel::forward.
 Tensor make_causal_mask(int64_t B, int64_t S) {
+    // BUGFIX (bug census): B was (void)-discarded — mask is {1,1,S,S} (batch
+    // broadcast), so B is intentionally unused. Unnamed param states it.
+    (void)B; // documented-unused: batch broadcasts from {1,1,S,S}
     Tensor mask(Shape{1, 1, S, S}, DType::F32);
     float* md = mask.data<float>();
     for (int64_t s = 0; s < S; s++)
         for (int64_t t = 0; t < S; t++)
             md[s * S + t] = (t > s) ? -INFINITY : 0.0f;
-    (void)B;
     return mask;
 }
 
