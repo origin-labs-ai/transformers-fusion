@@ -2071,49 +2071,38 @@ public:
     ~DSPHexagonBackend() override { delete hx_; }
     BackendType type() const override { return BackendType::DSP_HEXAGON; }
     const char* name() const override { return "DSP_HEXAGON"; }
-    void gemm(float alpha, const Tensor& A, const Tensor& B, float beta, Tensor& C) override {
-        (void)alpha; (void)A; (void)B; (void)beta; (void)C;
+    void gemm(float, const Tensor&, const Tensor&, float, Tensor&) override {
         if (!avail_) throw_unavailable("DSP_HEXAGON", "gemm", "no Hexagon DSP runtime on this host");
         throw_unavailable("DSP_HEXAGON", "gemm", "HVX kernels not implemented (host triple-loop stub only)");
     }
-    void gemv(float alpha, const Tensor& A, const Tensor& x, float beta, Tensor& y) override {
-        (void)alpha; (void)A; (void)x; (void)beta; (void)y;
+    void gemv(float, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "gemv", "HVX kernels not implemented (stub backend)");
     }
-    void softmax(const Tensor& x, Tensor& y, int axis) override {
-        (void)x; (void)y; (void)axis;
+    void softmax(const Tensor&, Tensor&, int) override {
         throw_unavailable("DSP_HEXAGON", "softmax", "HVX kernels not implemented (stub backend)");
     }
-    void layer_norm(const Tensor& x, const Tensor& g, const Tensor& bt, float e, Tensor& y) override {
-        (void)x; (void)g; (void)bt; (void)e; (void)y;
+    void layer_norm(const Tensor&, const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "layer_norm", "HVX kernels not implemented (stub backend)");
     }
-    void rms_norm(const Tensor& x, const Tensor& g, float e, Tensor& y) override {
-        (void)x; (void)g; (void)e; (void)y;
+    void rms_norm(const Tensor&, const Tensor&, float, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "rms_norm", "HVX kernels not implemented (stub backend)");
     }
-    void relu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void relu(const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "relu", "HVX kernels not implemented (stub backend)");
     }
-    void gelu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void gelu(const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "gelu", "HVX kernels not implemented (stub backend)");
     }
-    void silu(const Tensor& x, Tensor& y) override {
-        (void)x; (void)y;
+    void silu(const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "silu", "HVX kernels not implemented (stub backend)");
     }
-    void add(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void add(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "add", "HVX kernels not implemented (stub backend)");
     }
-    void mul(const Tensor& a, const Tensor& b, Tensor& c) override {
-        (void)a; (void)b; (void)c;
+    void mul(const Tensor&, const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "mul", "HVX kernels not implemented (stub backend)");
     }
-    void scale(float s, const Tensor& x, Tensor& y) override {
-        (void)s; (void)x; (void)y;
+    void scale(float, const Tensor&, Tensor&) override {
         throw_unavailable("DSP_HEXAGON", "scale", "HVX kernels not implemented (stub backend)");
     }
     void copy(const Tensor& src, Tensor& dst) override { dst.copy_from(src); }

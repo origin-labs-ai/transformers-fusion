@@ -2,6 +2,7 @@
 #include "quant/moe_variants.h"
 #include "quant/math.h"
 
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -9,6 +10,28 @@
 #include <ws2tcpip.h>
 
 #pragma comment(lib, "ws2_32.lib")
+#else
+// POSIX socket compat: the TCP transport below is written against the
+// Winsock spelling; these shims map it to BSD sockets so the same code
+// compiles on Linux/macOS. Semantics are identical (blocking connect,
+// non-blocking data sockets, SO_REUSEADDR listener).
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <cerrno>
+using SOCKET = int;
+inline int closesocket(SOCKET s) { return ::close(s); }
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET (-1)
+#endif
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR (-1)
+#endif
+#endif
 
 #include <cstring>
 #include <cstdlib>
@@ -75,14 +98,23 @@ struct TCPCommBackend::Impl {
 
     bool init_wsa() {
         if (wsa_initialized) return true;
+#if defined(_WIN32)
         WSADATA wd;
         int err = WSAStartup(MAKEWORD(2, 2), &wd);
         wsa_initialized = (err == 0);
+#else
+        // No startup handshake on POSIX; sockets are usable immediately.
+        wsa_initialized = true;
+#endif
         return wsa_initialized;
     }
 
     void cleanup_wsa() {
+#if defined(_WIN32)
         if (wsa_initialized) { WSACleanup(); wsa_initialized = false; }
+#else
+        wsa_initialized = false;
+#endif
     }
 };
 
@@ -100,7 +132,7 @@ bool TCPCommBackend::listen(int64_t port) {
     sockaddr_in addr = {};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons((u_short)port);
+    addr.sin_port = htons((unsigned short)port);
 
     if (bind(impl_->listen_sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         closesocket(impl_->listen_sock);
@@ -124,7 +156,7 @@ bool TCPCommBackend::connect(const std::string& address, int64_t port) {
 
     sockaddr_in addr = {};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons((u_short)port);
+    addr.sin_port = htons((unsigned short)port);
 
     std::string addr_str = address;
     if (inet_pton(AF_INET, addr_str.c_str(), &addr.sin_addr) != 1) {
@@ -154,7 +186,14 @@ bool TCPCommBackend::connect(const std::string& address, int64_t port) {
     }
 
     u_long nonblock = 1;
+#if defined(_WIN32)
     ioctlsocket(sock, FIONBIO, &nonblock);
+#else
+    // POSIX equivalent of FIONBIO: set O_NONBLOCK, preserving existing flags.
+    int fl = fcntl(sock, F_GETFL, 0);
+    if (fl < 0) fl = 0;
+    fcntl(sock, F_SETFL, fl | O_NONBLOCK);
+#endif
 
     auto entry = std::make_unique<SocketEntry>();
     entry->sock = sock;
@@ -1028,7 +1067,12 @@ void FaultToleranceManager::start_heartbeat(int64_t interval_ms) {
                     }
                 }
             }
+            // Portable sleep: Win32 Sleep(ms) vs POSIX thread sleep.
+#if defined(_WIN32)
             Sleep((DWORD)interval_ms);
+#else
+            std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+#endif
         }
     }).detach();
 }
@@ -1082,7 +1126,11 @@ void FaultToleranceManager::checkpoint_state(const std::string& path) {
                   ",dropped=" + std::to_string(stats.total_tokens_dropped) +
                   ",failures=" + std::to_string(stats.node_failures_handled) + "}";
     FILE* f = nullptr;
+#if defined(_WIN32)
     fopen_s(&f, path.c_str(), "wb");
+#else
+    f = std::fopen(path.c_str(), "wb");
+#endif
     if (f) {
         uint64_t sz = state_data.size();
         fwrite(&sz, sizeof(sz), 1, f);
@@ -1094,7 +1142,11 @@ void FaultToleranceManager::checkpoint_state(const std::string& path) {
 void FaultToleranceManager::restore_state(const std::string& path) {
     if (path.empty()) return;
     FILE* f = nullptr;
+#if defined(_WIN32)
     fopen_s(&f, path.c_str(), "rb");
+#else
+    f = std::fopen(path.c_str(), "rb");
+#endif
     if (!f) return;
     uint64_t sz = 0;
     if (fread(&sz, sizeof(sz), 1, f) != 1 || sz > 1024 * 1024) { fclose(f); return; }

@@ -1,6 +1,7 @@
 #include "quant/gpu_compute.h"
 #include "quant/tensor.h"
 
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -8,6 +9,7 @@
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
+#endif
 
 #include <cstring>
 #include <cstdlib>
@@ -17,8 +19,9 @@
 #include <string>
 #include <mutex>
 #include <new>
+#include <stdexcept>
 
-
+#if defined(_WIN32)
 
 using namespace Microsoft::WRL;
 
@@ -919,3 +922,71 @@ int64_t DirectXCompute::memory_total() const {
 
 } // namespace gpu
 } // namespace quant
+
+#else // !defined(_WIN32) — fail-closed DirectXCompute for non-Windows hosts.
+//
+// Direct3D 12 exists only on Windows. The backend layer (backend.cpp)
+// already treats an uninitialized DirectXCompute as "unavailable" (try/catch
+// + require_available + is_directx_available()==false off Windows), so this
+// TU only needs to compile and report unavailable: init() returns false,
+// is_initialized() is false, and every compute entry throws fail-loud.
+// No silent CPU passthrough (REAL-ONLY rule).
+
+namespace quant {
+namespace gpu {
+
+namespace {
+[[noreturn]] void throw_no_d3d(const char* what) {
+    throw std::runtime_error(std::string("DirectXCompute::") + what +
+                             ": Direct3D 12 requires Windows+D3D12 (unavailable on this host)");
+}
+} // namespace
+
+DirectXCompute::DirectXCompute() : impl_(nullptr) {}
+DirectXCompute::~DirectXCompute() = default;
+
+bool DirectXCompute::init(int64_t) { return false; }
+bool DirectXCompute::is_initialized() const { return false; }
+void DirectXCompute::shutdown() {}
+
+void* DirectXCompute::allocate(size_t) { return nullptr; }
+void DirectXCompute::free(void*) {}
+void DirectXCompute::upload(const Tensor&, void*) { throw_no_d3d("upload"); }
+void DirectXCompute::download(void*, Tensor&) { throw_no_d3d("download"); }
+void DirectXCompute::copy(void*, const void*, size_t) { throw_no_d3d("copy"); }
+
+void DirectXCompute::gemm(float, const void*, const void*, float, void*,
+                           int64_t, int64_t, int64_t) { throw_no_d3d("gemm"); }
+void DirectXCompute::gemv(float, const void*, const void*, float, void*,
+                           int64_t, int64_t) { throw_no_d3d("gemv"); }
+
+void DirectXCompute::relu(const void*, void*, int64_t) { throw_no_d3d("relu"); }
+void DirectXCompute::gelu(const void*, void*, int64_t) { throw_no_d3d("gelu"); }
+void DirectXCompute::silu(const void*, void*, int64_t) { throw_no_d3d("silu"); }
+void DirectXCompute::add(const void*, const void*, void*, int64_t) { throw_no_d3d("add"); }
+void DirectXCompute::mul(const void*, const void*, void*, int64_t) { throw_no_d3d("mul"); }
+void DirectXCompute::scale(float, const void*, void*, int64_t) { throw_no_d3d("scale"); }
+
+void DirectXCompute::softmax(const void*, void*, int64_t, int64_t) { throw_no_d3d("softmax"); }
+void DirectXCompute::rms_norm(const void*, const void*, void*, float, int64_t, int64_t) {
+    throw_no_d3d("rms_norm");
+}
+void DirectXCompute::layer_norm(const void*, const void*, const void*, void*,
+                                float, int64_t, int64_t) { throw_no_d3d("layer_norm"); }
+
+void DirectXCompute::moe_gather(const void*, const int64_t*, const float*, void*,
+                                int64_t, int64_t, int64_t) { throw_no_d3d("moe_gather"); }
+void DirectXCompute::moe_scatter_add(void*, const int64_t*, const float*, const void*,
+                                     int64_t, int64_t, int64_t) { throw_no_d3d("moe_scatter_add"); }
+
+void DirectXCompute::synchronize() {}
+int64_t DirectXCompute::memory_free() const { return 0; }
+int64_t DirectXCompute::memory_total() const { return 0; }
+
+// NOTE: get_dx_compute() is NOT defined here — the singleton lives in
+// gpu_compute_vulkan.cpp (factory section) on all platforms.
+
+} // namespace gpu
+} // namespace quant
+
+#endif // defined(_WIN32)

@@ -110,7 +110,7 @@ add_quant_test_full(test_native_weight test_native_weight.cpp quant_trainer quan
 set_tests_properties(test_native_weight PROPERTIES LABELS "training")
 
 # ── inference ─────────────────────────────────────────────────────
-add_quant_test_full(test_inference_opt test_inference_opt.cpp quant_inference_opt quant_model quant_inference ${_default_timeout})
+add_quant_test_full(test_inference_opt test_inference_opt.cpp quant_inference_opt quant_speculative quant_model quant_inference ${_default_timeout})
 set_tests_properties(test_inference_opt PROPERTIES LABELS "inference")
 
 add_quant_test_full(test_inference_batch test_inference_batch.cpp quant_inference quant_inference_opt quant_model quant_math quant_core quant_moe_variants ${_default_timeout})
@@ -202,9 +202,13 @@ endif()
 set_tests_properties(
   test_tensor test_math test_format test_kernel test_model test_tokenizer
   test_ops test_sha256_corrupt test_expert_prefetch test_continual_anticollapse
-  test_gpu test_cuda_backend
+  test_cuda_backend
   PROPERTIES COST 1.0
 )
+# test_gpu exists only on WIN32 (see GPU section above).
+if(WIN32)
+  set_tests_properties(test_gpu PROPERTIES COST 1.0)
+endif()
 set_tests_properties(
   test_trainer test_training test_gradient_check test_expert_parallel
   test_all test_protected test_inference_opt test_agi test_multimodal

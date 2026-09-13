@@ -1,7 +1,9 @@
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <winhttp.h>
+#endif
 #include "quant/hf_streamer.h"
 #include <cstdio>
 #include <cstring>
@@ -10,7 +12,9 @@
 #include <random>
 #include <sstream>
 
+#if defined(_WIN32)
 #pragma comment(lib, "winhttp.lib")
+#endif
 
 namespace quant {
 
@@ -140,14 +144,23 @@ std::string SimpleJSON::escape(const std::string& s) {
 // ════════════════════════════════════════════════════════════════
 
 HTTPClient::HTTPClient() : session_(nullptr) {
+#if defined(_WIN32)
     session_ = WinHttpOpen(L"Transcender/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY,
                            WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+#else
+    // POSIX: all transfers go through the curl subprocess (get_binary and
+    // friends below); no native session handle needed.
+    session_ = nullptr;
+#endif
 }
 
 HTTPClient::~HTTPClient() {
+#if defined(_WIN32)
     if (session_) WinHttpCloseHandle((HINTERNET)session_);
+#endif
 }
 
+#if defined(_WIN32)
 static std::string wide_to_utf8(const wchar_t* wstr) {
     int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
     if (len <= 0) return "";
@@ -163,12 +176,11 @@ static std::wstring utf8_to_wide(const std::string& str) {
     MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &result[0], len);
     return result;
 }
+#endif // defined(_WIN32)
 
 std::string HTTPClient::get(const std::string& host, const std::string& path, bool https) {
-    DWORD timeout = 15000;
-    std::wstring headers = L"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
-                           L"Accept-Encoding: identity\r\n";
-    
+    // Custom headers are baked into the curl command lines below; no separate
+    // header state needed (the WinHTTP session path was already unused here).
     auto binary = get_binary(host, path, https);
     return std::string(binary.begin(), binary.end());
 }
@@ -184,32 +196,53 @@ std::vector<uint8_t> HTTPClient::range_request(const std::string& host, const st
         if (end >= start) range_str += std::to_string(end);
         range_str += "\r\n";
     }
-    std::string cmd = "curl.exe -s -L -o - -H \"" + range_str + "\"";
+    std::string cmd =
+#if defined(_WIN32)
+        "curl.exe -s -L -o - -H \"" + range_str + "\"";
+#else
+        "curl -s -L -o - -H \"" + range_str + "\"";
+#endif
     if (!auth_token_.empty()) {
         cmd += " -H \"Authorization: Bearer " + auth_token_ + "\"";
     }
     cmd += " \"" + url + "\"";
     
+#if defined(_WIN32)
     FILE* pipe = _popen(cmd.c_str(), "rb");
+#else
+    FILE* pipe = popen(cmd.c_str(), "r");
+#endif
     if (!pipe) return {};
     std::vector<uint8_t> result;
     char buf[65536];
     size_t n;
     while ((n = fread(buf, 1, sizeof(buf), pipe)) > 0)
         result.insert(result.end(), buf, buf + n);
+#if defined(_WIN32)
     _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
     return result;
 }
 
 int64_t HTTPClient::get_content_length(const std::string& host, const std::string& path) {
     std::string url = "https://" + host + path;
+#if defined(_WIN32)
     std::string cmd = "curl.exe -s -I -L";
+#else
+    std::string cmd = "curl -s -I -L";
+#endif
     if (!auth_token_.empty()) {
         cmd += " -H \"Authorization: Bearer " + auth_token_ + "\"";
     }
     cmd += " \"" + url + "\"";
     
+#if defined(_WIN32)
     FILE* pipe = _popen(cmd.c_str(), "rb");
+#else
+    FILE* pipe = popen(cmd.c_str(), "r");
+#endif
     if (!pipe) return -1;
     std::string hdr;
     char buf[1024];
@@ -218,7 +251,11 @@ int64_t HTTPClient::get_content_length(const std::string& host, const std::strin
         buf[n] = 0;
         hdr += buf;
     }
+#if defined(_WIN32)
     _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
     // Parse Content-Length from headers
     size_t pos = hdr.find("Content-Length: ");
     if (pos == std::string::npos) pos = hdr.find("content-length: ");
@@ -232,17 +269,25 @@ int64_t HTTPClient::get_content_length(const std::string& host, const std::strin
 }
 
 std::vector<uint8_t> HTTPClient::get_binary(const std::string& host, const std::string& path, bool https) {
-    // Use curl.exe for faster downloads (Windows built-in, ~3 MB/s vs WinHTTP <0.5 MB/s)
+    // Use curl for downloads (Windows built-in curl.exe; system curl on POSIX).
     std::string url = (https ? "https://" : "http://") + host + path;
+#if defined(_WIN32)
     std::string cmd = "curl.exe -s -L -o -";
+#else
+    std::string cmd = "curl -s -L -o -";
+#endif
     if (!auth_token_.empty()) {
         cmd += " -H \"Authorization: Bearer " + auth_token_ + "\"";
     }
     cmd += " \"" + url + "\"";
     
+#if defined(_WIN32)
     FILE* pipe = _popen(cmd.c_str(), "rb");
+#else
+    FILE* pipe = popen(cmd.c_str(), "r");
+#endif
     if (!pipe) {
-        fprintf(stderr, "    [curl] _popen failed\n");
+        fprintf(stderr, "    [curl] popen failed\n");
         return {};
     }
     
@@ -252,7 +297,11 @@ std::vector<uint8_t> HTTPClient::get_binary(const std::string& host, const std::
     while ((n = fread(buf, 1, sizeof(buf), pipe)) > 0) {
         result.insert(result.end(), buf, buf + n);
     }
+#if defined(_WIN32)
     int rc = _pclose(pipe);
+#else
+    int rc = pclose(pipe);
+#endif
     if (rc != 0) {
         fprintf(stderr, "    [curl] exit %d, got %zu bytes\n", rc, result.size());
     }

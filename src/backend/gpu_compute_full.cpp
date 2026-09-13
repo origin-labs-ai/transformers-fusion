@@ -2,6 +2,7 @@
 #include "quant/tensor.h"
 #include "quant/math.h"
 
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -9,6 +10,7 @@
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
+#endif
 
 #include <cstring>
 #include <cstdlib>
@@ -20,6 +22,16 @@
 #include <mutex>
 #include <algorithm>
 #include <numeric>
+
+// GPUComputeFull is a Windows-only Direct3D 12 implementation (HLSL shaders
+// compiled at runtime via D3DCompile). There are zero callers outside this
+// translation unit on any platform (verified: no GPUComputeFull references in
+// src/, tests/, tools/, bench/), so on non-Windows hosts this TU compiles to
+// nothing instead of carrying ~40 fail-closed stubs with no consumers. If a
+// cross-platform caller ever appears, add a fail-closed branch here (see
+// gpu_compute.cpp DirectXCompute !defined(_WIN32) for the pattern) rather
+// than silently dropping the call.
+#if defined(_WIN32)
 
 using Microsoft::WRL::ComPtr;
 
@@ -1469,3 +1481,5 @@ void GPUComputeFull::CPUTensorFallback::rmsnorm_fallback(const float* x, const f
 
 } // namespace gpu
 } // namespace quant
+
+#endif // defined(_WIN32)

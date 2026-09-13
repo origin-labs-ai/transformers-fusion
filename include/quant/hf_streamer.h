@@ -52,9 +52,7 @@ public:
                                      bool https = true);
 
 private:
-#if defined(_WIN32)
-    void* session_ = nullptr;  // HINTERNET
-#endif
+    void* session_ = nullptr;  // HINTERNET on Windows; unused on POSIX
     std::string auth_token_;
 };
 

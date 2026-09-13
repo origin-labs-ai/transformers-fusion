@@ -57,7 +57,11 @@ bool GPUComputeZenDNN::init(int device_id) {
     handle_ = load_lib("libzendnn.so");
 #endif
     if (!handle_) return false;
-    sgemm_ = (zendnn_sgemm_fn)get_sym(handle_, "zendnn_sgemm");
+    // sgemm_ stores the symbol as void* (cast back to zendnn_sgemm_fn at the
+    // call site below): a direct void* assignment keeps GCC happy — a
+    // function-pointer intermediate is rejected by -fpermissive (MSVC
+    // accepted the C-style cast).
+    sgemm_ = get_sym(handle_, "zendnn_sgemm");
     initialized_ = true;
     return true;
 }
@@ -90,7 +94,13 @@ void GPUComputeZenDNN::gemm(float alpha, const void* A, const void* B,
         char transA = 'N', transB = 'N';
         int m = (int)M, n = (int)N, k = (int)K;
         float beta0 = beta;
-        ((zendnn_sgemm_fn)sgemm_)(&transA, &transB, &m, &n, &k, &alpha, a, &k, b, &n, &beta0, c, &n);
+        // void* -> function-pointer call: GCC forbids even reinterpret_cast
+        // here, so go through an intermediate of the exact function type.
+        // (MSVC accepted the C-style cast.)
+        zendnn_sgemm_fn fn = nullptr;
+        static_assert(sizeof(fn) == sizeof(sgemm_), "fn-ptr/void* size match");
+        std::memcpy(&fn, &sgemm_, sizeof(fn));
+        fn(&transA, &transB, &m, &n, &k, &alpha, a, &k, b, &n, &beta0, c, &n);
         return;
     }
 

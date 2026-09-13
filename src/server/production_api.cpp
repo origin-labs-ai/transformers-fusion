@@ -1,4 +1,7 @@
 #include "quant/production_internal.h"
+#if !defined(_WIN32)
+#include <dirent.h>
+#endif
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
@@ -274,7 +277,7 @@ void ModelZoo::scan_directory(std::vector<ModelInfo>& out) const {
     DIR* dir = opendir(zoo_path_.c_str());
     if (!dir) return;
 
-    struct dirent* entry;
+    struct ::dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
         std::string name = entry->d_name;
         if (name == "." || name == "..") continue;
