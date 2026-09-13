@@ -144,13 +144,20 @@ int main() {
     // unavailable => gemv must throw; live => relu (REAL device code on all
     // three backends) must match CPU.
     //
-    // PRODUCTION FIX (2026-09-11): the live-dispatch leg is opt-in behind
-    // TRANSCENDER_TEST_LIVE_GPU=1. Reason: on this machine the AMD iGPU
-    // reports Vulkan INITIALIZED + compute_ready, but the real relu dispatch
-    // crashes the driver process (exit -1073741819) — a driver/shader-binary
-    // defect, not a test-logic defect. A test that can kill its own process
-    // must never run by default in `ctest --parallel`. Default: assert the
-    // fail-loud legs only + honest skip note. Opt-in: exercise live relu.
+    // ROOT CAUSE FIXED (2026-09-12). The 2026-09-11 note here blamed a
+    // "driver/shader-binary defect" and made this leg opt-in. It was not the
+    // driver. Three bugs in our own Vulkan layer:
+    //   (1) all five embedded SPIR-V blobs were malformed (instruction stream
+    //       broke at word 13) and hung vkCreateShaderModule;
+    //   (2) VkWriteDescriptorSet omitted pImageInfo, so the driver read
+    //       pBufferInfo from past the end of the struct;
+    //   (3) VK_PIPELINE_BIND_POINT_COMPUTE was 0 — that is GRAPHICS — so
+    //       compute pipelines were bound at the wrong bind point.
+    // With those fixed the live leg passes on the AMD iGPU: relu/gelu/silu/
+    // add/mul all match the CPU reference (verified by an out-of-tree probe).
+    // Live dispatch therefore runs BY DEFAULT.
+    // Escape hatch: TRANSCENDER_TEST_SKIP_LIVE_GPU=1 skips it on a host whose
+    // driver misbehaves.
     std::printf("[T4] ComputeBackend dispatch: fail-loud when down, correct when live\n");
     {
         using quant::backend::BackendType;
@@ -181,17 +188,18 @@ int main() {
                               be->name());
                 CAP_CHECK(threw, msg);
             } else {
-                // Live device: exercise the real dispatch ONLY when the
-                // operator explicitly opts in (see T4 header note). Default:
-                // honest skip — the device presence itself is the evidence.
-                const char* live_opt = std::getenv("TRANSCENDER_TEST_LIVE_GPU");
-                bool live_ok = (live_opt && live_opt[0] == '1');
-                if (!live_ok) {
+                // Live device: the real dispatch runs BY DEFAULT. It used to be
+                // opt-in because it killed the driver; the three bugs behind
+                // that are fixed (see the T4 header note), so skipping is now
+                // the exceptional path.
+                const char* skip_opt = std::getenv("TRANSCENDER_TEST_SKIP_LIVE_GPU");
+                bool skip_live = (skip_opt && skip_opt[0] == '1');
+                if (skip_live) {
                     char msg[192];
                     std::snprintf(msg, sizeof(msg),
-                                  "%s live: dispatch SKIPPED by default "
-                                  "(set TRANSCENDER_TEST_LIVE_GPU=1 to exercise; "
-                                  "presence pinned, no fake pass)",
+                                  "%s live: dispatch SKIPPED by request "
+                                  "(TRANSCENDER_TEST_SKIP_LIVE_GPU=1; presence "
+                                  "pinned, no fake pass)",
                                   be->name());
                     std::printf("  [info] %s\n", msg);
                     CAP_CHECK(true, msg);

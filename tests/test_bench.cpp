@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 // test_bench.cpp — Benchmark hardware prober and backend micro-benchmarks
 #include "quant/backend.h"
 #include <iostream>
@@ -6,7 +9,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "    InNova Hardware Probe & Benchmark    " << std::endl;
+    std::cout << "    Transcender Hardware Probe & Benchmark    " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     std::cout << "[Test 1] Probing system hardware profile..." << std::endl;

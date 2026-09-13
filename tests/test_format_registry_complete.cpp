@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 // test_format_registry_complete.cpp — Complete unit test for FormatRegistry
 #include "quant/format_registry.h"
 #include <iostream>

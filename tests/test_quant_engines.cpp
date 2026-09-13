@@ -422,7 +422,7 @@ static void test_perblock_quant4_beats_uniform4() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("InNova — Quantization Engine Test Suite\n");
+    printf("Transcender — Quantization Engine Test Suite\n");
     printf("============================================\n");
 
     test_quant8_roundtrip();

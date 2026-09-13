@@ -1,4 +1,7 @@
-// test_gpu.cpp — Unit test for InNova GPU backend (CUDA, Vulkan, DX12)
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
+// test_gpu.cpp — Unit test for Transcender GPU backend (CUDA, Vulkan, DX12)
 #include "quant/backend.h"
 #include "quant/gpu_compute_cuda.h"
 #include <iostream>
@@ -7,7 +10,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      InNova GPU Backend Init Test       " << std::endl;
+    std::cout << "      Transcender GPU Backend Init Test       " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     std::cout << "[Test 1] Testing Hardware Backend Prober & Auto-selection..." << std::endl;

@@ -1,4 +1,7 @@
-// test_kernel.cpp — Unit test for InNova SIMD kernels
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
+// test_kernel.cpp — Unit test for Transcender SIMD kernels
 #include "quant/kernel.h"
 #include <iostream>
 #include <vector>
@@ -7,7 +10,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "     InNova SIMD Kernel Unit Tests      " << std::endl;
+    std::cout << "     Transcender SIMD Kernel Unit Tests      " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     constexpr int M = 4, N = 4, K = 64;

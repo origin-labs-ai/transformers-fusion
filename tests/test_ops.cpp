@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 #include "quant/math.h"
 #include "quant/simd_math.h"
 #include "quant/tensor.h"

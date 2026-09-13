@@ -5,6 +5,8 @@
 #include "quant/trainer.h"
 #include "quant/test.h"
 #include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <string>
 
 using namespace quant;
@@ -42,6 +44,41 @@ int main() {
     // Subsystem verification (used inside the loop)
     TEST_CHECK(codegen.compile_and_test("int main(){return 0;}\n"),
                "codegen compiles trivial program");
+
+    // P17: real asserts for self_play (no pass-by-construction).
+    // Null model skips the model-override branch -> deterministic template round-robin.
+    agi::Flywheel fw_null(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    std::string t1 = fw_null.self_play_for_test();
+    std::string t2 = fw_null.self_play_for_test();
+    TEST_CHECK(!t1.empty(), "self_play returns non-empty");
+    TEST_CHECK(!t2.empty(), "self_play second call non-empty");
+    TEST_CHECK(t1 != t2, "task_index round-robins (consecutive tasks differ)");
+
+    // P17: dataset-driven load via AGI_TASKS_FILE (file path, not hardcoded).
+    {
+        const char* tmp_tasks = "flywheel_p17_test_tasks.txt";
+        {
+            std::ofstream ofs(tmp_tasks);
+            ofs << "# P17 test task list\n\nCustom task alpha P17\nCustom task beta P17\n";
+        }
+#ifdef _WIN32
+        _putenv("AGI_TASKS_FILE=flywheel_p17_test_tasks.txt");
+#else
+        setenv("AGI_TASKS_FILE", "flywheel_p17_test_tasks.txt", 1);
+#endif
+        agi::Flywheel fw_file(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+        std::string ft = fw_file.self_play_for_test();
+        TEST_CHECK(ft == "Custom task alpha P17" || ft == "Custom task beta P17",
+                   "AGI_TASKS_FILE dataset-driven load");
+        std::string ft2 = fw_file.self_play_for_test();
+        TEST_CHECK(!ft2.empty(), "file-backed self_play non-empty");
+#ifdef _WIN32
+        _putenv("AGI_TASKS_FILE=");
+#else
+        unsetenv("AGI_TASKS_FILE");
+#endif
+        std::remove(tmp_tasks);
+    }
 
     int failures = TEST_REPORT();
     printf("\nAGI FLYWHEEL TEST %s\n", failures == 0 ? "PASSED" : "FAILED");

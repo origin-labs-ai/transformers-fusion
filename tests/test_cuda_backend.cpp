@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 // test_cuda_backend.cpp — Unit test for dynamic CUDA backend
 #include "quant/gpu_compute_cuda.h"
 #include "quant/backend.h"
@@ -8,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "   InNova Dynamic CUDA Backend Test     " << std::endl;
+    std::cout << "   Transcender Dynamic CUDA Backend Test     " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     quant::gpu::GPUComputeCuda cuda_backend;

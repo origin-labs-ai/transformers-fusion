@@ -77,17 +77,27 @@ int main() {
     for (const auto& m : quads) validate(m, 4, bpw);
     std::cout << "  QUAD_MIX variants validated: " << quads.size() << std::endl;
 
-    // Spot-check the flagship: QUAD_MIX@12.5 components are Q6/Q12/Q24/Q32.
+    // Spot-check the flagship: QG_MX@12.5 carries the GROUPED ladder
+    // QG6/QG12/QG24/Q32 (grouped MXQ ladder merge; the plain twin Q_MX@12.5
+    // keeps Q6/Q12/Q24/Q32). Both checked.
     bool found_flagship = false;
+    bool found_plain = false;
     for (const auto& m : quads) {
-        if (m.id == RegFormat::MXQ_12_5_G) {
+        if (m.id == RegFormat::QG_MX_12_5) {
             found_flagship = true;
+            CHECK(m.tier1_fmt == RegFormat::QG6 && m.tier2_fmt == RegFormat::QG12 &&
+                  m.tier3_fmt == RegFormat::QG24 && m.tier4_fmt == RegFormat::Q32,
+                  "flagship 12.5 mix members must be QG6/QG12/QG24/Q32 (grouped)");
+        }
+        if (m.id == RegFormat::Q_MX_12_5) {
+            found_plain = true;
             CHECK(m.tier1_fmt == RegFormat::Q6 && m.tier2_fmt == RegFormat::Q12 &&
                   m.tier3_fmt == RegFormat::Q24 && m.tier4_fmt == RegFormat::Q32,
-                  "flagship 12.5 mix members must be Q6/Q12/Q24/Q32");
+                  "plain 12.5 mix members must be Q6/Q12/Q24/Q32");
         }
     }
     CHECK(found_flagship, "flagship QUAD_MIX@12.5 present");
+    CHECK(found_plain, "plain QUAD_MIX@12.5 present");
 
     // Targeted getters must return descriptors of the right tier count.
     CHECK(FormatRegistry::get_four_mix(12.5f).num_tiers == 4, "get_four_mix -> 4 tiers");

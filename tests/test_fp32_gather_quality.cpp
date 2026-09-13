@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 // test_fp32_gather_quality.cpp — Unit test for FP32 codebook gather precision
 #include "quant/types.h"
 #include "quant/format_registry.h"
@@ -8,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << " InNova FP32 Codebook Gather Quality Test" << std::endl;
+    std::cout << " Transcender FP32 Codebook Gather Quality Test" << std::endl;
     std::cout << "=========================================" << std::endl;
 
     std::cout << "[Test 1] Verifying FP32 centroid gather precision..." << std::endl;

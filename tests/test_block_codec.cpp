@@ -1,3 +1,6 @@
+#undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
+                // assert() below out of the binary. Tests that rely on assert()
+                // were passing vacuously; this keeps them live in Release too.
 // test_block_codec.cpp — Unit tests for Q3, Q6, Q12, Q24, Q16 enhanced, and GRP codecs
 #include "quant/types.h"
 #include "quant/codebook.h"
@@ -88,7 +91,7 @@ void test_q12_kernel() {
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      InNova Block Codec Unit Tests      " << std::endl;
+    std::cout << "      Transcender Block Codec Unit Tests      " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     test_q24_codec();

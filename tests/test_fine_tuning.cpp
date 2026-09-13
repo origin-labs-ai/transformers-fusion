@@ -143,6 +143,143 @@ int main() {
         TEST_CHECK(mfinite, "merged model forward finite");
     }
 
+    // --- Method 2b: DoRA (weight-decomposed rank adapters) ---
+    // W' = m ⊙ (W0 + B·A) / ||W0 + B·A||_c. Three invariants are pinned here:
+    //   (1) at init (delta == 0) DoRA reproduces the base weight exactly, i.e. it
+    //       reduces to plain LoRA with the magnitude frozen at ||W0||_c;
+    //   (2) after any merge, every output column has L2 norm exactly m[o] — that
+    //       renormalisation IS DoRA, so if it holds the decomposition is real;
+    //   (3) magnitude_step() performs gradient descent on m.
+    {
+        DenseModel m4(make_cfg());
+        RankAdapterEngine ra(&m4);
+        RankAdapterConfig rcfg;
+        rcfg.rank = 4;
+        rcfg.learning_rate = 3e-4f;
+        rcfg.use_dora = true;
+        ra.configure(rcfg);
+        ra.init_adapters();
+
+        TEST_CHECK(ra.dora_enabled(), "dora_enabled() reports the configured mode");
+        TEST_CHECK(!ra.adapters().empty(), "dora: one adapter per layer");
+
+        const auto& ad0 = ra.adapters()[0];
+        const int64_t out_dim = ad0.out_dim, in_dim = ad0.in_dim;
+        TEST_CHECK(ra.dora_param_count() == (int64_t)ra.adapters().size() * out_dim,
+                   "dora: one magnitude scalar per output column per layer");
+        TEST_CHECK(ad0.magnitude.numel() == out_dim, "dora: magnitude vector sized out_dim");
+
+        // (1) magnitude must equal the base column norms at init.
+        {
+            const float* w0 = m4.layers[0]->ffn.down_proj.weight.data<float>();
+            const float* mag = ad0.magnitude.data<float>();
+            double worst = 0.0;
+            for (int64_t o = 0; o < out_dim; ++o) {
+                double s = 0.0;
+                for (int64_t k = 0; k < in_dim; ++k) {
+                    double d = (double)w0[k * out_dim + o];
+                    s += d * d;
+                }
+                worst = std::max(worst, std::fabs(mag[o] - std::sqrt(s)));
+            }
+            printf("  dora: |m - ||W0||_c| max = %.6g\n", worst);
+            TEST_CHECK(worst < 1e-4, "dora: m initialised to base column norms");
+        }
+
+        // (1) zero delta + renormalise => identity on the base weight.
+        {
+            const float* w0 = m4.layers[0]->ffn.down_proj.weight.data<float>();
+            int64_t n = m4.layers[0]->ffn.down_proj.weight.numel();
+            std::vector<float> snap(w0, w0 + n);
+            ra.merge_into_base();
+            const float* w1 = m4.layers[0]->ffn.down_proj.weight.data<float>();
+            double worst = 0.0;
+            for (int64_t i = 0; i < n; ++i)
+                worst = std::max(worst, (double)std::fabs((double)w1[i] - (double)snap[(size_t)i]));
+            printf("  dora: identity-merge max abs diff = %.6g\n", worst);
+            TEST_CHECK(worst < 1e-4, "dora: zero-delta merge reproduces the base (reduces to LoRA)");
+        }
+
+        // Train so B moves away from zero, then merge and check (2).
+        ra.freeze_base(true);
+        Tensor out = ra.forward_with_adapters(ids, pos);
+        TEST_CHECK(out.numel() == B * S * cfg.vocab_size, "dora forward logits shape");
+        for (int s = 0; s < 10; ++s) ra.train_step(ids, pos, tgt);
+        TEST_CHECK(std::isfinite(ra.last_loss()), "dora step loss finite");
+
+        // (3) magnitude_step must apply exactly the analytic DoRA gradient
+        //     dL/dm[o] = Σ_k dL/dW'[k,o] · V[k,o] / ||V[:,o]||,
+        // with V = W0 + B·A at the current factors. Checking the arithmetic
+        // beats checking a sign: Σ_k V[k,o] can be negative, so a uniformly
+        // positive dL/dW' does not imply m moves the same way in every column.
+        {
+            const int64_t r = ad0.rank;
+            const float* w0 = m4.layers[0]->ffn.down_proj.weight.data<float>();
+            const float* aa = ad0.A.data<float>();
+            const float* bb = ad0.B.data<float>();
+            std::vector<double> v((size_t)in_dim * (size_t)out_dim), nrm((size_t)out_dim, 0.0);
+            for (int64_t k = 0; k < in_dim; ++k)
+                for (int64_t o = 0; o < out_dim; ++o) {
+                    double acc = 0.0;
+                    for (int64_t t = 0; t < r; ++t)
+                        acc += (double)aa[k * r + t] * (double)bb[t * out_dim + o];
+                    double merged = (double)w0[k * out_dim + o] + acc;
+                    v[(size_t)k * out_dim + o] = merged;
+                    nrm[(size_t)o] += merged * merged;
+                }
+            for (int64_t o = 0; o < out_dim; ++o) nrm[(size_t)o] = std::sqrt(nrm[(size_t)o]);
+
+            const float lr = 0.01f;
+            std::vector<Tensor> grads;
+            for (size_t li = 0; li < ra.adapters().size(); ++li) {
+                Tensor g(Shape{in_dim, out_dim}, DType::F32);
+                g.fill(1.0f);
+                grads.push_back(g);
+            }
+            std::vector<float> before(ad0.magnitude.data<float>(),
+                                      ad0.magnitude.data<float>() + out_dim);
+            ra.magnitude_step(grads, lr);
+
+            const float* after = ra.adapters()[0].magnitude.data<float>();
+            double worst = 0.0;
+            bool moved = false;
+            for (int64_t o = 0; o < out_dim; ++o) {
+                double col_sum = 0.0;
+                for (int64_t k = 0; k < in_dim; ++k) col_sum += v[(size_t)k * out_dim + o];
+                double expected = (double)before[(size_t)o] - (double)lr * col_sum / nrm[(size_t)o];
+                worst = std::max(worst, std::fabs((double)after[o] - expected));
+                if (std::fabs((double)after[o] - (double)before[(size_t)o]) > 1e-9) moved = true;
+            }
+            printf("  dora: magnitude_step vs analytic max abs err = %.6g\n", worst);
+            TEST_CHECK(worst < 1e-5, "dora: magnitude_step matches the analytic gradient");
+            TEST_CHECK(moved, "dora: magnitude_step actually moves m");
+        }
+
+        ra.merge_into_base();
+        {
+            const float* w1 = m4.layers[0]->ffn.down_proj.weight.data<float>();
+            const float* mag = ra.adapters()[0].magnitude.data<float>();
+            double worst = 0.0;
+            for (int64_t o = 0; o < out_dim; ++o) {
+                double s = 0.0;
+                for (int64_t k = 0; k < in_dim; ++k) {
+                    double d = (double)w1[k * out_dim + o];
+                    s += d * d;
+                }
+                worst = std::max(worst, std::fabs(std::sqrt(s) - (double)mag[o]));
+            }
+            printf("  dora: ||W'[:,o]||_c - m[o] max = %.6g\n", worst);
+            TEST_CHECK(worst < 1e-4, "dora: merged columns are renormalised to m exactly");
+        }
+
+        Tensor merged_out = m4.forward(ids, pos);
+        bool dfinite = true;
+        const float* md = merged_out.data<float>();
+        for (int64_t i = 0; i < merged_out.numel(); i++)
+            if (!std::isfinite(md[i])) dfinite = false;
+        TEST_CHECK(dfinite, "dora merged model forward finite");
+    }
+
     // --- Method 3: Knowledge expansion ---
     {
         DenseModel m3(make_cfg());

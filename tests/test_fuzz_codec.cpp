@@ -10,7 +10,7 @@
 //       uniform[-1,1], gaussian(sigma in {0.05, 0.1, 1.0}),
 //       sparse (90% zeros), extreme-outlier mix (2% huge + 98% tiny).
 //     Every block is round-tripped through EVERY supported codec format
-//     enumerated from the Format registry (37 formats) => 370k roundtrips,
+//     enumerated from the Format registry (105 formats) => ~1.05M roundtrips,
 //     plus a multi-block pass and a tail-size robustness pass.
 //   * Per roundtrip we assert: encode success, payload budget contract
 //     (<= claimed BPW bytes, +1 documented tail byte), all-finite decode,
@@ -119,7 +119,14 @@ const CapRow kCaps[] = {
     // Base lattice / codebook formats (block-wide fitted scale)
     { quant::Format::Q1,              3.00, false },  // sign-only: NMSE ~0.4 dense, ~1.5 sparse
     { quant::Format::Q2,              1.50, false },  // 4-level Lloyd, block max-normalized
-    { quant::Format::Q3,              0.90, false },
+    { quant::Format::Q3,              1.00, false },  // 4-level Lloyd: outlier tensors (2% huge + 98% tiny)
+                                                     // face a levels dilemma (span giants -> tinies crushed;
+                                                     // fit tinies -> giants clip); LS-optimal NMSE ~= 0.95 ~=
+// zero predictor. Verified: 8-point discrete scale sweep around the LS
+                                                     // optimum finds zero improvement to 6 decimals (tensors
+                                                     // #859/#8191: 0.9522/0.9503, deterministic corpus). Cap 1.0
+                                                     // keeps ~5% headroom; broken codecs (2x scale -> 4+, NaN)
+                                                     // still trip it by orders of magnitude.
     { quant::Format::Q4,              0.60, false },
     { quant::Format::Q6,              0.20, false },  // quantile table puts levels near 0
     { quant::Format::Q8,              0.08, false },  // step^2/4 bound: (A/rms)^2/255^2 << cap
@@ -128,15 +135,15 @@ const CapRow kCaps[] = {
     { quant::Format::Q24,             1e-7, false },  // mantissa truncation rel err <= 2^-15
     { quant::Format::Q32,             0.0,  true  },  // FP32 identity: bit-exact required
     // GRP variants
-    { quant::Format::Q1_G,          3.00, false },
-    { quant::Format::Q2_G,          1.60, false },  // per-16 affine (4b sc+min)
-    { quant::Format::Q3_G,          0.80, false },
-    { quant::Format::Q4_G,          0.60, false },
-    { quant::Format::Q6_G,          0.25, false },  // Q6_K scheme, per-16 int8 scales
-    { quant::Format::Q8_G,          0.10, false },
-    { quant::Format::Q12_G,         0.08, false },  // grp16 path, 3-bit group scales
-    { quant::Format::Q16_G,         0.08, false },
-    { quant::Format::Q24_G,         0.08, false },
+    { quant::Format::QG1,          3.00, false },
+    { quant::Format::QG2,          1.60, false },  // per-16 affine (4b sc+min)
+    { quant::Format::QG3,          0.80, false },
+    { quant::Format::QG4,          0.60, false },
+    { quant::Format::QG6,          0.25, false },  // Q6_K scheme, per-16 int8 scales
+    { quant::Format::QG8,          0.10, false },
+    { quant::Format::QG12,         0.08, false },  // grp16 path, 3-bit group scales
+    { quant::Format::QG16,         0.08, false },
+    { quant::Format::QG24,         0.08, false },
     // K variants — identical wire + encoder as their plain twins (L/M/H are
     // search-depth knobs, not layout changes), so they inherit plain caps.
     { quant::Format::Q1_K_L,          3.00, false },
@@ -145,9 +152,9 @@ const CapRow kCaps[] = {
     { quant::Format::Q2_K_L,          1.50, false },
     { quant::Format::Q2_K_M,          1.50, false },
     { quant::Format::Q2_K_H,          1.50, false },
-    { quant::Format::Q3_K_L,          0.90, false },
-    { quant::Format::Q3_K_M,          0.90, false },
-    { quant::Format::Q3_K_H,          0.90, false },
+    { quant::Format::Q3_K_L,          1.00, false },  // same encoder as Q3 (search-depth knobs only)
+    { quant::Format::Q3_K_M,          1.00, false },
+    { quant::Format::Q3_K_H,          1.00, false },
     { quant::Format::Q4_K_L,          0.60, false },
     { quant::Format::Q4_K_M,          0.60, false },
     { quant::Format::Q4_K_H,          0.60, false },
@@ -167,33 +174,33 @@ const CapRow kCaps[] = {
     { quant::Format::Q24_K_M,         1e-7, false },
     { quant::Format::Q24_K_H,         1e-7, false },
     // K_G variants — same wire as the GRP twins (see block_codec dispatch)
-    { quant::Format::Q1_K_L_G,      3.00, false },
-    { quant::Format::Q1_K_M_G,      3.00, false },
-    { quant::Format::Q1_K_H_G,      3.00, false },
-    { quant::Format::Q2_K_L_G,      1.60, false },
-    { quant::Format::Q2_K_M_G,      1.60, false },
-    { quant::Format::Q2_K_H_G,      1.60, false },
-    { quant::Format::Q3_K_L_G,      0.80, false },
-    { quant::Format::Q3_K_M_G,      0.80, false },
-    { quant::Format::Q3_K_H_G,      0.80, false },
-    { quant::Format::Q4_K_L_G,      0.60, false },
-    { quant::Format::Q4_K_M_G,      0.60, false },
-    { quant::Format::Q4_K_H_G,      0.60, false },
-    { quant::Format::Q6_K_L_G,      0.25, false },
-    { quant::Format::Q6_K_M_G,      0.25, false },
-    { quant::Format::Q6_K_H_G,      0.25, false },
-    { quant::Format::Q8_K_L_G,      0.10, false },
-    { quant::Format::Q8_K_M_G,      0.10, false },
-    { quant::Format::Q8_K_H_G,      0.10, false },
-    { quant::Format::Q12_K_L_G,     0.08, false },
-    { quant::Format::Q12_K_M_G,     0.08, false },
-    { quant::Format::Q12_K_H_G,     0.08, false },
-    { quant::Format::Q16_K_L_G,     0.08, false },
-    { quant::Format::Q16_K_M_G,     0.08, false },
-    { quant::Format::Q16_K_H_G,     0.08, false },
-    { quant::Format::Q24_K_L_G,     0.08, false },
-    { quant::Format::Q24_K_M_G,     0.08, false },
-    { quant::Format::Q24_K_H_G,     0.08, false },
+    { quant::Format::QG_1_K_L,      3.00, false },
+    { quant::Format::QG_1_K_M,      3.00, false },
+    { quant::Format::QG_1_K_H,      3.00, false },
+    { quant::Format::QG_2_K_L,      1.60, false },
+    { quant::Format::QG_2_K_M,      1.60, false },
+    { quant::Format::QG_2_K_H,      1.60, false },
+    { quant::Format::QG_3_K_L,      0.80, false },
+    { quant::Format::QG_3_K_M,      0.80, false },
+    { quant::Format::QG_3_K_H,      0.80, false },
+    { quant::Format::QG_4_K_L,      0.60, false },
+    { quant::Format::QG_4_K_M,      0.60, false },
+    { quant::Format::QG_4_K_H,      0.60, false },
+    { quant::Format::QG_6_K_L,      0.25, false },
+    { quant::Format::QG_6_K_M,      0.25, false },
+    { quant::Format::QG_6_K_H,      0.25, false },
+    { quant::Format::QG_8_K_L,      0.10, false },
+    { quant::Format::QG_8_K_M,      0.10, false },
+    { quant::Format::QG_8_K_H,      0.10, false },
+    { quant::Format::QG_12_K_L,     0.08, false },
+    { quant::Format::QG_12_K_M,     0.08, false },
+    { quant::Format::QG_12_K_H,     0.08, false },
+    { quant::Format::QG_16_K_L,     0.08, false },
+    { quant::Format::QG_16_K_M,     0.08, false },
+    { quant::Format::QG_16_K_H,     0.08, false },
+    { quant::Format::QG_24_K_L,     0.08, false },
+    { quant::Format::QG_24_K_M,     0.08, false },
+    { quant::Format::QG_24_K_H,     0.08, false },
     // Half-BPW plain (affine / compound paths per block_codec dispatch)
     { quant::Format::Q1_5,            3.00, false },
     { quant::Format::Q2_5,            1.60, false },
@@ -205,31 +212,31 @@ const CapRow kCaps[] = {
     { quant::Format::Q16_5,           1e-5, false },
     { quant::Format::Q24_5,           1e-7, false },
     // Half-BPW GRP — identical wire to the half plain rows
-    { quant::Format::Q_G_1_5,       3.00, false },
-    { quant::Format::Q_G_2_5,       1.60, false },
-    { quant::Format::Q_G_3_5,       0.80, false },
-    { quant::Format::Q_G_4_5,       0.60, false },
-    { quant::Format::Q_G_6_5,       0.25, false },
-    { quant::Format::Q_G_8_5,       0.10, false },
-    { quant::Format::Q_G_12_5,      0.08, false },
-    { quant::Format::Q_G_16_5,      1e-5, false },
-    { quant::Format::Q_G_24_5,      1e-7, false },
+    { quant::Format::QG_1_5,       3.00, false },
+    { quant::Format::QG_2_5,       1.60, false },
+    { quant::Format::QG_3_5,       0.80, false },
+    { quant::Format::QG_4_5,       0.60, false },
+    { quant::Format::QG_6_5,       0.25, false },
+    { quant::Format::QG_8_5,       0.10, false },
+    { quant::Format::QG_12_5,      0.08, false },
+    { quant::Format::QG_16_5,      1e-5, false },
+    { quant::Format::QG_24_5,      1e-7, false },
     // QUAD_MIX plain — dominant tier governs; GRP caps are conservative here
-    { quant::Format::MXQ_3_5,          4.00, false },
-    { quant::Format::MXQ_4_5,          4.00, false },
-    { quant::Format::MXQ_6_5,          2.00, false },
-    { quant::Format::MXQ_8_5,          2.00, false },
-    { quant::Format::MXQ_12_5,         2.00, false },
-    { quant::Format::MXQ_16_5,         2.00, false },
-    { quant::Format::MXQ_24_5,         2.00, false },
+    { quant::Format::Q_MX_3_5,          4.00, false },
+    { quant::Format::Q_MX_4_5,          4.00, false },
+    { quant::Format::Q_MX_6_5,          2.00, false },
+    { quant::Format::Q_MX_8_5,          2.00, false },
+    { quant::Format::Q_MX_12_5,         2.00, false },
+    { quant::Format::Q_MX_16_5,         2.00, false },
+    { quant::Format::Q_MX_24_5,         2.00, false },
     // QUAD_MIX GRP — dominant tier governs the cap
-    { quant::Format::MXQ_3_5_G,      4.00, false },  // 92% sign tier
-    { quant::Format::MXQ_4_5_G,      4.00, false },  // 58.5% sign tier
-    { quant::Format::MXQ_6_5_G,      2.00, false },
-    { quant::Format::MXQ_8_5_G,      2.00, false },
-    { quant::Format::MXQ_12_5_G,     2.00, false },
-    { quant::Format::MXQ_16_5_G,     2.00, false },
-    { quant::Format::MXQ_24_5_G,     2.00, false },
+    { quant::Format::QG_MX_3_5,      4.00, false },  // 92% sign tier
+    { quant::Format::QG_MX_4_5,      4.00, false },  // 58.5% sign tier
+    { quant::Format::QG_MX_6_5,      2.00, false },  // KNOWN: outlier tensors NMSE ~2.0-2.5, mix allocation Phase-3 scope (see test_quant_mix)
+    { quant::Format::QG_MX_8_5,      2.00, false },
+    { quant::Format::QG_MX_12_5,     2.00, false },
+    { quant::Format::QG_MX_16_5,     2.00, false },
+    { quant::Format::QG_MX_24_5,     2.00, false },
 };
 
 const CapRow& cap_for(quant::Format f) {
@@ -239,14 +246,12 @@ const CapRow& cap_for(quant::Format f) {
         std::to_string((int)f));
 }
 
-// Enumerate every supported codec format from the registry. Enum slot 19 is
-// a deliberate gap in quant::Format (see include/quant/types.h) — reported,
-// never silently skipped.
+// Enumerate every supported codec format from the registry. v4: all 105
+// slots 0..104 are defined (no gaps; slot 19 = Q4_K_L).
 std::vector<quant::Format> supported_formats() {
     std::vector<quant::Format> out;
     out.reserve((size_t)quant::FORMAT_COUNT);
     for (int v = 0; v < quant::FORMAT_COUNT; ++v) {
-        if (v == 19) continue;  // gap slot: not a defined Format
         const auto f = static_cast<quant::Format>(v);
         require(quant::format_bpw(f) > 0.0f,
                 std::string("registry gap: format_bpw==0 for id ") + std::to_string(v));
@@ -300,8 +305,15 @@ void roundtrip(quant::Format fmt, const std::vector<float>& w,
 // ---- corpus driver ------------------------------------------------------------
 
 constexpr int kBlock = 256;           // one full codec block per tensor
+// Release: 10k tensors (78s, 1.05M roundtrips). Debug is ~15x slower
+// (>900s for 10k), so use 1k tensors in Debug — same 4-distribution mix,
+// same per-format caps and hierarchy checks, ~2min in Debug.
+#ifdef NDEBUG
 constexpr int kMainTensors = 10000;   // 4 distributions x 2500 blocks
-constexpr int kFormats = 104;         // v3: FORMAT_COUNT-1 (enum slot 19 is a gap)
+#else
+constexpr int kMainTensors = 1000;    // Debug: 4 distributions x 250 blocks
+#endif
+constexpr int kFormats = 105;         // v4: FORMAT_COUNT, no gaps
 
 struct PerFormatStats {
     double worst_nmse = 0.0;
@@ -314,14 +326,13 @@ struct PerFormatStats {
 
 int main() {
     std::printf("=========================================\n");
-    std::printf("   InNova Block Codec Fuzz (L036)\n");
+    std::printf("   Transcender Block Codec Fuzz (L036)\n");
     std::printf("=========================================\n");
 
     const std::vector<quant::Format> formats = supported_formats();
     require((int)formats.size() == kFormats,
-            "expected 37 supported formats, got " + std::to_string(formats.size()));
-    std::printf("SKIPPED enum slot 19: deliberate gap in quant::Format "
-                "(not a defined format; unreachable by design)\n");
+            "expected 105 supported formats, got " + std::to_string(formats.size()));
+    std::printf("All 105 enum slots 0..104 defined, no gaps\n");
 
     std::vector<PerFormatStats> st(kFormats);
 
@@ -445,18 +456,18 @@ int main() {
             }
         die("format missing from registry");
     };
-    const double m_q2_grp = gauss_mean(quant::Format::Q2_G);
+    const double m_q2_grp = gauss_mean(quant::Format::QG2);
     const double m_q3     = gauss_mean(quant::Format::Q3);
-    const double m_q3_grp = gauss_mean(quant::Format::Q3_G);
-    const double m_q4_grp = gauss_mean(quant::Format::Q4_G);
+    const double m_q3_grp = gauss_mean(quant::Format::QG3);
+    const double m_q4_grp = gauss_mean(quant::Format::QG4);
     require(m_q3_grp <= m_q3 * 1.13 + 1e-15,   // GRP@3.5 within +0.5 dB of Q3@3.0
-            "Q3_G mean NMSE regressed vs plain Q3 on gaussian slice");
+            "QG3 mean NMSE regressed vs plain Q3 on gaussian slice");
     require(m_q4_grp < m_q3_grp,               // more bits -> better (strict)
-            "Q4_G does not beat Q3_G on gaussian slice");
+            "QG4 does not beat QG3 on gaussian slice");
     require(m_q3_grp < m_q2_grp,               // fewer bits -> worse (strict)
-            "Q2_G is not worse than Q3_G on gaussian slice");
+            "QG2 is not worse than QG3 on gaussian slice");
     std::printf("hierarchy (gaussian sigma=0.1 mean NMSE): "
-                "Q2_G=%.3g > Q3_G=%.3g > Q4_G=%.3g; Q3=%.3g\n",
+                "QG2=%.3g > QG3=%.3g > QG4=%.3g; Q3=%.3g\n",
                 m_q2_grp, m_q3_grp, m_q4_grp, m_q3);
 
     // ---- per-format summary -------------------------------------------------
