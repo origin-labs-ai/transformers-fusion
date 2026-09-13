@@ -6,6 +6,7 @@
 #include "quant/autograd.h"
 #include <fstream>
 #include <cmath>
+#include <cstdio>
 
 namespace quant {
 
@@ -97,9 +98,12 @@ void FineTuner::fine_tune(DataLoader& dataloader) {
             }
             optimizer_->step();
 
-            if (batch_idx % cfg_.log_interval == 0) {
+            if (batch_idx % cfg_.log_interval == 0 && cfg_.log_interval > 0) {
                 float loss_val = loss.numel() > 0 ? loss.data<float>()[0] : 0.0f;
-                (void)loss_val;
+                // BUGFIX (bug census): loss computed then (void)-discarded —
+                // training ran blind (no log output at all). Emit progress.
+                std::fprintf(stderr, "[finetune] batch %lld loss %.6f\n",
+                             (long long)batch_idx, (double)loss_val);
             }
             if (batch_idx % cfg_.save_interval == 0 && cfg_.save_interval > 0) {
                 save(cfg_.output_path);

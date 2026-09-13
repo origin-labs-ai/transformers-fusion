@@ -739,3 +739,10 @@ Verification: `test_inference_opt.exe` → `[KV Truncate Test] Passed.`,
 | P1 | `parquet StreamingDataset` discarded `data_dir` (empty dataset silently) | Auto-scan *.parquet |
 | R1 | **Own revert**: my Quant1 non-unity-scale throw broke the VALID roundtrip (`quantize_per_channel` writes real max_abs scales) → test abort 0xc0000409 | Reverted to documented-ignore; 81/81 green |
 | Suite | Rebuild 0 errors; full ctest green | 72/72 |
+
+## 1000-bug sweep round 30 — 2026-09-13 (finetune blind training)
+
+| # | Bugs fixed | Evidence |
+|---|---|---|
+| F1 | `FineTuner` computed loss then `(void)`-discarded it (training ran blind, zero visibility) | stderr progress log per log_interval |
+| Suite | Rebuild 0 errors; full ctest green | 72/72 |
