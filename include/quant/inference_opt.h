@@ -43,6 +43,9 @@ public:
     int accepted_count() const { return accepted_count_; }
     int total_count() const { return total_count_; }
     float current_gamma() const { return gamma_; }
+    // P13: true jab draft_==nullptr uniform fallback use hua ho (legit path,
+    // fake nahi). verify_tokens/generate me set hota hai; metric ke liye flag hai.
+    bool used_uniform_draft_fallback() const { return draft_absent_fallback_; }
 private:
     Model* draft_;
     Model* target_;
@@ -54,6 +57,8 @@ private:
     float acc_ema_ = 0.6f; // EWMA of acceptance rate for adaptive gamma
     int accepted_count_ = 0;
     int total_count_ = 0;
+    // P13 metric flag: draft absent me uniform p_draft fallback liya gaya tha.
+    bool draft_absent_fallback_ = false;
     int adapt_interval_ = 10; // re-evaluate gamma every N calls
     int calls_since_adapt_ = 0;
     bool verify_tokens(const std::vector<int>& draft_tokens,
@@ -259,43 +264,13 @@ struct RejectionStats {
     }
 };
 
-class SpeculativeDecoderV2 {
-public:
-    SpeculativeDecoderV2(Model* draft, Model* target, int vocab_size = 32000,
-                         float gamma = 5.0f, int n_tree_candidates = 4);
-    
-    std::vector<int> generate(const std::vector<int>& prompt, int max_tokens);
-    const RejectionStats& stats() const { return stats_; }
-    void reset_stats();
-    
-    // Enable/disable tree attention verification
-    void set_use_tree_attention(bool use) { use_tree_attn_ = use; }
-    bool use_tree_attention() const { return use_tree_attn_; }
-
-private:
-    Model* draft_;
-    Model* target_;
-    int vocab_size_;
-    float gamma_;
-    int n_tree_candidates_;
-    bool use_tree_attn_ = true;
-    
-    KVCache draft_kv_cache_;
-    KVCache target_kv_cache_;
-    Sampler sampler_;
-    SamplerConfig sampler_cfg_;
-    RejectionStats stats_;
-    
-    std::vector<int> generate_draft_tokens(int prev_token, int count, int pos);
-    int verify_with_tree(const std::vector<int>& draft_tokens,
-                          const std::vector<int>& prefix,
-                          std::vector<int>& output);
-    int verify_linear(const std::vector<int>& draft_tokens,
-                       const std::vector<int>& prefix,
-                       std::vector<int>& output);
-    float get_target_prob(const float* logits, int token);
-    int sample_replacement(const float* logits);
-};
+// REMOVED: SpeculativeDecoderV2 had zero implementations, see P13
+// (P13: class sirf declare thi — grep "SpeculativeDecoderV2::" se zero defs,
+// zero callers mile; link-time ghost thi. Poori declaration ab
+// docs/P13_SPECULATIVE_V2_REMOVED.md note me rakhi hai. P6 no-delete rule ke
+// tahat ye comment chhoda gaya hai, class wapas nahi laani jab tak .cpp me
+// real defs + caller + test na ho.)
+// RejectionStats header-only hai isliye yahin rakha hai.
 
 // ===========================================================================
 // E2: Multi-Query Attention (MQA) — shared KV across heads

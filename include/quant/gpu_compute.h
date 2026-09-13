@@ -94,6 +94,9 @@ public:
 
     bool init(int64_t device_id = 0);
     bool is_initialized() const;
+    // True when the device is up AND the embedded compute shaders passed
+    // structural validation. is_initialized() only speaks about the device.
+    bool compute_ready() const;
     void shutdown();
 
     void* allocate(size_t bytes);

@@ -1,14 +1,14 @@
 #pragma once
 
 // ============================================================================
-// InNova Fine-Tuning Engine — three native strategies.
+// Transcender Fine-Tuning Engine — three native strategies.
 //
 //   1. SelectiveFineTuner        — "where to overwrite": gradient-saliency +
 //                                   Fisher-prior driven block selection.
 //                                   Base weights are updated ONLY in blocks
 //                                   the gradients prove need changing.
 //
-//   2. RankAdapterEngine         — InNova-native low-rank delta adapters
+//   2. RankAdapterEngine         — Transcender-native low-rank delta adapters
 //                                   (QUANT-Rank): per-layer LOW-RANK delta
 //                                   ΔW ≈ B·A trained with autograd and
 //                                   stored quantized in QUANT/QUANT formats.
@@ -126,7 +126,7 @@ private:
 };
 
 // ============================================================================
-// METHOD 2 — InNova-native low-rank delta adapters ("QUANT-Rank")
+// METHOD 2 — Transcender-native low-rank delta adapters ("QUANT-Rank")
 // ============================================================================
 struct RankAdapterConfig {
     int rank = 16;                     // adapter rank (width of the delta path)
@@ -136,6 +136,12 @@ struct RankAdapterConfig {
     int warmup_steps = 10;
     Format factor_format = Format::Q8; // deployment quantization of A and B
     std::string output_path = "adapters.nrad";
+    // DoRA (weight-decomposed low-rank adaptation): keep a trainable per-output
+    // magnitude vector m and renormalise the adapted weight to it —
+    //   W' = m ⊙ (W0 + B·A) / ||W0 + B·A||_c
+    // with ||·||_c the L2 norm down each output column. m is initialised to
+    // ||W0||_c, and freezing m there makes W' collapse to plain LoRA exactly.
+    bool use_dora = false;
 };
 
 class RankAdapterEngine {
@@ -147,6 +153,9 @@ public:
         int64_t rank = 0;
         Tensor A;              // {rank, in_dim}, pre-scaled by alpha/rank
         Tensor B;              // {out_dim, rank}, init 0 => zero initial delta
+        // DoRA only: {out_dim, 1} magnitude vector, initialised to ||W0[:,o]||_c
+        // (the column norms of the frozen base). Empty when use_dora is false.
+        Tensor magnitude;
         std::string name;
     };
 
@@ -168,8 +177,24 @@ public:
                     const Tensor& target_ids);
     void clear_grads();
 
-    // Fold the deltas into the base down-projections (exact: W' = W + ΔW).
+    // Fold the deltas into the base down-projections. Plain LoRA: W' = W0 + ΔW.
+    // DoRA: W' = m ⊙ (W0 + ΔW) / ||W0 + ΔW||_c, so every merged column has norm
+    // exactly m[o] by construction.
     void merge_into_base();
+
+    // DoRA magnitude support -------------------------------------------------
+    bool dora_enabled() const { return cfg_.use_dora; }
+    // Number of trainable magnitude scalars (0 unless use_dora).
+    int64_t dora_param_count() const;
+    // Exact DoRA magnitude gradient step. `dL_dW` holds one gradient tensor per
+    // adapter, in the same {in_dim, out_dim} layout as the merged base weight
+    // (position k*out_dim + o), i.e. dL/dW' for W' = m ⊙ V / ||V||_c with V and
+    // ||V||_c held fixed:
+    //     dL/dm[o] = Σ_k  dL/dW'[k,o] · V[k,o] / ||V[:,o]||
+    // Exposed as an explicit call rather than folded into the autograd graph
+    // because the engine has no norm/div op to carry it through. Layers whose
+    // gradient is absent or the wrong size are skipped, not guessed at.
+    void magnitude_step(const std::vector<Tensor>& dL_dW, float lr);
 
     // Quantized adapter store (.nrad): A/B saved in cfg.factor_format.
     void save(const std::string& path) const;

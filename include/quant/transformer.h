@@ -37,12 +37,6 @@ struct TransformerConfig {
     float yarn_beta_fast = 32.0f;          // frequency boundary for fast-rotating dims
     float yarn_beta_slow = 1.0f;           // frequency boundary for slow-rotating dims
 
-    // MLA (Multi-head Latent Attention) for DeepSeek V4 Flash
-    bool use_mla = false;
-    int64_t q_lora_rank = 0;
-    int64_t kv_lora_rank = 0;
-    int64_t mla_rope_dim = 0;
-
     // FP8 mixed precision
     bool use_fp8 = false;
     bool fp8_use_e4m3 = true;  // true = E4M3 (activations), false = E5M2 (gradients)
@@ -85,6 +79,9 @@ public:
     float theta;
     RoPEScalingMode scaling_mode = RoPEScalingMode::None;
     float scaling_factor = 1.0f;
+    float mscale = 1.0f;
+    float yarn_attn_factor = 1.0f;
+    float attn_scale_mult() const { return mscale * yarn_attn_factor; }
     RotaryEmbedding() = default;
     RotaryEmbedding(int64_t head_dim, int64_t max_seq_len, float theta = 10000.0f);
     RotaryEmbedding(int64_t head_dim, int64_t max_seq_len, float theta,
@@ -101,11 +98,28 @@ public:
     Linear q_proj, k_proj, v_proj, o_proj;
     int64_t num_heads, num_kv_heads, head_dim;
     RotaryEmbedding rope;
+    // L052: FP8 attention path (inference-only; training falls back to FP32).
+    // Wired from TransformerConfig::use_fp8 / fp8_use_e4m3.
+    bool use_fp8 = false;
+    bool fp8_e4m3 = true;
     Attention() = default;
     explicit Attention(const TransformerConfig& cfg);
     Tensor forward(const Tensor& x, const Tensor& positions,
                    const Tensor& mask, KVCache& cache, int layer_idx) const;
 };
+
+// L052: FP8 linear GEMM (inference-only slow path).
+// Quantizes A (activations) and B (weights) to E4M3/E5M2 via math::fp8_gemm
+// (elementwise quantize, FP32 accumulate). Training must use Linear::forward
+// (autograd graph); this path is for the use_fp8 inference switch.
+// Max roundtrip error bounds (measured, see tests/test_wave6_model_feats.cpp):
+//   E4M3: <= 0.07 abs on [-1, 1]; E5M2: <= 0.16 abs on [-1, 1].
+Tensor linear_forward_fp8(const Linear& lin, const Tensor& input, bool use_e4m3);
+
+// NOTE (owner purge 2026-09-07): attention-variant layer classes REMOVED.
+// Standard Attention + TransformerBlock remain the only sequence mixers until
+// the Cender/ formula (Phase 19-23, owner-gated) proves parity. No variant
+// lineage of any name lives here.
 
 class FFN {
 public:

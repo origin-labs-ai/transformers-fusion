@@ -321,6 +321,10 @@ private:
     float label_smoothing_ = 0.0f;
     float ema_decay_ = 0.999f;
     bool ema_enabled_ = false;
+    // L051: MTP auxiliary loss weight (from TrainConfig::mtp_loss_weight).
+    // >0 with a DenseModel carrying mtp_heads wires the MTP term into
+    // micro_step()'s graph. 0 = legacy single-head behavior.
+    float mtp_loss_weight_ = 0.0f;
     // QAT state
     bool qat_enabled_ = false;
     int qat_bits_ = 8;
@@ -364,12 +368,15 @@ public:
     void set_log_callback(std::function<void(float pl, float vl, float ent, float kl)> cb) {
         log_cb_ = cb;
     }
+    void set_optimizer(Optimizer* opt) { optimizer_ = opt; }
+    Optimizer* optimizer() const { return optimizer_; }
     float kl_alpha() const { return kl_alpha_; }
     float last_kl() const { return last_kl_; }
 
 private:
     Model* policy_;
     Model* ref_model_;
+    Optimizer* optimizer_ = nullptr;
     float clip_epsilon_;
     float value_coef_;
     float entropy_coef_;
@@ -518,5 +525,73 @@ private:
 namespace quant {
 
 void collect_dense_params(DenseModel* dm, std::vector<Tensor*>& params);
+
+// ── L073 Unified trainer entry (Phase 16 Wave 7) ───────────────────────────
+// Single entry point for all training CLI paths. quant::Trainer remains the
+// implementation; engines/trainer/dense::DenseTrainer and FineTuner configure
+// through this facade via from_*() translation (no circular link: this header
+// does not include engines/* or finetune.h; translation is field-wise).
+// New code must use UnifiedTrainer; direct Trainer use is legacy-compat.
+enum class UnifiedTrainerKind : uint8_t {
+    Dense = 0,
+    FineTune = 1,
+    MoE = 2,
+    Native = 3
+};
+
+struct UnifiedTrainArgs {
+    UnifiedTrainerKind kind = UnifiedTrainerKind::Dense;
+    int64_t batch_size = 8;
+    int64_t seq_length = 512;
+    int num_epochs = 3;
+    int train_steps = 10000;
+    float learning_rate = 3e-4f;
+    float weight_decay = 1e-2f;
+    int warmup_steps = 100;
+    int log_interval = 10;
+    int save_interval = 1000;
+    int val_interval = 500;
+    std::string output_path = "model.quant";
+    std::string data_path;
+    std::string optimizer_name = "adafactor"; // "adafactor" | "adamw"
+    bool use_qat = false;
+    int qat_bits = 8;
+    float moe_load_balance_coef = 0.01f;
+    float moe_z_loss_coef = 0.001f;
+};
+
+const char* unified_trainer_kind_name(UnifiedTrainerKind k);
+bool unified_trainer_parse_kind(const std::string& s, UnifiedTrainerKind* out);
+TrainConfig unified_to_train_config(const UnifiedTrainArgs& a);
+
+class UnifiedTrainer {
+public:
+    UnifiedTrainer(Model* model, Tokenizer* tokenizer);
+    ~UnifiedTrainer();
+
+    bool configure(const UnifiedTrainArgs& args, std::string* err_out);
+    bool run(std::string* err_out);
+    bool train_step_once(const Tensor& input_ids, const Tensor& labels,
+                         float* loss_out, std::string* err_out);
+    void save_checkpoint(const std::string& path);
+    void load_checkpoint(const std::string& path);
+    const TrainMetrics& metrics() const;
+    const UnifiedTrainArgs& args() const { return args_; }
+    Trainer* inner() { return trainer_.get(); }
+
+    using LogCallback = std::function<void(const TrainMetrics&)>;
+    void set_log_callback(LogCallback cb);
+
+private:
+    Model* model_ = nullptr;
+    Tokenizer* tokenizer_ = nullptr;
+    UnifiedTrainArgs args_;
+    TrainConfig cfg_;
+    std::unique_ptr<Trainer> trainer_;
+    std::unique_ptr<Optimizer> owned_opt_;
+    Optimizer* opt_ = nullptr;
+    LogCallback log_cb_;
+    bool configured_ = false;
+};
 
 } // namespace quant

@@ -59,6 +59,21 @@ public:
     void save(const std::string& path) const;
     void load(const std::string& path);
 
+    // ── L072 SentencePiece interchange (Phase 16 Wave 7) ───────────────────
+    // Binary protobuf .model is NOT parsed (no protobuf dep by design).
+    // Supported: TSV interchange "<piece>\t<log_prob>" per line (export via
+    // save_sentencepiece_tsv, e.g. from a Python `sentencepiece` export), plus
+    // SentencePiece encode/decode semantics (U+2581 word marker, NFKC-ish
+    // whitespace normalization). encode_sentencepiece() normalizes then runs
+    // the same Viterbi unigram segmentation as encode(); decode_sentencepiece()
+    // joins then maps U+2581 back to space.
+    static std::string sentencepiece_normalize(const std::string& text);
+    static std::string sentencepiece_join(const std::string& text);
+    bool load_sentencepiece_tsv(const std::string& path, std::string* err_out);
+    bool save_sentencepiece_tsv(const std::string& path) const;
+    std::vector<int> encode_sentencepiece(const std::string& text);
+    std::string decode_sentencepiece(const std::vector<int>& ids);
+
     std::vector<int> encode_with_scores(const std::string& text, std::vector<double>& scores);
     std::vector<std::vector<int>> encode_nbest(const std::string& text, int n = 5);
 

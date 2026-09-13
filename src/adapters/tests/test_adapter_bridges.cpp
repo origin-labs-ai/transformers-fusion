@@ -98,8 +98,8 @@ static void test_mixed_write() {
     check(bpw > 1.0f && bpw < 4.0f, "estimated BPW in valid range");
 }
 
-static void test_quad_budget_at_scale() {
-    std::fprintf(stdout, "\n=== QUAD_MIX Budget Tests ===\n");
+static void test_qg_mx_budget_at_scale() {
+    std::fprintf(stdout, "\n=== QG_MX Budget Tests ===\n");
 
     constexpr int64_t N = 1 << 20; // 1M weights, 4096 blocks of 256
     std::vector<float> data((size_t)N);
@@ -112,12 +112,12 @@ static void test_quad_budget_at_scale() {
 
     const MixDescriptor* mix = nullptr;
     for (const auto& m : FormatRegistry::get_all_four_mixes())
-        if (m.name == "QUAD_QUANT2_QUANT4_QUANT8_QUANT16") mix = &m;
-    check(mix != nullptr, "QUAD_QUANT2_QUANT4_QUANT8_QUANT16 registered");
+        if (m.name == "QG_MX_3.5") mix = &m;
+    check(mix != nullptr, "QG_MX_3.5 registered");
     if (!mix) return;
 
     const std::vector<Format> fmts =
-        allocate_tensor_formats("layer0.weight", N, data.data(), 256, Format::QUANT2, mix);
+        allocate_tensor_formats("layer0.weight", N, data.data(), 256, Format::Q2, mix);
 
     size_t total_bytes = 0;
     bool budget_ok = true;
@@ -132,16 +132,16 @@ static void test_quad_budget_at_scale() {
         if (stored > cap) budget_ok = false;
         total_bytes += stored;
     }
-    check(budget_ok, "every QUAD block fits its claimed byte budget");
+    check(budget_ok, "every QG_MX block fits its claimed byte budget");
 
-    const double expected = 2.92 * (double)N / 8.0;
+    const double expected = 3.78125 * (double)N / 8.0;
     const double actual = (double)total_bytes;
     char message[256];
     std::snprintf(message, sizeof(message),
-                  "QUAD file bytes %.0f vs claimed %.0f (%.2f%% off)",
+                  "QG_MX file bytes %.0f vs claimed %.0f (%.2f%% off)",
                   actual, expected, 100.0 * (actual - expected) / expected);
     check(std::fabs(actual - expected) / expected < 0.01, message);
-    std::fprintf(stdout, "QUAD_QUANT2_QUANT4_QUANT8_QUANT16 @ 1M weights: %zu bytes (claim 2.92 BPW -> %.0f)\n",
+    std::fprintf(stdout, "QG_MX_3.5 @ 1M weights: %zu bytes (claim 3.78125 BPW -> %.0f)\n",
                  total_bytes, expected);
 }
 
@@ -161,6 +161,167 @@ static void test_raw_load() {
     }
 }
 
+// ── L070 LLaMA-family loader tests (Phase 16 Wave 7) ────────────────────────
+
+static AdapterTensor make_llama_tensor(const std::string& name,
+                                       std::vector<int64_t> shape) {
+    AdapterTensor t;
+    t.name = name;
+    t.shape = std::move(shape);
+    int64_t n = 1;
+    for (int64_t d : t.shape) n *= d;
+    t.data.assign((size_t)n, 0.01f);
+    return t;
+}
+
+static std::vector<AdapterTensor> make_tiny_llama(bool qwen_marker) {
+    std::vector<AdapterTensor> ts;
+    ts.push_back(make_llama_tensor("model.embed_tokens.weight", {32, 16}));
+    for (int l = 0; l < 2; l++) {
+        std::string p = "model.layers." + std::to_string(l) + ".";
+        ts.push_back(make_llama_tensor(p + "self_attn.q_proj.weight", {16, 16}));
+        ts.push_back(make_llama_tensor(p + "self_attn.k_proj.weight", {16, 16}));
+        ts.push_back(make_llama_tensor(p + "self_attn.v_proj.weight", {16, 16}));
+        ts.push_back(make_llama_tensor(p + "self_attn.o_proj.weight", {16, 16}));
+        ts.push_back(make_llama_tensor(p + "mlp.gate_proj.weight", {32, 16}));
+        ts.push_back(make_llama_tensor(p + "mlp.up_proj.weight", {32, 16}));
+        ts.push_back(make_llama_tensor(p + "mlp.down_proj.weight", {16, 32}));
+        ts.push_back(make_llama_tensor(p + "input_layernorm.weight", {16}));
+        ts.push_back(make_llama_tensor(p + "post_attention_layernorm.weight", {16}));
+        if (qwen_marker && l == 0)
+            ts.push_back(make_llama_tensor(p + "self_attn.q_norm.weight", {16}));
+    }
+    ts.push_back(make_llama_tensor("model.norm.weight", {16}));
+    ts.push_back(make_llama_tensor("lm_head.weight", {32, 16}));
+    return ts;
+}
+
+static void test_llama_loader() {
+    std::fprintf(stdout, "\n=== L070 LLaMA Loader Tests ===\n");
+    auto ts = make_tiny_llama(false);
+    check(detect_llama_family(ts) == LlamaFamily::Llama, "llama family detected");
+    std::string err;
+    check(validate_llama_tensors(ts, &err), "tiny llama validates");
+    LlamaArchConfig c = infer_llama_arch(ts);
+    check(c.valid, "llama arch valid");
+    check(c.num_layers == 2, "llama 2 layers inferred");
+    check(c.hidden_size == 16, "llama hidden 16 inferred");
+    check(c.vocab_size == 32, "llama vocab 32 inferred");
+    check(c.ffn_hidden == 32, "llama ffn 32 inferred");
+    check(!c.tie_embeddings, "llama head present (not tied)");
+
+    auto qwen = make_tiny_llama(true);
+    check(detect_llama_family(qwen) == LlamaFamily::QwenDense, "qwen-dense marker detected");
+    check(validate_llama_tensors(qwen, &err), "tiny qwen validates");
+
+    std::vector<AdapterTensor> garbage;
+    AdapterTensor g;
+    g.name = "some_random_weight";
+    g.shape = {8, 8};
+    g.data.assign(64, 0.1f);
+    garbage.push_back(g);
+    check(detect_llama_family(garbage) == LlamaFamily::Unknown, "garbage is Unknown family");
+    check(!validate_llama_tensors(garbage, &err), "garbage fails validation");
+    check(!err.empty(), "validation error message set");
+}
+
+// ── L071 MoE arch loader tests (Phase 16 Wave 7) ────────────────────────────
+
+static std::vector<AdapterTensor> make_tiny_mixtral() {
+    std::vector<AdapterTensor> ts;
+    ts.push_back(make_llama_tensor("model.embed_tokens.weight", {32, 16}));
+    std::string p = "model.layers.0.";
+    ts.push_back(make_llama_tensor(p + "self_attn.q_proj.weight", {16, 16}));
+    ts.push_back(make_llama_tensor(p + "block_sparse_moe.gate.weight", {4, 16}));
+    for (int e = 0; e < 4; e++) {
+        std::string ep = p + "block_sparse_moe.experts." + std::to_string(e) + ".";
+        ts.push_back(make_llama_tensor(ep + "w1.weight", {32, 16}));
+        ts.push_back(make_llama_tensor(ep + "w2.weight", {16, 32}));
+        ts.push_back(make_llama_tensor(ep + "w3.weight", {32, 16}));
+    }
+    ts.push_back(make_llama_tensor("model.norm.weight", {16}));
+    return ts;
+}
+
+static void test_moe_loader() {
+    std::fprintf(stdout, "\n=== L071 MoE Loader Tests ===\n");
+    auto ts = make_tiny_mixtral();
+    check(is_moe_tensors(ts), "mixtral experts detected");
+    MoeArchConfig c = infer_moe_arch(ts);
+    check(c.valid, "moe arch valid");
+    check(c.is_moe, "moe flag set");
+    check(c.num_experts == 4, "4 experts inferred");
+    check(c.num_layers_with_moe == 1, "1 moe layer inferred");
+    check(c.pattern == "mixtral", "mixtral pattern named");
+    std::string err;
+    check(validate_moe_tensors(ts, &err), "tiny mixtral validates");
+
+    auto dense = make_tiny_llama(false);
+    check(!is_moe_tensors(dense), "dense llama is not moe");
+    check(!validate_moe_tensors(dense, &err), "dense fails moe validation");
+}
+
+// ── L059 Block-FP8 pair loader tests (Phase 15 Wave 6) ───────────────────
+// Qwen3.8-class split layout: raw F8_E4M3 weight bytes + one F32 scale per
+// `block` elements. This test crafts a minimal safetensors file by hand
+// (header JSON + raw segment) and verifies bit-exact scaled loads plus
+// honest failures (missing keys, scale-count mismatch).
+
+static void write_u64_le(std::ofstream& f, uint64_t v) {
+    for (int i = 0; i < 8; i++) {
+        f.put((char)(v & 0xFF));
+        v >>= 8;
+    }
+}
+
+static void test_block_fp8_loader() {
+    std::fprintf(stdout, "\n=== L059 Block-FP8 Loader Tests ===\n");
+    const std::string path = "test_block_fp8.safetensors";
+    // weight "w": 4x F8_E4M3 bytes [0x38, 0x38, 0xBC, 0x00] = [1, 1, -1, 0]
+    // scale "w_scale": 2x F32 [0.5, 2.0], block = 2
+    // expected: [0.5, 0.5, -2.0, 0.0]
+    const std::string header =
+        "{\"w\":{\"dtype\":\"F8_E4M3\",\"shape\":[4],\"data_offsets\":[0,4]},"
+        "\"w_scale\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[4,12]}}";
+    {
+        std::ofstream f(path, std::ios::binary);
+        write_u64_le(f, (uint64_t)header.size());
+        f.write(header.data(), (std::streamsize)header.size());
+        const uint8_t wbytes[4] = {0x38, 0x38, 0xBC, 0x00};
+        f.write(reinterpret_cast<const char*>(wbytes), 4);
+        const float scales[2] = {0.5f, 2.0f};
+        f.write(reinterpret_cast<const char*>(scales), 8);
+    }
+    BlockFp8Group g = load_block_fp8_pair(path, "w", "w_scale", 2);
+    check(g.ok, "block-fp8 pair loads ok");
+    check(g.use_e4m3, "e4m3 variant detected");
+    check(g.block_size == 2, "block size kept");
+    if (g.ok && g.data.size() == 4) {
+        check(std::fabs(g.data[0] - 0.5f) < 1e-6f, "w[0] = 1.0 * 0.5");
+        check(std::fabs(g.data[1] - 0.5f) < 1e-6f, "w[1] = 1.0 * 0.5");
+        check(std::fabs(g.data[2] + 2.0f) < 1e-6f, "w[2] = -1.0 * 2.0");
+        check(std::fabs(g.data[3] - 0.0f) < 1e-6f, "w[3] = 0.0 * 2.0");
+    } else {
+        check(false, "block-fp8 data has 4 elements");
+    }
+    // Plain per-element F8 path sees the same bytes (regression: decoder fix).
+    auto plain = load_safetensors(path, false);
+    for (const auto& t : plain) {
+        if (t.name == "w" && t.data.size() == 4) {
+            check(std::fabs(t.data[0] - 1.0f) < 1e-6f, "plain F8_E4M3 0x38 = 1.0 (decoder fix)");
+            check(std::fabs(t.data[2] + 1.0f) < 1e-6f, "plain F8_E4M3 0xBC = -1.0 (decoder fix)");
+        }
+    }
+    // Honest failures.
+    BlockFp8Group miss = load_block_fp8_pair(path, "nope", "w_scale", 2);
+    check(!miss.ok, "missing weight key => !ok");
+    BlockFp8Group miss_scale = load_block_fp8_pair(path, "w", "nope_scale", 2);
+    check(!miss_scale.ok, "missing scale key => !ok");
+    BlockFp8Group bad_block = load_block_fp8_pair(path, "w", "w_scale", 1);
+    check(!bad_block.ok, "scale-count mismatch (block=1 needs 4 scales, has 2) => !ok");
+    std::remove(path.c_str());
+}
+
 int main() {
     std::fprintf(stdout, "========================================\n");
     std::fprintf(stdout, "  ADAPTER-EDITION SMOKE TESTS\n");
@@ -169,8 +330,11 @@ int main() {
     test_fp_conversions();
     test_format_detection();
     test_mixed_write();
-    test_quad_budget_at_scale();
+    test_qg_mx_budget_at_scale();
     test_raw_load();
+    test_llama_loader();
+    test_moe_loader();
+    test_block_fp8_loader();
 
     std::fprintf(stdout, "\n========================================\n");
     if (g_failures == 0)

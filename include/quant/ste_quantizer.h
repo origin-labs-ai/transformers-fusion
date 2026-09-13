@@ -21,7 +21,9 @@ public:
     // The last block may be smaller than block_size
     Tensor forward_mixed(const Tensor& weights, const std::vector<Format>& per_block_formats, int block_size = 256);
     
-    // Quantize with codebook training
+    // Quantize with codebook training (caller-owned exclusive: the codebook
+    // must be exclusively owned by the caller for the call — trained in place
+    // if untrained and mutated via batch stats; do not share across threads).
     Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT8& codebook);
     Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT4& codebook);
     
@@ -29,7 +31,8 @@ public:
     void quantize_quant(const float* src, uint8_t* dst, float* scale, int64_t n);
     void quantize_Q1(const float* src, uint8_t* dst, float* scale, int64_t n);
     
-    // Set target format
+    // Set target format (NOT thread-safe: mutates target_format_ without
+    // synchronization; external locking required if shared across threads).
     void set_target_format(Format fmt);
     Format target_format() const;
 

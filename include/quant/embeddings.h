@@ -1,5 +1,5 @@
 // ============================================================================
-// embeddings.h — Embedding model types for InNova
+// embeddings.h — Embedding model types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

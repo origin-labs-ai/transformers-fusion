@@ -1,5 +1,5 @@
 // ============================================================================
-// video.h — Video processing types for InNova
+// video.h — Video processing types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

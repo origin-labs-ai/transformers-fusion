@@ -4,16 +4,17 @@
 
 namespace quant {
 
-enum class HybridAttnKind { KDA, MLA };
+// Per-layer attention-kind map. STD = full softmax attention (only kind).
+// Owner purge 2026-09-07: variant kinds removed; schedule is all-STD.
+enum class HybridAttnKind { STD };
 
 struct HybridSchedule {
     std::vector<HybridAttnKind> layers;
-    int num_kda = 0;
-    int num_mla = 0;
+    int num_std = 0;
     int total() const { return (int)layers.size(); }
 };
 
-HybridSchedule build_hybrid_schedule(int total_layers, int kda_per_mla = 3);
-HybridSchedule build_k3_schedule(); // 93 layers, 69 KDA + 24 MLA (3:1)
+// Generic N-layer layout: all STD. Keeps signature for callers.
+HybridSchedule build_hybrid_schedule(int total_layers, int reserved = 3);
 
 } // namespace quant

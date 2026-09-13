@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
     printf("%s\n", std::string(60, '=').c_str());
     printf("Layers benchmarked: %d\n", (int)results.size());
     printf("Total weights: %.1fM\n", n_elem_total / 1e6f);
-    printf("\nQUANT Mixed (95%% QUANT, 4%% QUANT4, 1%% QUANT8):\n");
+    printf("\nQUANT Mixed (95%% QUANT, 4%% Q4, 1%% Q8):\n");
     printf("  Avg MSE:   %.6f\n", quant_avg_mse);
     printf("  Avg RMSE:  %.6f\n", sqrtf(quant_avg_mse));
     printf("  Size:      %.1fKB / %.1fKB (%.1f%%)\n",

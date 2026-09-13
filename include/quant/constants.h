@@ -1,6 +1,6 @@
 #pragma once
 // ============================================================================
-// constants.h — Named Constants for InNova
+// constants.h — Named Constants for Transcender
 // ============================================================================
 // Eliminates magic numbers across the entire codebase.
 // Every numeric literal with semantic meaning lives here.
@@ -35,17 +35,17 @@ constexpr int64_t LARGE_MODEL_PARAMS   = 7'000'000'000LL; // 7B
 
 constexpr int    QUANT4_CODEBOOK_SIZE    = 16;
 constexpr int    QUANT8_CODEBOOK_SIZE    = 256;
-constexpr int    QUANT1_CENTROIDS        = 1;
-constexpr int    QUANT2_CENTROIDS        = 4;
+constexpr int    Q1_CENTROIDS        = 1;
+constexpr int    Q2_CENTROIDS        = 4;
 constexpr int    QUANT4_CENTROIDS        = 16;
 constexpr int    QUANT8_CENTROIDS        = 256;
-constexpr int    QUANT_Q0_CENTROIDS    = 4;
+constexpr int    Q1_5_CENTROIDS    = 4;
 constexpr int    QUANT16_CENTROIDS       = 0;    // QUANT16 stores raw FP16, no centroids
 constexpr int    QUANT_FORMAT_COUNT      = 15;
 
 constexpr float  FP16_MAX_VALUE        = 65504.0f;
 constexpr float  FP32_EPSILON          = 1e-8f;
-constexpr float  QUANT_Q0_BPW          = 1.50f;
+constexpr float  Q1_5_BPW          = 1.50f;
 
 // ── Training Defaults ─────────────────────────────────────────────────────
 

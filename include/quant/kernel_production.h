@@ -2,7 +2,7 @@
 // kernel_production.h — Production SIMD kernels for QUANT inference
 // ----------------------------------------------------------------------------
 // Tiled GEMV, batch GEMV, and calibration-aware kernels for:
-//   QUANT_Q0 (1.50-bit, 4 values/byte), QUANT4 (4-bit, 2/byte), QUANT8 (8-bit, 1/byte)
+//   Q1_5 (1.50-bit, 4 values/byte), QUANT4 (4-bit, 2/byte), QUANT8 (8-bit, 1/byte)
 //
 // ISA dispatch: AVX2 > SSE4.1 > Scalar (runtime CPU detection)
 // ============================================================================

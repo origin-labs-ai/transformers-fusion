@@ -49,6 +49,10 @@ struct MoEMetrics {
     float expert_utilization = 0.0f;
     float tokens_per_sec = 0.0f;
     int64_t tokens_processed = 0;
+    // L057: router overflow stats — total dropped tokens across layers in the
+    // last micro_step (capacity/overflow accounting, replaces the previous
+    // misuse of tokens_per_sec as a drop counter).
+    int64_t tokens_dropped_total = 0;
     int num_experts_used = 0;
     int step = 0;
     int epoch = 0;
@@ -69,6 +73,7 @@ public:
              DataLoader* val_dl = nullptr);
 
     float train_step(const Tensor& input_ids, const Tensor& labels);
+    float train_step(DataLoader& loader, const Tensor& first_input, const Tensor& first_labels);
     float micro_step(const Tensor& input_ids, const Tensor& labels,
                      float loss_scale = 1.0f);
     float eval_loss(DataLoader& val_dl, int64_t max_batches = 20);

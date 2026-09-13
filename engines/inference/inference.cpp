@@ -1,4 +1,5 @@
 #include "inference.h"
+#include "quant/random.h"
 #include <chrono>
 #include <cstring>
 #include <algorithm>
@@ -36,7 +37,8 @@ void InferenceEngine::init(Model* model, Tokenizer* tokenizer, const EngineConfi
             false);
     }
 
-    sampler_ = std::make_unique<Sampler>(42);
+    sampler_ = std::make_unique<Sampler>(
+        make_seed(resolve_base_seed(0), SeedStream::EngineSampler, 0));
     generator_ = std::make_unique<Generator>(model_, tokenizer_);
 
     std::memset(&stats_, 0, sizeof(stats_));

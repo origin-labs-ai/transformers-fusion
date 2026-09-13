@@ -1,5 +1,5 @@
 # ============================================================================
-# ADAPTER-EDITION — Subdirectory of main InNova project
+# ADAPTER-EDITION — Subdirectory of main Transcender project
 # ----------------------------------------------------------------------------
 # Links against the parent project's already-built libraries (quant_core,
 # quant_format, quant_kernel, quant_model, quant_math).  Does NOT recompile parent
@@ -9,7 +9,7 @@
 # (scratch + continual modes) + delta-adapter host + MTP-head trainer.
 # ============================================================================
 cmake_minimum_required(VERSION 3.20)
-project(InNova_Adapter_Edition LANGUAGES CXX)
+project(Transcender_Adapter_Edition LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -91,9 +91,10 @@ if(QUANT_ADAPTER_BUILD_TOOLS)
     add_adapter_tool(probe_search "tools/probe_search.cpp")
     add_adapter_tool(probe_t4 "tools/probe_t4.cpp")
     add_adapter_tool(quant_verify_roundtrip "tools/quant_verify_roundtrip.cpp")
+    add_adapter_tool(quant_refcheck "tools/quant_refcheck.cpp")
     add_adapter_tool(dump_quant "tools/dump_quant.cpp")
     add_adapter_tool(quant_chat "tools/quant_chat.cpp" "tools/qwen35_engine.cpp"
-        "../../src/qwen35_tokenizer.cpp" "../../src/json_parser.cpp")
+        "../../src/tokenizer/qwen35_tokenizer.cpp" "../../src/server/json_parser.cpp")
     if(MSVC)
         target_compile_options(quant_chat PRIVATE /O2 /arch:AVX2)
     endif()

@@ -23,9 +23,13 @@ public:
 
     float load_balance_loss = 0.0f;
     float z_loss = 0.0f;
+    // L057: router overflow accounting — tokens dropped by capacity limits in
+    // the last forward (from moe::MoEOutput::tokens_dropped).
+    int64_t tokens_dropped = 0;
 
     moe::MoEAllConfig moe_config;
     Tensor last_expert_indices;
+    Tensor last_router_logits;
 
     MoEBlock() = default;
     MoEBlock(const TransformerConfig& cfg, const moe::MoEAllConfig& moe_cfg);

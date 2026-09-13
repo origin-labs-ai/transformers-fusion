@@ -104,6 +104,11 @@ class WorldModel {
 public:
     WorldModel(Model* model, int64_t state_dim = 64, int64_t ensemble_size = 5);
 
+    // Legacy tensor-step API (G13, kept for quant::WorldModel compat).
+    // Null-model safe: returns zeros shaped like state; plan returns {}.
+    Tensor simulate_step(const Tensor& state, const Tensor& action);
+    std::vector<Tensor> plan(int64_t horizon);
+
     PredictionResult predict(const WorldState& state, const std::string& action);
     float predict_reward(const WorldState& state, const std::string& action);
     PredictionResult predict_with_uncertainty(const WorldState& state, const std::string& action);

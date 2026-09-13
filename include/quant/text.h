@@ -1,5 +1,5 @@
 // ============================================================================
-// text.h — Text processing types for InNova
+// text.h — Text processing types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

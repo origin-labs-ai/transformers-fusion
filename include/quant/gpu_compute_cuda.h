@@ -44,7 +44,8 @@ public:
     void moe_gather(const void* expert_outputs, const void* routing_indices, void* output, int64_t num_tokens, int64_t expert_dim);
     void moe_scatter(const void* input, const void* routing_indices, void* expert_inputs, int64_t num_tokens, int64_t token_dim);
 
-    // MoE Page-locking and Async Streams (64% speedup support)
+    // MoE page-locking and async-stream upload/download primitives.
+    // No speedup figure is claimed here: consult bench/ for measured numbers.
     bool register_host_memory(void* ptr, size_t bytes);
     bool unregister_host_memory(void* ptr);
     void* create_stream();

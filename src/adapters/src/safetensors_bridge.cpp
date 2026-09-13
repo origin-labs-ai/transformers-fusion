@@ -99,23 +99,16 @@ static float st_bf16_to_f32(uint16_t b) {
 }
 
 static float st_fp8_e4m3(uint8_t x) {
-    int sign = (x >> 7) & 1;
-    int exp  = (x >> 3) & 0xF;
-    int mant = x & 0x7;
-    if (exp == 0 && mant == 0) return 0.0f;
-    if (exp == 15) return mant ? NAN : INFINITY;
-    if (exp == 0) return (float)mant / 64.0f * 2.0f;
-    return ((float)((mant | 0x8) << (3 + 20)) / 8388608.0f) * std::ldexp(1.0f, exp - 7) * (sign ? -1.0f : 1.0f);
+    // L059 fix: delegate to the verified adapter_core decoder (bit-exact;
+    // covered by test_adapter_bridges "FP8 E4M3 1.0"). The previous local
+    // formula scaled normals by an extra 2^4 (0x38 decoded to 8.0, not 1.0).
+    return fp8_e4m3_to_float(x);
 }
 
 static float st_fp8_e5m2(uint8_t x) {
-    int sign = (x >> 7) & 1;
-    int exp  = (x >> 2) & 0x1F;
-    int mant = x & 0x3;
-    if (exp == 0 && mant == 0) return 0.0f;
-    if (exp == 31) return mant ? NAN : INFINITY;
-    if (exp == 0) return (float)mant / 256.0f * 2.0f;
-    return ((float)((mant | 0x4) << (2 + 20)) / 8388608.0f) * std::ldexp(1.0f, exp - 15) * (sign ? -1.0f : 1.0f);
+    // L059 fix: same as above (previous local formula scaled E5M2 normals
+    // by an extra 2^1; 0x3C decoded to 2.0, not 1.0).
+    return fp8_e5m2_to_float(x);
 }
 
 // ── Safetensors parser ───────────────────────────────────────────────────────
@@ -295,6 +288,84 @@ bool safetensors_to_quant(const std::string& input_path, const BridgeConfig& cfg
     if (tensors.empty()) return false;
     BridgeConfig c = cfg;
     return write_quant_mixed(tensors, c);
+}
+
+// L059: split block-FP8 pair loader. Reuses load_safetensors() for parsing
+// (weight bytes decode as raw FP8 values, scales as floats), then applies
+// the per-block scale. Key lookup is exact; any mismatch => ok=false.
+BlockFp8Group load_block_fp8_pair(const std::string& path,
+                                  const std::string& weight_key,
+                                  const std::string& scale_key,
+                                  int64_t block) {
+    BlockFp8Group out;
+    out.block_size = block > 0 ? block : 128;
+    if (weight_key.empty() || scale_key.empty()) return out;
+
+    // Recover the weight dtype from the raw header (load_safetensors hides
+    // it): re-scan for the weight key's dtype string.
+    std::string weight_dtype;
+    {
+        std::ifstream f(path, std::ios::binary);
+        if (!f) return out;
+        uint64_t hdr_len_u64 = 0;
+        f.read(reinterpret_cast<char*>(&hdr_len_u64), 8);
+        if (f.gcount() != 8 || hdr_len_u64 == 0 || hdr_len_u64 > (1u << 26)) return out;
+        std::string json((size_t)hdr_len_u64, '\0');
+        f.read(&json[0], (std::streamsize)hdr_len_u64);
+        if ((std::streamsize)hdr_len_u64 != f.gcount()) return out;
+        size_t kp = json.find("\"" + weight_key + "\"");
+        if (kp == std::string::npos) return out;
+        size_t dp = json.find("\"dtype\"", kp);
+        if (dp == std::string::npos || dp > kp + 4096) return out;
+        size_t q1 = json.find('"', dp + 7);
+        if (q1 == std::string::npos) return out;
+        size_t q2 = json.find('"', q1 + 1);
+        if (q2 == std::string::npos) return out;
+        weight_dtype = json.substr(q1 + 1, q2 - q1 - 1);
+    }
+    bool e4m3;
+    if (weight_dtype == "F8_E4M3") e4m3 = true;
+    else if (weight_dtype == "F8_E5M2") e4m3 = false;
+    else return out; // not a block-FP8 weight tensor
+    out.use_e4m3 = e4m3;
+
+    auto tensors = load_safetensors(path, false);
+    const AdapterTensor* w = nullptr;
+    const AdapterTensor* s = nullptr;
+    for (const auto& t : tensors) {
+        if (t.name == weight_key) w = &t;
+        if (t.name == scale_key) s = &t;
+    }
+    if (!w || !s) return out;
+    int64_t wn = w->numel();
+    int64_t need_scales = (wn + out.block_size - 1) / out.block_size;
+    if ((int64_t)s->data.size() != need_scales) return out;
+
+    out.name = weight_key;
+    out.shape = w->shape;
+    out.data.resize((size_t)wn);
+    // w->data holds the exact FP8 bit-decode (st_fp8_* delegate to the
+    // verified adapter_core decoders), so scaling here is bit-exact:
+    // out[i] == fp8(w[i]) * scale[i / block].
+    for (int64_t i = 0; i < wn; i++)
+        out.data[(size_t)i] = w->data[(size_t)i] * s->data[(size_t)(i / out.block_size)];
+    out.ok = true;
+    return out;
+}
+
+bool block_fp8_safetensors_to_quant(const std::string& input_path,
+                                    const std::string& weight_key,
+                                    const std::string& scale_key,
+                                    const BridgeConfig& cfg,
+                                    int64_t block) {
+    BlockFp8Group g = load_block_fp8_pair(input_path, weight_key, scale_key, block);
+    if (!g.ok) return false;
+    AdapterTensor at;
+    at.name = g.name;
+    at.shape = g.shape;
+    at.data = g.data;
+    BridgeConfig c = cfg;
+    return write_quant_mixed({at}, c);
 }
 
 } // namespace adapters

@@ -3,6 +3,7 @@
 #define QUANT_VULKAN_TYPES_H
 
 #include <cstdint>
+#include <cstddef>
 
 namespace quant {
 namespace gpu {
@@ -66,6 +67,10 @@ using VkBool32 = uint32_t;
 constexpr int VK_SUCCESS = 0;
 constexpr int VK_FALSE = 0;
 constexpr int VK_TRUE = 1;
+// These enum values must match the real Vulkan ABI. Several were wrong
+// (PIPELINE_BIND_POINT_COMPUTE was 0 == GRAPHICS, and eight sType values
+// were off), which made the driver misinterpret structs and crash inside
+// vkCmdBindPipeline. Corrected 2026-09-12 against vulkan_core.h.
 constexpr int VK_SHARING_MODE_EXCLUSIVE = 0;
 constexpr int VK_BUFFER_USAGE_STORAGE_BUFFER_BIT = 0x20;
 constexpr int VK_BUFFER_USAGE_TRANSFER_SRC_BIT = 0x1;
@@ -73,26 +78,27 @@ constexpr int VK_BUFFER_USAGE_TRANSFER_DST_BIT = 0x2;
 constexpr int VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT = 0x00000001;
 constexpr int VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000002;
 constexpr int VK_MEMORY_PROPERTY_HOST_COHERENT_BIT = 0x00000004;
-constexpr int VK_PIPELINE_BIND_POINT_COMPUTE = 0;
+constexpr int VK_PIPELINE_BIND_POINT_COMPUTE = 1;
 constexpr int VK_STRUCTURE_TYPE_APPLICATION_INFO = 0;
 constexpr int VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO = 1;
 constexpr int VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 2;
 constexpr int VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 3;
-constexpr int VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 22;
+constexpr int VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 12;
 constexpr int VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO = 5;
 constexpr int VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 32;
 constexpr int VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 30;
-constexpr int VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 15;
+constexpr int VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 16;
 constexpr int VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 29;
 constexpr int VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO = 33;
 constexpr int VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO = 34;
+constexpr int VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 18;
 constexpr int VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES = 16;
-constexpr int VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 28;
-constexpr int VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO = 45;
-constexpr int VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 46;
-constexpr int VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 48;
+constexpr int VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 39;
+constexpr int VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO = 40;
+constexpr int VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 42;
+constexpr int VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 8;
 constexpr int VK_STRUCTURE_TYPE_SUBMIT_INFO = 4;
-constexpr int VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 54;
+constexpr int VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 35;
 constexpr int VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU = 1;
 constexpr int VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU = 2;
 constexpr uint64_t VK_QUEUE_FAMILY_IGNORED = 0xFFFFFFFF;
@@ -134,8 +140,8 @@ struct VkPhysicalDeviceMemoryProperties {
 };
 
 struct VkPhysicalDeviceProperties {
-    VkStructureType sType;
-    const void* pNext;
+    // REAL ONLY: matches Vulkan spec prefix — NO sType/pNext.
+    // apiVersion@0, driverVersion@4, vendorID@8, deviceID@12, deviceType@16, deviceName@20.
     uint32_t apiVersion;
     uint32_t driverVersion;
     uint32_t vendorID;
@@ -144,6 +150,23 @@ struct VkPhysicalDeviceProperties {
     char deviceName[256];
     uint8_t _rest[512];
 };
+
+// REAL VkQueueFamilyProperties: 24B total, queueFlags@0.
+struct VkQueueFamilyProperties {
+    VkFlags queueFlags;                        // @0
+    uint32_t queueCount;                       // @4
+    uint32_t timestampValidBits;               // @8
+    uint32_t minImageTransferGranularity[3];   // @12 (12B)
+};
+
+static_assert(offsetof(VkPhysicalDeviceProperties, apiVersion) == 0, "REAL VkPhysicalDeviceProperties: apiVersion@0");
+static_assert(offsetof(VkPhysicalDeviceProperties, driverVersion) == 4, "REAL VkPhysicalDeviceProperties: driverVersion@4");
+static_assert(offsetof(VkPhysicalDeviceProperties, vendorID) == 8, "REAL VkPhysicalDeviceProperties: vendorID@8");
+static_assert(offsetof(VkPhysicalDeviceProperties, deviceID) == 12, "REAL VkPhysicalDeviceProperties: deviceID@12");
+static_assert(offsetof(VkPhysicalDeviceProperties, deviceType) == 16, "REAL VkPhysicalDeviceProperties: deviceType@16");
+static_assert(offsetof(VkPhysicalDeviceProperties, deviceName) == 20, "REAL VkPhysicalDeviceProperties: deviceName@20");
+static_assert(sizeof(VkQueueFamilyProperties) == 24, "REAL VkQueueFamilyProperties must be 24B");
+static_assert(offsetof(VkQueueFamilyProperties, queueFlags) == 0, "REAL VkQueueFamilyProperties: flags@0");
 
 struct VkBufferCreateInfo {
     VkStructureType sType; const void* pNext; VkFlags flags; VkDeviceSize size;
@@ -206,10 +229,19 @@ struct VkDescriptorSetAllocateInfo {
 
 struct VkDescriptorBufferInfo { VkBuffer buffer; VkDeviceSize offset; VkDeviceSize range; };
 
+// ABI NOTE: must match the real VkWriteDescriptorSet exactly (64 bytes on x64).
+// This struct previously omitted pImageInfo, so the driver read pImageInfo from
+// offset 40 (where pBufferInfo actually sits) and pBufferInfo from offset 48 —
+// past the end of the object. That produced garbage pointers inside the driver
+// and a segfault that moved around between runs. The tail field is never read
+// for STORAGE_BUFFER writes but must exist so the offsets line up.
 struct VkWriteDescriptorSet {
     VkStructureType sType; const void* pNext; VkDescriptorSet dstSet;
     uint32_t dstBinding; uint32_t dstArrayElement; uint32_t descriptorCount;
-    int descriptorType; const VkDescriptorBufferInfo* pBufferInfo;
+    int descriptorType;
+    const void* pImageInfo;
+    const VkDescriptorBufferInfo* pBufferInfo;
+    const void* pTexelBufferView;
 };
 
 struct VkCommandPoolCreateInfo { VkStructureType sType; const void* pNext; VkFlags flags; uint32_t queueFamilyIndex; };

@@ -37,11 +37,11 @@ enum class MoEVariant {
     DOMAIN_MOE,          // Domain-specialized MoE
     PRODUCT_KEY,         // Product Key MoE (large vocab via product keys)
     ATTENTION_MOE,       // Attention-based MoE routing
-    MLA_MOE,             // Multi-Latent Attention MoE (DeepSeek MLA)
+    LOWRANK_MOE,         // Low-rank bottleneck MoE
     MAMBA_MOE,           // Mamba (SSM) + MoE hybrid
     QUANTIZED_INT8_MOE,  // INT8 quantized experts
-    QUANT_MOE,         // QUANT_Q0 {-1,0,+1} quantized experts
-    QUANT1_MOE,           // QUANT1 {-1,+1} quantized experts
+    QUANT_MOE,         // Q1_5 {-1,0,+1} quantized experts
+    Q1_MOE,           // QUANT1 {-1,+1} quantized experts
     QUANT8_MOE,            // QUANT8 codebook quantized experts
     QUANT4_MOE             // QUANT4 codebook quantized experts
 };
@@ -534,12 +534,12 @@ public:
 };
 
 // ========================================================================
-// 19. MLA MoE — Multi-Latent Attention MoE (DeepSeek-V2 style)
+// 19. Low-rank MoE — low-rank bottleneck MoE
 // ========================================================================
 
-class MLAMoE {
+class LowRankMoE {
 public:
-    MLAMoE(int64_t hidden_size, const MoEAllConfig& cfg);
+    LowRankMoE(int64_t hidden_size, const MoEAllConfig& cfg);
     MoEOutput forward(const Tensor& x);
     float load_balance_loss(const Tensor& gates) const;
     float z_loss(const Tensor& logits) const;

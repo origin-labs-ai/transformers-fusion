@@ -1,23 +1,20 @@
 #pragma once
 #include "quant/transformer.h"
-#include "quant/kda_attention.h"
-#include "quant/mla_attention.h"
 #include "quant/hybrid_scheduler.h"
 
 namespace quant {
 
-// HybridBlock — per-layer dispatch between KDA and MLA per HybridSchedule.
-// Mirrors TransformerBlock's norm/FFN wiring but swaps the attention core.
+// HybridBlock — per-layer dispatch, STD Attention only (owner purge 2026-09-07).
+// Mirrors TransformerBlock's norm/FFN wiring.
 class HybridBlock {
 public:
     RMSNorm attention_norm;
     RMSNorm ffn_norm;
     FFN ffn;
 
-    HybridAttnKind kind = HybridAttnKind::KDA;
-    // Only the active branch is usable; the other stays default-constructed.
-    KDAAttention kda;
-    MLAAttention mla;
+    HybridAttnKind kind = HybridAttnKind::STD;
+    // Standard full-attention core.
+    Attention attn;
 
     HybridBlock() = default;
     HybridBlock(const TransformerConfig& cfg, HybridAttnKind k);

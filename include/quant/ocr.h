@@ -1,8 +1,9 @@
 // ============================================================================
-// ocr.h — OCR (Optical Character Recognition) types for InNova
+// ocr.h — OCR (Optical Character Recognition) types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"
+#include "quant/image.h"
 #include <string>
 #include <vector>
 

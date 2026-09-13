@@ -2,7 +2,7 @@
 // bench_bitnet_comparison.cpp — QUANT Mixed Precision vs BitNet.cpp 1-bit formats
 // ============================================================================
 // Compares QUANT Mixed (~1.5 bpw) against BitNet.cpp quantization types:
-//   BitNet 1.58b (QUANT-equivalent {-1,0,+1}), BitNet 1-bit (QUANT1-equivalent {-1,+1}),
+//   BitNet 1.58b (QUANT-equivalent {-1,0,+1}), BitNet 1-bit (Q1-equivalent {-1,+1}),
 //   INT4 (4-bit uniform), INT8 (8-bit uniform)
 // Proves QUANT Mixed beats BitNet on quality while maintaining similar compression.
 // ============================================================================
@@ -65,7 +65,7 @@ static float measure_quant(const float* orig, const std::vector<uint8_t>& q, int
     return (float)(mse / ne);
 }
 
-// BitNet 1-bit: QUANT1-equivalent {-1, +1} with per-block scale
+// BitNet 1-bit: Q1-equivalent {-1, +1} with per-block scale
 static std::vector<uint8_t> quantize_quant1(const float* w, int K) {
     int nb = (K + 127) / 128;
     std::vector<uint8_t> out(nb * 4 + (K + 7) / 8); // scale per block + 1 bit per weight

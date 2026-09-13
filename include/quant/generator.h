@@ -70,6 +70,15 @@ struct StreamingConfig {
     std::vector<std::string> stop_strings;
     bool stream_logprobs = false;
     int logprobs_k = 5;
+    // L058: reasoning-budget tier + explicit override, same semantics as
+    // SamplerConfig (budget caps the requested max_tokens).
+    ReasoningBudget reasoning_budget = ReasoningBudget::High;
+    int reasoning_max_tokens = 0;
+    int effective_max_tokens() const {
+        int want = reasoning_max_tokens > 0 ? reasoning_max_tokens : max_tokens;
+        int cap = reasoning_budget_cap(reasoning_budget);
+        return want < cap ? want : cap;
+    }
 };
 
 class StreamingGenerator {

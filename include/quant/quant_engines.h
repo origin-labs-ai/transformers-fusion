@@ -50,6 +50,12 @@ public:
     float quant_error(const Tensor& original, const Tensor& reconstructed) const;
     float quant_snr(const Tensor& original, const Tensor& reconstructed) const;
     const std::vector<float>& codebook() const { return codebook_; }
+    // Stochastic rounding samples between the two nearest codebook centroids,
+    // probability proportional to their distances, which makes the quantisation
+    // noise zero-mean with minimum variance. `temp` is accepted for source
+    // compatibility but no longer affects the result: the unbiased two-centroid
+    // estimator has no temperature. (Until 2026-09-12 this was a softmax over
+    // every centroid that was far too flat and made MSE ~100x worse than argmin.)
     void enable_stochastic_rounding(bool enable, float temp = 1.0f) {
         use_stochastic_ = enable; stoch_temperature_ = temp;
     }
@@ -79,6 +85,12 @@ public:
     float quant_error(const Tensor& original, const Tensor& reconstructed) const;
     float quant_snr(const Tensor& original, const Tensor& reconstructed) const;
     const std::vector<float>& codebook() const { return codebook_; }
+    // Stochastic rounding samples between the two nearest codebook centroids,
+    // probability proportional to their distances, which makes the quantisation
+    // noise zero-mean with minimum variance. `temp` is accepted for source
+    // compatibility but no longer affects the result: the unbiased two-centroid
+    // estimator has no temperature. (Until 2026-09-12 this was a softmax over
+    // every centroid that was far too flat and made MSE ~100x worse than argmin.)
     void enable_stochastic_rounding(bool enable, float temp = 1.0f) {
         use_stochastic_ = enable; stoch_temperature_ = temp;
     }
@@ -91,7 +103,7 @@ private:
 // Quant Engine: {-1, 0, +1} with per-block scale.
 // NOTE: this is an IN-MEMORY engine with its own self-consistent layout
 // (2-bit ternary + per-block max-abs scale). It is NOT the canonical wire
-// encoding — QUANT_Q0 on disk is produced by quantize_block_all() in
+// encoding — Q1_5 on disk is produced by quantize_block_all() in
 // quant/block_codec.h (per-32 FP16 scale + sign bits).
 class QuantEngine {
 public:
@@ -147,6 +159,12 @@ public:
     float quant_error(const Tensor& original, const Tensor& reconstructed) const;
     float quant_snr(const Tensor& original, const Tensor& reconstructed) const;
     const std::vector<float>& codebook() const { return codebook_; }
+    // Stochastic rounding samples between the two nearest codebook centroids,
+    // probability proportional to their distances, which makes the quantisation
+    // noise zero-mean with minimum variance. `temp` is accepted for source
+    // compatibility but no longer affects the result: the unbiased two-centroid
+    // estimator has no temperature. (Until 2026-09-12 this was a softmax over
+    // every centroid that was far too flat and made MSE ~100x worse than argmin.)
     void enable_stochastic_rounding(bool enable, float temp = 1.0f) {
         use_stochastic_ = enable; stoch_temperature_ = temp;
     }
@@ -190,6 +208,16 @@ public:
 float compute_quant_error(const Tensor& original, const Tensor& dequantized);
 float compute_quant_mse(const Tensor& original, const Tensor& reconstructed);
 float compute_quant_snr(const Tensor& original, const Tensor& reconstructed);
+
+#ifdef QUANT_HAS_AVX2
+// Shared AVX2 helpers (defined in src/codec/quant_engines_core.cpp, used by
+// quant8/quant4 engines). P18: were file-static, now shared (no delete).
+void dequant_tensor_quant8_avx2(const uint8_t* indices, float* out, int64_t n, const float* cb);
+void dequant_tensor_quant4_avx2(const uint8_t* packed, float* out, int64_t n, const float* cb);
+void quant_gemm_quant8_avx2(const float* ad, float* cd, const uint8_t* b_idx, int64_t M, int64_t N, int64_t K, const float* cb);
+void quant_gemm_quant4_avx2(const float* ad, float* cd, const uint8_t* packed, int64_t M, int64_t N, int64_t K, const float* cb);
+void quant_gemm_quant_avx2(const float* ad, float* cd, const uint8_t* pd, const float* sd, int64_t M, int64_t N, int64_t K, int64_t block_size);
+#endif
 
 } // namespace engines
 } // namespace quant

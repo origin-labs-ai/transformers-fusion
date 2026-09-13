@@ -1,5 +1,5 @@
 // ============================================================================
-// vision.h — Vision processing types for InNova
+// vision.h — Vision processing types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

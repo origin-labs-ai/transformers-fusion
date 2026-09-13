@@ -163,7 +163,7 @@ private:
 // would show 1-2 dominant experts and6-7 starved experts.
 //
 // Example output:
-// [InNova ROUTE] Expert Utilization (840B tokens, 8 experts):
+// [Transcender ROUTE] Expert Utilization (840B tokens, 8 experts):
 //   Expert 0 (TEXT):     ████████████████████ 25.2%
 //   Expert 1 (TEXT):     ████████████████████ 24.8%
 //   Expert 2 (TEXT):     ████████████████████ 25.1%

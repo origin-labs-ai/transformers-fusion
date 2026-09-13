@@ -38,16 +38,16 @@ struct AdapterTensor {
 
 // Configuration for the QUANT conversion funnel.
 struct BridgeConfig {
-    // Single on-disk format for ALL blocks (default: Q2_G at
+    // Single on-disk format for ALL blocks (default: QG2 at
     // 2.625 BPW, highly recommended).
-    // Note: this is ignored if compound != Q2_G
-    Format format = Format::Q2_G;
+    // Note: this is ignored if compound != QG2
+    Format format = Format::QG2;
 
-    // Compound format (TWI_MIX / QUAD): when set to a MIX_*/QUAD_* RegFormat,
+    // Compound format (Q_MX / QG_MX): when set to a Q_MX_*/QG_MX_* RegFormat,
     // blocks are routed to the member formats by importance with the exact
     // registry ratios, so the file's average BPW equals the claimed
     // effective_bpw. Defaults to the single format above.
-    RegFormat compound = RegFormat::Q2_G;
+    RegFormat compound = RegFormat::QG2;
 
     // Kept for CLI/API compatibility; write_quant_mixed ignores it in favor of
     // `format`. The nearest matching format is chosen when set.
@@ -96,10 +96,10 @@ bool quantize_block(Format fmt, const float* w, int n,
 Format select_tensor_format(const std::string& name, int64_t numel, Format base);
 
 // Per-block format allocation for one tensor. Single formats pass through
-// select_tensor_format(); compound (TWI_MIX/QUAD) formats route blocks to
+// select_tensor_format(); compound (Q_MX/QG_MX) formats route blocks to
 // their member formats by importance quantiles using the exact registry
 // ratios, so the file average BPW equals the claimed effective_bpw.
-// Adaptive mixes (Q_MIX) allocate via FormatRegistry::allocate_mix_blocks
+// Adaptive mixes (Q_MX/QG_MX) allocate via FormatRegistry::allocate_mix_blocks
 // (measured benefit-per-byte under the hard claimed-BPW budget).
 // `mix` may be null for single-format writes. `plan_out` (optional) receives
 // the per-block layout (starts/lens/formats); `shape` (optional) is the
@@ -111,7 +111,7 @@ std::vector<Format> allocate_tensor_formats(const std::string& name, int64_t num
                                             FormatRegistry::MixBlockPlan* plan_out = nullptr,
                                             const std::vector<int64_t>* shape = nullptr);
 
-// Look up a compound (MIX_*/QUAD_*) descriptor by RegFormat id; returns null
+// Look up a compound (Q_MX_*/QG_MX_*) descriptor by RegFormat id; returns null
 // when `rf` is a single format or unknown.
 const MixDescriptor* find_mix_descriptor(RegFormat rf);
 
@@ -140,6 +140,59 @@ enum class ExternalFormat {
 
 ExternalFormat detect_format(const std::string& path);
 const char* external_format_name(ExternalFormat f);
+
+// ── L070 LLaMA-family loader (Phase 16 Wave 7, via adapters) ───────────────
+// Detects llama / mistral / qwen-dense safetensors+GGUF tensor sets that share
+// the LLaMA decoder block layout (RMSNorm + RoPE + SwiGLU/SiLU + GQA) and
+// infers a dense arch config from tensor names+shapes. No config.json needed
+// for the shape-derived fields; rope_theta/heads fall back to documented
+// family defaults when shapes are ambiguous (see .cpp).
+enum class LlamaFamily : uint8_t {
+    Unknown = 0,
+    Llama = 1,
+    Mistral = 2,
+    QwenDense = 3
+};
+
+struct LlamaArchConfig {
+    LlamaFamily family = LlamaFamily::Unknown;
+    int64_t hidden_size = 0;
+    int64_t num_layers = 0;
+    int64_t num_heads = 0;
+    int64_t num_kv_heads = 0;
+    int64_t ffn_hidden = 0;
+    int64_t vocab_size = 0;
+    float rope_theta = 10000.0f;
+    bool tie_embeddings = false;
+    bool valid = false;
+};
+
+LlamaFamily detect_llama_family(const std::vector<AdapterTensor>& tensors);
+LlamaArchConfig infer_llama_arch(const std::vector<AdapterTensor>& tensors);
+bool validate_llama_tensors(const std::vector<AdapterTensor>& tensors,
+                            std::string* err_out);
+const char* llama_family_name(LlamaFamily f);
+
+// ── L071 MoE arch loader (Phase 16 Wave 7, via adapters) ───────────────────
+// Detects Mixtral / Qwen-MoE / DeepSeek-style expert tensor sets and infers
+// expert counts + routing pattern. Works on the same AdapterTensor lists
+// produced by load_safetensors()/load_gguf(); the .quant funnel
+// (write_quant_mixed) is format-agnostic so MoE tensors flow through it
+// unchanged once validated here.
+struct MoeArchConfig {
+    bool is_moe = false;
+    int64_t num_experts = 0;
+    int64_t top_k = 2;
+    int64_t num_shared = 0;
+    int64_t num_layers_with_moe = 0;
+    std::string pattern; // "mixtral" | "qwen_moe" | "deepseek_moe" | "generic_moe" | ""
+    bool valid = false;
+};
+
+bool is_moe_tensors(const std::vector<AdapterTensor>& tensors);
+MoeArchConfig infer_moe_arch(const std::vector<AdapterTensor>& tensors);
+bool validate_moe_tensors(const std::vector<AdapterTensor>& tensors,
+                          std::string* err_out);
 
 } // namespace adapters
 } // namespace quant

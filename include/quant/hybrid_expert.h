@@ -5,8 +5,8 @@
 
 namespace quant {
 
-// HybridExpertShard — maps 896 K3 experts onto cluster nodes for HybridModel.
-// Uses round-robin assignment balanced per layer-kind (KDA vs MLA) so each
+// HybridExpertShard — maps hybrid experts onto cluster nodes for HybridModel.
+// Uses round-robin assignment balanced per layer-kind so each
 // node's expert load is statistically uniform. Wraps ExpertParallel cluster
 // but testable without network (dry-run assignments).
 class HybridExpertShard {
@@ -14,7 +14,7 @@ public:
     explicit HybridExpertShard(const expert::ClusterConfig& cfg, int num_nodes);
 
     // Per-layer expert assignments for a full HybridSchedule (93 layers).
-    // MLA layers share same expert set but assignment is recomputed per layer
+    // Each layer shares same expert set but assignment is recomputed per layer
     // for load isolation.
     std::vector<std::vector<expert::ExpertAssignment>> assign_schedule(
         const HybridSchedule& sched) const;

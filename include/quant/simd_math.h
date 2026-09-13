@@ -102,7 +102,7 @@ void swiglu(const float* gate, const float* up, float* output, int64_t n);
 // GeGLU(x, W_gate, W_up) = gelu(x @ W_gate) * (x @ W_up)
 //
 // Similar to SwiGLU but uses GELU instead of SiLU as the gating function.
-// Used in PaLM, Gemma, and Kimi K3 architectures.
+// Used in PaLM and Gemma architectures.
 // ============================================================================
 
 void geglu_avx2(const float* gate, const float* up, float* output,

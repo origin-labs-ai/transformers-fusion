@@ -1,5 +1,5 @@
 // ============================================================================
-// image.h — Image processing types for InNova
+// image.h — Image processing types for Transcender
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"
