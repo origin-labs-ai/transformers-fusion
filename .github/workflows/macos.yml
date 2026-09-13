@@ -43,8 +43,16 @@ jobs:
           -DQUANT_BUILD_TOOLS=ON
           -DQUANT_AVX2=OFF
 
+      - name: Diagnose toolchain
+        run: |
+          cmake --version
+          ninja --version
+          clang --version
+          echo "--- disk ---"; df -h / | tail -1
+          echo "--- arch ---"; uname -m
+
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --parallel --verbose
 
       - name: Wave-7 gate (contract + missing-module + entry suites)
         working-directory: build
