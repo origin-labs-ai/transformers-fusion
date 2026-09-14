@@ -1164,3 +1164,17 @@ Post-RoPE-clamp + iOS-contract + K3-deletion HEAD re-built from scratch
 is closed: every source change since the previous 72/72 proof is now
 covered by a same-HEAD full-suite green (ASan Quick 62/62 + heavies 7/7
 were already proven on this source generation).
+
+## CI-fix round 15 — 2026-09-14 (C-15 acceptance scope clarified)
+
+C-15's last open item ("draft-present acceptance bench — numbers, not
+code") re-examined against `tests/test_inference_opt.cpp:107-164`: the
+accept/reject/generate paths ARE measured — accept 3/3 + rate 1.0 on a
+matching pair, first-token reject + exact KV rewind on a mismatching pair,
+`generate()` 6/6 + rate 1.0 end-to-end. What remains owed is specifically
+*realistic-draft* acceptance numbers (a trained small draft vs target on
+real text) — impossible on this host with no trained draft model and no
+eval corpus in-tree. Re-scoped honestly: **code + synthetic-path coverage
+COMPLETE; realistic acceptance numbers OWED and blocked on artifacts, not
+code.** No speedup claim may cite C-15 until those numbers exist. V2 ghost
+stays removed (tombstone `docs/P13_SPECULATIVE_V2_REMOVED.md`).
