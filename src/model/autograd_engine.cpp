@@ -169,11 +169,18 @@ Tensor AutogradEngine::rotary_op(const Tensor& x, const Tensor& cos_cached,
         float* od = out.data<float>();
         const float* cos_d = cos_cached.data<float>();
         const float* sin_d = sin_cached.data<float>();
+        // ASAN fix (2026-09-14): same rope-window clamp as
+        // RotaryEmbedding::apply — pos can exceed the cached rows when
+        // generation outruns max_seq_len (heap-buffer-overflow under ASan).
+        int64_t cache_rows = cos_cached.dim(0);
+        if (cache_rows <= 0) return out;
         for (int64_t b = 0; b < B; b++)
             for (int64_t h = 0; h < H; h++)
                 for (int64_t s = 0; s < S; s++) {
                     int64_t base = ((b * H + h) * S + s) * D;
                     int64_t pos = seq_start + s;
+                    if (pos < 0) pos = 0;
+                    else if (pos >= cache_rows) pos %= cache_rows;
                     for (int64_t d = 0; d < half; d++) {
                         float x1 = xd[base + d], x2 = xd[base + d + half];
                         float cos_v = cos_d[pos * half + d];

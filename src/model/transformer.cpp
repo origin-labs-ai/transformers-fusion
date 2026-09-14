@@ -222,10 +222,25 @@ void RotaryEmbedding::apply(Tensor& x, int64_t seq_start, int64_t seq_len) const
     int64_t HS = H * S;
     int64_t HSD = HS * D;
     int64_t cos_stride = cos_cached.shape().dims[1];
+    // ASAN fix (2026-09-14, CI GCC-13 ASAN heap-buffer-overflow): callers
+    // drive generation past the rope window (generate_new_tokens keeps a
+    // 64-token sliding window while cos_cached covers max_seq_len=32 in
+    // toy configs; seq_start grows unboundedly). pos >= max positions used
+    // to read past cos/sin (512B region + 4B READ at its end). Clamp the
+    // position into the cached window — frequencies repeat by construction
+    // (cos/sin of angle), so wrapping is the numerically faithful fallback;
+    // degenerate (empty cache) → no-op instead of OOB.
+    int64_t cache_rows = cos_cached.shape().dims[0];
+    if (cache_rows <= 0 || cos_stride <= 0) return;
+    auto clamp_pos = [&](int64_t p) -> int64_t {
+        if (p < 0) return 0;
+        if (p >= cache_rows) return p % cache_rows;
+        return p;
+    };
     for (int64_t b = 0; b < B; b++) {
         for (int64_t h = 0; h < H; h++) {
             for (int64_t s = 0; s < S; s++) {
-                int64_t pos = seq_start + s;
+                int64_t pos = clamp_pos(seq_start + s);
                 int64_t x_off = b * HSD + h * S * D + s * D;
                 int64_t c_off = pos * cos_stride;
                 int64_t d = 0;

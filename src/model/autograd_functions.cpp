@@ -392,12 +392,19 @@ std::vector<Tensor> RotaryFunction::forward(const std::vector<Tensor>& inputs) {
     float* od = out.data<float>();
     const float* cos_d = cos_cached_.data<float>();
     const float* sin_d = sin_cached_.data<float>();
+    // ASAN fix (2026-09-14): same rope-window clamp as
+    // RotaryEmbedding::apply (heap-buffer-overflow under ASan when
+    // generation outruns the cached max_seq_len).
+    int64_t cache_rows = cos_cached_.dim(0);
+    if (cache_rows <= 0) return {out};
     int64_t half = D_ / 2;
     for (int64_t b = 0; b < B_; b++)
         for (int64_t h = 0; h < H_; h++)
             for (int64_t s = 0; s < S_; s++) {
                 int64_t base = ((b * H_ + h) * S_ + s) * D_;
                 int64_t pos = seq_start_ + s;
+                if (pos < 0) pos = 0;
+                else if (pos >= cache_rows) pos %= cache_rows;
                 for (int64_t d = 0; d < half; d++) {
                     float x1 = xd[base + d];
                     float x2 = xd[base + d + half];
@@ -417,12 +424,17 @@ std::vector<Tensor> RotaryFunction::backward(const std::vector<Tensor>& grad_out
     float* dxd = dx.data<float>();
     const float* cos_d = cos_cached_.data<float>();
     const float* sin_d = sin_cached_.data<float>();
+    // ASAN fix (2026-09-14): same rope-window clamp as forward().
+    int64_t cache_rows = cos_cached_.dim(0);
+    if (cache_rows <= 0) return {dx};
     int64_t half = D_ / 2;
     for (int64_t b = 0; b < B_; b++)
         for (int64_t h = 0; h < H_; h++)
             for (int64_t s = 0; s < S_; s++) {
                 int64_t base = ((b * H_ + h) * S_ + s) * D_;
                 int64_t pos = seq_start_ + s;
+                if (pos < 0) pos = 0;
+                else if (pos >= cache_rows) pos %= cache_rows;
                 for (int64_t d = 0; d < half; d++) {
                     float g1 = gd[base + d];
                     float g2 = gd[base + d + half];

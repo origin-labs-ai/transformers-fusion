@@ -216,9 +216,13 @@ jobs:
         timeout-minutes: 10
         shell: bash
         run: |
+          # Informational only — never fail the gate. bench_kernels needs
+          # ≥1000 iters/variant and overruns 10 min on slow shared runners
+          # (timeout 2026-09-14 on Clang-18 leg). Bound it with `timeout`
+          # so numbers (when produced) are a bonus, not a blocker.
           cmake --build build --target bench_kernels 2>/dev/null || true
           if [ -f ./build/bench_kernels ]; then
-            ./build/bench_kernels 2>&1
+            timeout 480 ./build/bench_kernels 2>&1 || echo "bench_kernels: over budget/hung — informational, gate unaffected (exit $?)"
           fi
 
       - name: Upload build artifacts
