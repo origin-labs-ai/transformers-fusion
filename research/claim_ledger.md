@@ -1051,7 +1051,10 @@ keeps the `typeinfo` reference alive, so only the ASAN link died (normal
 quant_model quant_tokenizer)`. No cycle (`quant_tokenizer` → only
 `quant_core`). Verified: Windows MSVC `quant_infer` links green + Linux
 GCC `quant_infer` links green (72/72-target build unaffected — pure
-dep-declaration fix).
+dep-declaration fix). **Re-proven 2026-09-14:** fresh WSL ASAN configure
+(GCC 15.2, `-fsanitize=address,undefined -fno-sanitize-recover=all
+-fno-omit-frame-pointer`) + `quant_infer` links **[72/72] green** — the
+exact failing link now passes under sanitizers.
 
 ## CI-fix round 7 — 2026-09-13 (macOS exact error → fix, owner-provided log)
 
