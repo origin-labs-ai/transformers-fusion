@@ -1178,3 +1178,17 @@ eval corpus in-tree. Re-scoped honestly: **code + synthetic-path coverage
 COMPLETE; realistic acceptance numbers OWED and blocked on artifacts, not
 code.** No speedup claim may cite C-15 until those numbers exist. V2 ghost
 stays removed (tombstone `docs/P13_SPECULATIVE_V2_REMOVED.md`).
+
+## CI-fix round 16 — 2026-09-14 (all-platforms green: Full + macOS + Build)
+
+`CI Full` run `34813695445` on `29a27fc` (all fixes landed): **macOS leg
+SUCCESS** (Build + Quick), **Windows leg SUCCESS** (Build + Quick),
+**Docker SUCCESS** (Build + Test image), **clang-tidy SUCCESS**, both
+Ubuntu legs Build + Quick SUCCESS — with the RoPE clamp (`b46d915`), link
+dep (`a5f58d4`), Metal calls (`6ed98d9`), cache-key + `-lobjc` (`c0269da`),
+bash shells + lowercase tag (`6ed98d9`), HEALTHCHECK (`d437078`) all live
+in this run. Remaining in flight at last poll: GCC-13 ASAN tests, Clang-18
+coverage + benchmarks (timeout-guarded). Dedicated `CI macOS` run
+`34813695467`: **FULL SUCCESS** (Build + Wave-7 incl. ios fix + Full
+suite). Dedicated `CI Build`: **3/3 SUCCESS** (prior run; same source
+generation).
