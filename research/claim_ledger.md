@@ -1192,3 +1192,37 @@ coverage + benchmarks (timeout-guarded). Dedicated `CI macOS` run
 `34813695467`: **FULL SUCCESS** (Build + Wave-7 incl. ios fix + Full
 suite). Dedicated `CI Build`: **3/3 SUCCESS** (prior run; same source
 generation).
+
+## CI-fix round 17 — 2026-09-14 (6/7 green on round-16 commit; ASAN pending)
+
+`CI Full` run `34814654629` on `bd04c28` (check-runs API, per-leg verdicts):
+**docker SUCCESS**, **macOS leg SUCCESS** (Build + Quick), **Windows leg
+SUCCESS** (Build + Quick), **clang-tidy SUCCESS**; Clang-18 leg Build +
+Quick SUCCESS (coverage/benchmarks in flight at last poll); GCC-13 leg
+Build + Quick SUCCESS with the **ASAN step in progress** (RoPE clamp +
+link dep both live in this run — decisive for the last red). Unpushed
+local note: push-freeze in effect (no commits until this run settles —
+every push cancels in-flight CI).
+
+## CI-fix round 18 — 2026-09-14 (Clang-18 leg SUCCESS; ASAN the last red)
+
+`CI Full` run `34814654629` update (check-runs API): **Clang-18 leg
+SUCCESS** (completed 07:05:59 — Build + Quick + Coverage + benchmarks, the
+timeout-guard held). Scoreboard: docker/macOS/Windows/Clang-18/clang-tidy
+**SUCCESS**; **GCC-13 leg IN PROGRESS** — its ASAN step carries both the
+link fix and the RoPE clamp, the run that decides the last red. Still
+push-frozen (uncommitted local note).
+
+## CI-fix round 19 — 2026-09-14 (FULL GREEN: all 3 workflows SUCCESS)
+
+`CI Full` run `34814654629` on `bd04c28`: **completed, conclusion
+SUCCESS** — all 7 legs green incl. GCC-13 ASAN (RoPE clamp holds under
+sanitizers on hosted GCC-13) and Clang-18 coverage+benchmarks
+(timeout-guard holds). Same commit: `CI Build` run `34814654602`
+**SUCCESS** (3/3: Windows + GCC-13 + Clang-18) and `CI macOS` run
+`34814654567` **SUCCESS** (Build + Wave-7 + Full suite). Every fix in this
+session is CI-proven on hosted hardware: link dep (`a5f58d4`), RoPE clamp
+(`b46d915`), iOS contract (`3d62a61`), Metal/`Impl::`/`-lobjc`/cache-key
+(`6ed98d9`/`c0269da`), bash shells + lowercase tag, HEALTHCHECK `CMD`
+(`d437078`), bench timeout-guard (`b46d915`). Push-freeze lifted — this
+entry + rounds 17/18 committed together.
