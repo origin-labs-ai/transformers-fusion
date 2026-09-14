@@ -125,7 +125,12 @@ add_library(quant_inference
   src/inference/generator.cpp
 )
 target_include_directories(quant_inference PUBLIC include)
-target_link_libraries(quant_inference PUBLIC quant_model)
+# generator.cpp includes quant/tokenizer.h (Tokenizer* members + calls):
+# the dependency must be declared or static-link order breaks. Found via
+# ASAN CI (2026-09-13): -fsanitize=undefined vptr checks keep a typeinfo
+# reference to BPETokenizer alive that normal builds optimize out, so only
+# the ASAN link died (undefined reference to `typeinfo for BPETokenizer`).
+target_link_libraries(quant_inference PUBLIC quant_model quant_tokenizer)
 
 add_library(quant_tokenizer
   src/tokenizer/bpe_tokenizer_advanced.cpp
