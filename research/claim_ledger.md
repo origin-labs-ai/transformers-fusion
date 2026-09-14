@@ -1226,3 +1226,30 @@ session is CI-proven on hosted hardware: link dep (`a5f58d4`), RoPE clamp
 (`6ed98d9`/`c0269da`), bash shells + lowercase tag, HEALTHCHECK `CMD`
 (`d437078`), bench timeout-guard (`b46d915`). Push-freeze lifted — this
 entry + rounds 17/18 committed together.
+
+## Scorecard round - 2026-09-14 (ledger-derived production composite + LOC truth)
+
+Owner asked for a single readiness number ("duniya number maangti hai").
+Bare pct refused (same class as the busted goal_status.json "256 DONE" -
+repo/memory/01-user-profile.md:22, TRANSCRIPT PART-C). Instead: recomputable
+composite + single source of truth (docs/PRODUCTION_SCORECARD.md), pointer
+from docs/STRATEGY.md, chain event in repo/state/telemetry/events.jsonl.
+
+| # | Leg | Score | Evidence |
+|---|---|---|---|
+| S-tests | ctest suite | **100% (72/72)** | tests/CMakeLists.txt: 71x add_quant_test_full + WIN32-only test_gpu = 72; rounds 13-19: Windows 72/72, Linux 71/71 |
+| S-claims | C-01..C-25 (C-16 RETIRED, owner purge 2026-09-07, 24 active) | **strict 75.0% (18/24), engine-scope 83.3% (20/24)** | VERIFIED/FIXED 18: C-01, 02, 04, 05, 07, 08, 09, 10, 11, 12, 13, 14, 17, 18, 19, 21, 24, 25. SCOPED 2: C-22 (single-host), C-23 (pipelines-real/quality-placeholder). PARTIAL 4: C-03 (64% unsourced), C-06 (non-host backends), C-15 (realistic-draft numbers), C-20 (NVMe tiering) |
+| S-CI | 3 workflows | **100% (7/7 Full legs)** | Round 19: CI Full SUCCESS + CI Build 3/3 + CI macOS FULL SUCCESS |
+| S-ASan | sanitizer suite | **100% (62/62 + 7/7 clean)** | Rounds 10-11, 13: -fsanitize=address,undefined -fno-sanitize-recover=all |
+| S-BPW | ironclad probe | **100% (105/105, 0 violations)** | include/quant/types.h:67 FORMAT_COUNT=105; round-4 re-probe 2026-09-13 |
+
+**Composite (equal weights): strict (100+75+100+100+100)/5 = 95.0%;**
+**engine-scope (100+83.3+100+100+100)/5 = 96.7%.**
+Headline range: **~95.0-96.7% (LEDGER-DERIVED, this-host re-run owed -**
+**build-final/build-head absent in this workspace, tree clean at 8f06002).**
+
+| # | Item | State |
+|---|---|---|
+| S-LOC | "180K+ LOC" owner claim | **NOT SUPPORTED.** Measured 2026-09-14: code tree (src+include+engines+tests+bench+tools, .cpp/.h) = **452 files, 139,304 lines** (code 109,254 + blank 15,195 + comment/preproc 14,855); +17 files/3,239 lines (sops+scripts+cmake+CMakeLists) = **~140K**. 180K needs docs/research/memory counted - repo size, not code LOC |
+| S-prior | Deleted-thread claims (94%, 149/256 rounds, 1000+ verifications) | **NO in-repo evidence** ("149/256" zero grep hits; this-session get_goal = null). Recorded as UNVERIFIED owner statement, NOT used in the composite |
+| S-rule | Number placement | **Single source of truth.** Full methodology lives ONLY in docs/PRODUCTION_SCORECARD.md; docs/STRATEGY.md carries a pointer, never a copied number. Recompute on every production-round close; supersede, never overwrite |

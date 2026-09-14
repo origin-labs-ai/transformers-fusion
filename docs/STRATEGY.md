@@ -5,6 +5,7 @@
 > UNVERIFIED-direction until measured (re-checked 2026-09-13 — still no source).
 > SCOPE: a production-readiness tag covers the engine build/test/hardening
 > evidence in this round; it does NOT certify any P59–P73 strategy number.
+> Numbered scorecard (methodology + recompute steps): `docs/PRODUCTION_SCORECARD.md`.
 
 ## P59–P73 topic register (Phase 18 verdicts: DOCUMENTED)
 
