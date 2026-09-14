@@ -1073,6 +1073,18 @@ runs the same Quick set — with the link fix (`a5f58d4`) + RoPE clamp
 (`b46d915`) both landed, its two historical failure modes are closed
 locally; rerun verdict owed from CI.
 
+## CI-fix round 12 — 2026-09-14 (near-full green: 6/7 CI Full legs + macOS dedicated)
+
+`CI Full` run `34811708029` on `7a56de7` (all fixes landed): **macOS leg
+SUCCESS** (Build + Quick), **Windows leg Build SUCCESS**, **Docker
+SUCCESS**, **clang-tidy SUCCESS**; Ubuntu legs Build SUCCESS, Quick/ASAN
+in progress at last poll. Dedicated `CI macOS` run `34764029183`:
+**FULL SUCCESS** (Build + Wave-7 gate + Full suite) — the ios
+toolchain-contract fix works on hosted Apple hardware. Dedicated
+`CI Build` run `34805003765`: **3/3 SUCCESS** (Windows + GCC-13 +
+Clang-18). Remaining: GCC-13 ASAN step verdict (RoPE clamp in this run),
+Clang-18 benchmarks verdict (timeout guard in this run).
+
 ## CI-fix round 7 — 2026-09-13 (macOS exact error → fix, owner-provided log)
 
 Owner pasted the `macos.yml` Build log. It compiled 73/374 TUs fine
