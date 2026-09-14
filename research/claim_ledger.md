@@ -1155,3 +1155,12 @@ scratch): full rebuild green + `ctest -C Release` **100% tests passed, 0
 failed out of 72**. Linux full suite (`build-final-lin`, GCC 15.2):
 **71/71 green**. Local ASan suite (`build-asan-local`, same flags as CI):
 Quick **62/62** + heavies **7/7**, all sanitizer-clean.
+
+## CI-fix round 14 — 2026-09-14 (HEAD re-verified: RoPE+iOS+K3 era 72/72)
+
+Post-RoPE-clamp + iOS-contract + K3-deletion HEAD re-built from scratch
+(`build-head/`, MSVC Release) and full suite re-run: `ctest -C Release
+--timeout 600` → **100% tests passed, 0 failed out of 72**. The honest gap
+is closed: every source change since the previous 72/72 proof is now
+covered by a same-HEAD full-suite green (ASan Quick 62/62 + heavies 7/7
+were already proven on this source generation).
