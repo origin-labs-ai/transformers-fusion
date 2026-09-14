@@ -1030,6 +1030,29 @@ android case:
 | M-wave7 | `test_production.cpp:202`: `ios deploy returns false (not on macOS)` on macOS runner | `deploy_ios()` returns true when `xcodebuild` runs — macOS CI hosts ship Xcode, bare boxes don't | Same contract-pinning as android: expect `xcodebuild`-detectability on `__APPLE__` (`system()` probe, mirroring the impl), false elsewhere. Verified Windows **36/36** + Linux **36/36** |
 | Scoreboard | Windows CI job FULL SUCCESS; Ubuntu GCC-13 + Clang-18 Quick SUCCESS; Clang coverage SUCCESS; clang-tidy SUCCESS; Docker SUCCESS; macOS Build SUCCESS + Wave-7 3/4 (ios fix in rerun) | Remaining: macOS Wave-7 rerun, Full-suite rerun, `ci_full` macOS leg (44s fail — same source, rerun owed) | — |
 
+## CI-fix round 10 — 2026-09-13 (ASAN link error → missing dep declared)
+
+`CI Full` was 7/8 green; only the GCC-13 ASAN step failed. Owner log showed
+hundreds of warnings (all pre-existing hygiene backlog) and ONE fatal at
+`[298/406]` linking `quant_infer` under `-fsanitize=address,undefined`:
+
+```
+libquant_inference.a(generator.cpp.o): undefined reference to
+`typeinfo for quant::BPETokenizer' (×4)
+```
+
+`generator.cpp` includes `quant/tokenizer.h` (holds `Tokenizer*` members +
+virtual calls) but `quant_inference` never declared `quant_tokenizer` as a
+link dep. Normal static builds survive because the linker GCs the unref'd
+vptr slots — but `-fsanitize=undefined` instruments every vtable slot and
+keeps the `typeinfo` reference alive, so only the ASAN link died (normal
+`build.yml` Ubuntu jobs stayed green on the same commit). **FIXED (commit
+`a5f58d4`, pushed):** `target_link_libraries(quant_inference PUBLIC
+quant_model quant_tokenizer)`. No cycle (`quant_tokenizer` → only
+`quant_core`). Verified: Windows MSVC `quant_infer` links green + Linux
+GCC `quant_infer` links green (72/72-target build unaffected — pure
+dep-declaration fix).
+
 ## CI-fix round 7 — 2026-09-13 (macOS exact error → fix, owner-provided log)
 
 Owner pasted the `macos.yml` Build log. It compiled 73/374 TUs fine
