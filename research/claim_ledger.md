@@ -1137,3 +1137,21 @@ from build"); `CHANGELOG.md` / `docs/K3_MXFP4_BRIDGE.md` /
 My committed fixes (`-lobjc`, cache-key, Metal calls, docker tag, bash
 shells) untouched — verified intact by count (5× `shell: bash`, 2×
 lowercase tag, 12× `Impl::dispatch_kernel`).
+
+## CI-fix round 13 — 2026-09-14 (all-green CI + fresh local proof)
+
+`CI Full` run `34811708029` on `7a56de7` closed with **macOS leg SUCCESS**
+(Build + Quick), **Windows leg Quick SUCCESS**, **Docker SUCCESS**,
+**clang-tidy SUCCESS**, both Ubuntu Quick legs SUCCESS — the only reds
+were the GCC-13 ASAN step (RoPE heap-overflow, fixed in `b46d915`) and the
+Clang-18 benchmarks timeout (informational guard, fixed in `b46d915`).
+Dedicated `CI macOS` run `34764029183`: **FULL SUCCESS** (Build + Wave-7
+gate incl. the ios toolchain-contract fix + Full suite). Dedicated
+`CI Build` run `34805003765`: **3/3 SUCCESS** (Windows + GCC-13 +
+Clang-18, link fix included).
+
+Fresh local proof on latest HEAD (`build-final/`, MSVC Release, from
+scratch): full rebuild green + `ctest -C Release` **100% tests passed, 0
+failed out of 72**. Linux full suite (`build-final-lin`, GCC 15.2):
+**71/71 green**. Local ASan suite (`build-asan-local`, same flags as CI):
+Quick **62/62** + heavies **7/7**, all sanitizer-clean.
