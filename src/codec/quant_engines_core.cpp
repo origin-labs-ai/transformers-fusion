@@ -47,7 +47,7 @@ void dequant_tensor_quant4_avx2(const uint8_t* packed, float* out,
     }
 }
 
-// AVX2 quant_gemm: QUANT8 (256-entry codebook LUT)
+// AVX2 quant_gemm: Q8 (256-entry codebook LUT)
 void quant_gemm_quant8_avx2(const float* ad, float* cd,
                                   const uint8_t* b_idx,
                                   int64_t M, int64_t N, int64_t K,
@@ -73,7 +73,7 @@ void quant_gemm_quant8_avx2(const float* ad, float* cd,
     }
 }
 
-// AVX2 quant_gemm: QUANT4 (packed 4-bit indices, 16-entry codebook)
+// AVX2 quant_gemm: Q4 (packed 4-bit indices, 16-entry codebook)
 void quant_gemm_quant4_avx2(const float* ad, float* cd,
                                   const uint8_t* packed,
                                   int64_t M, int64_t N, int64_t K,

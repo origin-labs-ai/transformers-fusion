@@ -26,7 +26,7 @@ NativeQUANTTrainer::NativeQUANTTrainer(DenseModel* model, const NativeTrainConfi
         engine.register_parameter(p);
     }
 
-    weight_store_ = std::make_unique<NativeQUANTWeightStore>(total_params_, cfg_.block_size);
+    weight_store_ = std::make_unique<NativeQWeightStore>(total_params_, cfg_.block_size);
     grad_buffer_ = std::make_unique<float[]>(total_params_);
     sensitivity_ = std::make_unique<float[]>(total_params_);
     temp_weight_buffer_ = std::make_unique<float[]>(total_params_);
@@ -103,9 +103,9 @@ void NativeQUANTTrainer::apply_two_timescale_sgd() {
             NativeFormat fmt = weight_store_->get_format(i);
             uint8_t idx = weight_store_->get_index(i);
             switch (fmt) {
-                case NativeFormat::QUANT1: cv = quant1_value(idx); break;
-                case NativeFormat::QUANT4:    cv = NativeQUANTWeightStore::global_quant4_codebook().centroid(idx); break;
-                case NativeFormat::QUANT8:    cv = NativeQUANTWeightStore::global_codebook().centroid(idx); break;
+                case NativeFormat::Q1: cv = quant1_value(idx); break;
+                case NativeFormat::Q4:    cv = NativeQWeightStore::global_quant4_codebook().centroid(idx); break;
+                case NativeFormat::Q8:    cv = NativeQWeightStore::global_codebook().centroid(idx); break;
                 default: cv = 0.0f;
             }
             grad_scale_sum += grad_buffer_[i] * cv;
@@ -167,8 +167,8 @@ NativeTrainMetrics NativeQUANTTrainer::train_step(const float* input, const floa
     double avg_s = 0.0;
     for (size_t i = 0; i < total_params_; i++) {
         NativeFormat fmt = weight_store_->get_format(i);
-        if (fmt == NativeFormat::QUANT8) quant8++;
-        else if (fmt == NativeFormat::QUANT1) quant1++;
+        if (fmt == NativeFormat::Q8) quant8++;
+        else if (fmt == NativeFormat::Q1) quant1++;
         else quant++;
         float dz = dead_zone_radius(fmt, weight_store_->get_scale(i));
         if (std::abs(grad_buffer_[i]) * cfg_.lr_weight < dz) frozen++;
@@ -223,7 +223,7 @@ void NativeQUANTTrainer::warmup_phase(const std::vector<std::vector<float>>& dat
         }
     }
     allocate_formats();
-    std::cout << "[NativeQUANT] CID: QUANT8=" << (cfg_.frac_quant8 * 100.0f)
+    std::cout << "[NativeQUANT] CID: Q8=" << (cfg_.frac_quant8 * 100.0f)
               << "% T=" << (cfg_.frac_quant * 100.0f)
               << "% B=" << ((1.0f - cfg_.frac_quant8 - cfg_.frac_quant) * 100.0f) << "%\n";
 }

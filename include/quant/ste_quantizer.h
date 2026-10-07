@@ -24,8 +24,8 @@ public:
     // Quantize with codebook training (caller-owned exclusive: the codebook
     // must be exclusively owned by the caller for the call — trained in place
     // if untrained and mutated via batch stats; do not share across threads).
-    Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT8& codebook);
-    Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT4& codebook);
+    Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQ8& codebook);
+    Tensor quantize_with_codebook(const Tensor& fp32_weight, CodebookQ4& codebook);
     
     // Quantize to QUANT/Q1 with scale
     void quantize_quant(const float* src, uint8_t* dst, float* scale, int64_t n);

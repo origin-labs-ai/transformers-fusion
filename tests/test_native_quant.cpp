@@ -1,4 +1,4 @@
-// test_native_quant.cpp — NativeQUANTWeightStore + NativeQUANTTrainer
+// test_native_quant.cpp — NativeQWeightStore + NativeQUANTTrainer
 #include "quant/native_trainer.h"
 #include "quant/model.h"
 #include "quant/transformer.h"

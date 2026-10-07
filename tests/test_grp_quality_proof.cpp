@@ -17,7 +17,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "  Transcender GRP Quality Superiority Proof  " << std::endl;
+    std::cout << "  TransFormers-Fusion GRP Quality Superiority Proof  " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     // Verify all 9 integer-GRP formats exist and are registered.

@@ -24,10 +24,10 @@ static bool all_close(const float* a, const float* b, int64_t n, float eps = 1e-
     return true;
 }
 
-// QUANT8 quantize/dequantize roundtrip
+// Q8 quantize/dequantize roundtrip
 static void test_quant8_roundtrip() {
-    TEST_SUITE("QUANT8 quantize/dequantize");
-    QUANT8Engine quant8;
+    TEST_SUITE("Q8 quantize/dequantize");
+    Q8Engine quant8;
     std::vector<float> data(256);
     for (int i = 0; i < 256; i++)
         data[i] = (float)(i - 128) / 8.0f;
@@ -36,7 +36,7 @@ static void test_quant8_roundtrip() {
     float val = 5.0f;
     uint8_t idx = quant8.quantize(val);
     float deq = quant8.dequantize(idx);
-    TEST_CHECK_CLOSE(val, deq, 1.0f, "QUANT8 scalar roundtrip");
+    TEST_CHECK_CLOSE(val, deq, 1.0f, "Q8 scalar roundtrip");
 
     // Tensor roundtrip
     int64_t N = 100;
@@ -45,7 +45,7 @@ static void test_quant8_roundtrip() {
         orig.data<float>()[i] = std::sin((float)i * 0.1f) * 8.0f;
     Tensor q = quant8.quantize_tensor(orig.data<float>(), N);
     Tensor dq = quant8.dequant_tensor(q.data<uint8_t>(), N);
-    TEST_CHECK(all_close(orig.data<float>(), dq.data<float>(), N, 4.0f), "QUANT8 tensor roundtrip");
+    TEST_CHECK(all_close(orig.data<float>(), dq.data<float>(), N, 4.0f), "Q8 tensor roundtrip");
 
     // Per-channel
     Tensor orig2d({4, 32});
@@ -55,22 +55,22 @@ static void test_quant8_roundtrip() {
     quant8.quantize_per_channel(orig2d, 0, qc, scales);
     Tensor dqc({4, 32});
     quant8.dequantize_per_channel(qc, scales, 0, dqc);
-    TEST_CHECK(all_close(orig2d.data<float>(), dqc.data<float>(), 4 * 32, 5.0f), "QUANT8 per-channel roundtrip");
+    TEST_CHECK(all_close(orig2d.data<float>(), dqc.data<float>(), 4 * 32, 5.0f), "Q8 per-channel roundtrip");
 
     // quant_error
     float err = quant8.quant_error(orig, dq);
-    TEST_CHECK(std::isfinite(err), "QUANT8 quant_error finite");
-    TEST_CHECK(err >= 0, "QUANT8 quant_error non-negative");
+    TEST_CHECK(std::isfinite(err), "Q8 quant_error finite");
+    TEST_CHECK(err >= 0, "Q8 quant_error non-negative");
 
     // quant_snr
     float snr = quant8.quant_snr(orig, dq);
-    TEST_CHECK(std::isfinite(snr), "QUANT8 quant_snr finite");
+    TEST_CHECK(std::isfinite(snr), "Q8 quant_snr finite");
 }
 
-// QUANT4 quantize/dequantize roundtrip
+// Q4 quantize/dequantize roundtrip
 static void test_quant4_roundtrip() {
-    TEST_SUITE("QUANT4 quantize/dequantize");
-    QUANT4Engine quant4;
+    TEST_SUITE("Q4 quantize/dequantize");
+    Q4Engine quant4;
     std::vector<float> train_data(64);
     for (int i = 0; i < 64; i++)
         train_data[i] = (float)(i - 32) / 2.0f;
@@ -79,7 +79,7 @@ static void test_quant4_roundtrip() {
     float val = 5.0f;
     uint8_t idx = quant4.quantize(val);
     float deq = quant4.dequantize(idx);
-    TEST_CHECK_CLOSE(val, deq, 2.0f, "QUANT4 scalar roundtrip");
+    TEST_CHECK_CLOSE(val, deq, 2.0f, "Q4 scalar roundtrip");
 
     int64_t N = 64;
     Tensor orig({N});
@@ -87,7 +87,7 @@ static void test_quant4_roundtrip() {
         orig.data<float>()[i] = (float)(i - 32) / 4.0f;
     Tensor q = quant4.quantize_tensor(orig.data<float>(), N);
     Tensor dq = quant4.dequant_tensor(q.data<uint8_t>(), N);
-    TEST_CHECK(all_close(orig.data<float>(), dq.data<float>(), N, 5.0f), "QUANT4 tensor roundtrip");
+    TEST_CHECK(all_close(orig.data<float>(), dq.data<float>(), N, 5.0f), "Q4 tensor roundtrip");
 
     // Per-channel
     Tensor orig2d({4, 16});
@@ -97,10 +97,10 @@ static void test_quant4_roundtrip() {
     quant4.quantize_per_channel(orig2d, 0, qc, scales);
     Tensor dqc({4, 16});
     quant4.dequantize_per_channel(qc, scales, 0, dqc);
-    TEST_CHECK(all_close(orig2d.data<float>(), dqc.data<float>(), 4 * 16, 5.0f), "QUANT4 per-channel roundtrip");
+    TEST_CHECK(all_close(orig2d.data<float>(), dqc.data<float>(), 4 * 16, 5.0f), "Q4 per-channel roundtrip");
 
     float err = quant4.quant_error(orig, dq);
-    TEST_CHECK(std::isfinite(err), "QUANT4 quant_error finite");
+    TEST_CHECK(std::isfinite(err), "Q4 quant_error finite");
 }
 
 // FP8 E4M3 roundtrip
@@ -197,13 +197,13 @@ static void test_quant() {
     TEST_CHECK(std::isfinite(err), "Quant quant_error finite");
 }
 
-// QUANT1 quantize/dequantize
+// Q1 quantize/dequantize
 static void test_quant1() {
     TEST_SUITE("Quant1");
-    Quant1Engine be;
+    Q1Engine be;
     int64_t N = 64;
     Tensor orig({N});
-    // Normalized weights in [-1, 1] — typical for QUANT1 quantization
+    // Normalized weights in [-1, 1] — typical for Q1 quantization
     for (int64_t i = 0; i < N; i++)
         orig.data<float>()[i] = (float)(i - 32) / 32.0f;
     Tensor q = be.quantize(orig);
@@ -248,8 +248,8 @@ static void test_quant_gemm() {
     for (int64_t i = 0; i < c_e5m2.numel(); i++)
         TEST_CHECK(std::isfinite(c_e5m2.data<float>()[i]), "E5M2 quant_gemm finite");
 
-    // QUANT8 quant_gemm
-    QUANT8Engine quant8;
+    // Q8 quant_gemm
+    Q8Engine quant8;
     std::vector<float> train(256);
     for (int i = 0; i < 256; i++) train[i] = (float)(i - 128) / 16.0f;
     quant8.train_codebook(train.data(), 256);
@@ -257,9 +257,9 @@ static void test_quant_gemm() {
     for (int64_t i = 0; i < K * N; i++)
         b_idx[i] = quant8.quantize((float)(i % 10));
     Tensor c_quant8 = quant8.quant_gemm(a, b_idx.data(), M, N, K);
-    TEST_CHECK(c_quant8.numel() == M * N, "QUANT8 quant_gemm output shape");
+    TEST_CHECK(c_quant8.numel() == M * N, "Q8 quant_gemm output shape");
     for (int64_t i = 0; i < c_quant8.numel(); i++)
-        TEST_CHECK(std::isfinite(c_quant8.data<float>()[i]), "QUANT8 quant_gemm finite");
+        TEST_CHECK(std::isfinite(c_quant8.data<float>()[i]), "Q8 quant_gemm finite");
 }
 
 // quant_error metrics
@@ -289,9 +289,9 @@ static void test_quant_error_metrics() {
     TEST_CHECK(std::isfinite(snr), "quant_snr finite for identical");
 }
 
-// Per-block QUANT8 vs uniform 8-bit grid: QUANT codebook beats plain uniform grid
+// Per-block Q8 vs uniform 8-bit grid: QUANT codebook beats plain uniform grid
 static void test_perblock_quant8_beats_uniform8() {
-    TEST_SUITE("Per-block QUANT8 vs uniform 8-bit grid");
+    TEST_SUITE("Per-block Q8 vs uniform 8-bit grid");
     const int64_t N = 100320;
     const int64_t BS = 32;
 
@@ -325,8 +325,8 @@ static void test_perblock_quant8_beats_uniform8() {
     }
     double u8_mse = u8_sq / (double)N;
 
-    // QUANT8 per-block k-means
-    QUANT8Engine quant8;
+    // Q8 per-block k-means
+    Q8Engine quant8;
     quant8.train_codebook_per_block(w.data(), N, BS, 30);
 
     std::vector<uint8_t> indices(N);
@@ -344,18 +344,18 @@ static void test_perblock_quant8_beats_uniform8() {
     double quant8_mse = quant8_sq / (double)N;
 
     printf("  u8_0  (uniform per-block) MSE: %.6e\n", u8_mse);
-    printf("  QUANT8  (k-means per-block) MSE: %.6e\n", quant8_mse);
+    printf("  Q8  (k-means per-block) MSE: %.6e\n", quant8_mse);
     if (quant8_mse < u8_mse) {
-        printf("  >>> QUANT8 BEATS u8_0 by %.2fx <<<\n", u8_mse / quant8_mse);
+        printf("  >>> Q8 BEATS u8_0 by %.2fx <<<\n", u8_mse / quant8_mse);
     } else {
         printf("  u8_0 wins by %.2fx\n", quant8_mse / u8_mse);
     }
-    TEST_CHECK(quant8_mse < u8_mse, "QUANT8 per-block beats u8_0 uniform");
+    TEST_CHECK(quant8_mse < u8_mse, "Q8 per-block beats u8_0 uniform");
 }
 
-// Per-block QUANT4 vs uniform 4-bit grid: QUANT codebook beats plain uniform grid
+// Per-block Q4 vs uniform 4-bit grid: QUANT codebook beats plain uniform grid
 static void test_perblock_quant4_beats_uniform4() {
-    TEST_SUITE("Per-block QUANT4 vs uniform 4-bit grid");
+    TEST_SUITE("Per-block Q4 vs uniform 4-bit grid");
     const int64_t N = 100320;
     const int64_t BS = 32;
 
@@ -392,8 +392,8 @@ static void test_perblock_quant4_beats_uniform4() {
     }
     double u4_mse = u4_sq / (double)N;
 
-    // QUANT4 per-block k-means
-    QUANT4Engine quant4;
+    // Q4 per-block k-means
+    Q4Engine quant4;
     quant4.train_codebook_per_block(w.data(), N, BS, 30);
 
     std::vector<uint8_t> indices(N);
@@ -411,18 +411,18 @@ static void test_perblock_quant4_beats_uniform4() {
     double quant4_mse = quant4_sq / (double)N;
 
     printf("  u4_0  (uniform per-block) MSE: %.6e\n", u4_mse);
-    printf("  QUANT4  (k-means per-block) MSE: %.6e\n", quant4_mse);
+    printf("  Q4  (k-means per-block) MSE: %.6e\n", quant4_mse);
     if (quant4_mse < u4_mse) {
-        printf("  >>> QUANT4 BEATS u4_0 by %.2fx <<<\n", u4_mse / quant4_mse);
+        printf("  >>> Q4 BEATS u4_0 by %.2fx <<<\n", u4_mse / quant4_mse);
     } else {
         printf("  u4_0 wins by %.2fx\n", quant4_mse / u4_mse);
     }
-    TEST_CHECK(quant4_mse < u4_mse, "QUANT4 per-block beats u4_0 uniform");
+    TEST_CHECK(quant4_mse < u4_mse, "Q4 per-block beats u4_0 uniform");
 }
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Transcender — Quantization Engine Test Suite\n");
+    printf("TransFormers-Fusion — Quantization Engine Test Suite\n");
     printf("============================================\n");
 
     test_quant8_roundtrip();

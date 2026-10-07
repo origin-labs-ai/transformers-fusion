@@ -1,5 +1,5 @@
 // ============================================================================
-// Transcender PoC Benchmark — In-House Edition
+// TransFormers-Fusion PoC Benchmark — In-House Edition
 // ============================================================================
 // All quantization formats in this benchmark are QUANT/QUANT/GRP formats from
 // FormatRegistry, QUANT_MIX importance routing (FormatPlanner), and native STE
@@ -67,9 +67,9 @@ static void mix_quantize_dequantize(const float* data, int64_t n, float target_b
     auto find_fmt = [&](const std::string& nm) -> const FormatDescriptor* {
         for (auto& s : singles) if (s.name == nm) return &s; return nullptr;
     };
-    auto* f8 = find_fmt("QUANT8"); auto* f4 = find_fmt("QUANT4"); auto* f2 = find_fmt("QUANT2");
-    auto* fsp = find_fmt("QUANT_Q1_G");
-    if (!f8) f8 = find_fmt("QUANT8_G"); if (!f4) f4 = find_fmt("QUANT4_G");
+    auto* f8 = find_fmt("Q8"); auto* f4 = find_fmt("Q4"); auto* f2 = find_fmt("Q2");
+    auto* fsp = find_fmt("QG1sparse");
+    if (!f8) f8 = find_fmt("QG8"); if (!f4) f4 = find_fmt("QG4");
     if (!f2) f2 = find_fmt("QG2"); if (!fsp) fsp = f2;
 
     std::vector<const FormatDescriptor*> assign(nb, f2);
@@ -169,12 +169,12 @@ static void lm_train_pinned(const float* data, size_t n, float* centroids, int k
     }
 }
 
-// QUANT4 Column-Wise: per-column min/max + global Lloyd-Max codebook.
+// Q4 Column-Wise: per-column min/max + global Lloyd-Max codebook.
 // In-house column-wise variant: column scales preserve row structure, while
 // the shared pinned Lloyd-Max codebook adapts to the (typically sparse)
 // normalized weight distribution.
 static Row test_quant4_cw(const float* d, int64_t n, int64_t cols) {
-    Row r = {"QUANT4_CW", 4.0f, -1, -1, -1};
+    Row r = {"Q4_CW", 4.0f, -1, -1, -1};
     int64_t rows = n / cols; if (rows * cols != n) { rows = 1; cols = n; }
     std::vector<float> normalized(static_cast<size_t>(n));
     std::vector<float> col_min(static_cast<size_t>(cols));
@@ -242,7 +242,7 @@ struct SteModel {
 
 // STE forward: quantize-dequantize weights in-place (forward only; gradients
 // flow straight through to the latent FP32 copy).
-// mode: 0=FP32, 1=QUANT2(lloyd 4c), 2=QUANT4(lloyd 16c), 3=Q1_5(sign+scale), 4=QUANT1(block mean)
+// mode: 0=FP32, 1=Q2(lloyd 4c), 2=Q4(lloyd 16c), 3=Q1_5(sign+scale), 4=Q1(block mean)
 static void ste_quantize_weights(SteModel& m, int mode) {
     auto q = [&](float* w, int64_t n, std::vector<float>& sc) {
         if (mode == 0 || n == 0) return;
@@ -269,7 +269,7 @@ static void ste_quantize_weights(SteModel& m, int mode) {
                 if (scl < 1e-10f) scl = 1e-10f;
                 for (int64_t i = s; i < e; i++) w[i] = (w[i] >= 0) ? scl : -scl;
             }
-        } else if (mode == 4) { // QUANT1: LEARNABLE block mean, 1 centroid per 32 (1.0 BPW)
+        } else if (mode == 4) { // Q1: LEARNABLE block mean, 1 centroid per 32 (1.0 BPW)
             const int64_t BLK = 32;
             for (int64_t b = 0; b < (n + BLK - 1) / BLK; b++) {
                 int64_t s = b * BLK, e = std::min(s + BLK, n);
@@ -307,7 +307,7 @@ static float ste_loss_eval(SteModel& m, const float* x, const float* y, int64_t 
 // Adam + STE native training on a fixed synthetic regression task.
 // Identical task + identical init for every format. Returns best eval MSE.
 static float ste_train(const SteCfg& cfg, int mode, std::string& note) {
-    const char* names[] = {"FP32", "Q2_STE", "QUANT4_STE", "Q1_5_STE", "Q1_STE"};
+    const char* names[] = {"FP32", "Q2_STE", "Q4_STE", "Q1_5_STE", "Q1_STE"};
     if (mode < 0 || mode > 4) mode = 0;
     note = names[mode];
 
@@ -595,7 +595,7 @@ int main() {
     const int64_t N = 16384;
 
     std::cout << "================================================================================" << std::endl;
-    std::cout << "  Transcender PoC Benchmark — In-House Edition" << std::endl;
+    std::cout << "  TransFormers-Fusion PoC Benchmark — In-House Edition" << std::endl;
     std::cout << "  Per-block codebook + error feedback + importance routing" << std::endl;
     std::cout << "  All formats are QUANT/QUANT/GRP + QUANT_MIX routing. No external schemes." << std::endl;
     std::cout << "================================================================================" << std::endl;
@@ -609,7 +609,7 @@ int main() {
         csv << "distribution,format,bpw,mse,cosine,snr" << std::endl;
 
         std::ofstream md("bench_01_gaussian.md");
-        md << "# Transcender PoC — File 1: Gaussian Distribution\n\n";
+        md << "# TransFormers-Fusion PoC — File 1: Gaussian Distribution\n\n";
         md << "**Methodology:** FP32 → per-block Lloyd-Max (block=256) → error feedback → dequantize → MSE\n\n";
 
         auto data = gen_gauss(N, 0.02f);
@@ -626,7 +626,7 @@ int main() {
                << std::scientific << std::setprecision(4) << r.mse << " | "
                << std::fixed << std::setprecision(1) << r.snr << " |\n";
         }
-        md << "\n**Key:** QUANT4_CW = in-house column-wise variant (per-column min/max + shared pinned Lloyd-Max codebook).\n\n---\n*Generated by Transcender bench_poc (in-house edition)*\n";
+        md << "\n**Key:** Q4_CW = in-house column-wise variant (per-column min/max + shared pinned Lloyd-Max codebook).\n\n---\n*Generated by TransFormers-Fusion bench_poc (in-house edition)*\n";
     }
 
     // ========================================================================
@@ -638,7 +638,7 @@ int main() {
         csv << "distribution,format,bpw,mse,cosine,snr" << std::endl;
 
         std::ofstream md("bench_02_realweights.md");
-        md << "# Transcender PoC — File 2: Real Neural Weight Distributions\n\n";
+        md << "# TransFormers-Fusion PoC — File 2: Real Neural Weight Distributions\n\n";
         md << "**Distributions:** Sparse (90%, 95%, 99%) — mimics real transformer weights\n\n";
 
         struct Dist { std::string name; std::vector<float> data; };
@@ -665,7 +665,7 @@ int main() {
             }
             md << "\n";
         }
-        md << "\n---\n*Generated by Transcender bench_poc (in-house edition)*\n";
+        md << "\n---\n*Generated by TransFormers-Fusion bench_poc (in-house edition)*\n";
     }
 
     // ========================================================================
@@ -677,7 +677,7 @@ int main() {
         csv << "distribution,format,bpw,mse,cosine,snr" << std::endl;
 
         std::ofstream md("bench_03_headtohead.md");
-        md << "# Transcender PoC — File 3: Comprehensive Head-to-Head\n\n";
+        md << "# TransFormers-Fusion PoC — File 3: Comprehensive Head-to-Head\n\n";
         md << "**Every format × every distribution. Comparison at same BPW tier.**\n\n";
 
         struct Dist { std::string name; std::vector<float> data; };
@@ -725,11 +725,11 @@ int main() {
         }
 
         md << "\n## Key Findings\n\n";
-        md << "1. **QUANT_Q1_G at 2.0 BPW** delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max + exact zero preservation)\n";
-        md << "2. **QUANT8 at 8.0 BPW** dominates raw quality on every distribution\n";
-        md << "3. **QUANT_MIX** routes QUANT8 to salient blocks and low-bit formats to the bulk — best quality/byte at fixed target BPW\n";
+        md << "1. **QG1sparse at 2.0 BPW** delivers the best quality-per-bit on sparse weight distributions (pinned Lloyd-Max + exact zero preservation)\n";
+        md << "2. **Q8 at 8.0 BPW** dominates raw quality on every distribution\n";
+        md << "3. **QUANT_MIX** routes Q8 to salient blocks and low-bit formats to the bulk — best quality/byte at fixed target BPW\n";
         md << "4. Real neural weights are sparse — QUANT's codebook quantization excels on sparse data\n\n";
-        md << "---\n*Generated by Transcender bench_poc (in-house edition)*\n";
+        md << "---\n*Generated by TransFormers-Fusion bench_poc (in-house edition)*\n";
     }
 
     g_csv = nullptr;
@@ -743,7 +743,7 @@ int main() {
         csv << "format,bpw,eval_mse" << std::endl;
 
         std::ofstream md("bench_04_ste_training.md");
-        md << "# Transcender PoC — File 4: STE Native Training (In-House)\n\n";
+        md << "# TransFormers-Fusion PoC — File 4: STE Native Training (In-House)\n\n";
         md << "**Methodology:** Every format is trained NATIVELY with Straight-Through Estimator —\n";
         md << "quantization happens in the forward pass, gradients pass straight through (dL/dw = dL/dq).\n";
         md << "No post-training quantization. MLP 128→64→8, Adam (lr 2e-3), 6000 steps, batch 64,\n";
@@ -753,9 +753,9 @@ int main() {
         md << "| 1.0 BPW | Q1_STE (block mean) |\n";
         md << "| 1.5 BPW | Q1_5_STE (sign + learnable scale) |\n";
         md << "| 2.0 BPW | Q2_STE (pinned Lloyd-Max) |\n";
-        md << "| 4.0 BPW | QUANT4_STE (pinned Lloyd-Max) |\n\n";
+        md << "| 4.0 BPW | Q4_STE (pinned Lloyd-Max) |\n\n";
 
-        const char* names[] = {"FP32", "Q2_STE", "QUANT4_STE", "Q1_5_STE", "Q1_STE"};
+        const char* names[] = {"FP32", "Q2_STE", "Q4_STE", "Q1_5_STE", "Q1_STE"};
         const float bpws[] = {32.0f, 2.0f, 4.0f, 1.5f, 1.0f};
 
         SteCfg cfg;
@@ -785,9 +785,9 @@ int main() {
         }
         md << "\n## Key Findings\n\n";
         md << "1. Every QUANT/QUANT format is trained NATIVELY (STE) — quantization lives in the forward pass, no post-training quantization\n";
-        md << "2. Q1_5 (1.5 BPW) and QUANT2 (2.0 BPW) learnable parameters (per-block scales, codebooks) adapt during training\n";
-        md << "3. QUANT1's block means are trained as Lloyd-style centroids; QUANT2/QUANT4 use pinned Lloyd-Max codebooks — all trained end-to-end, adapting per step\n\n";
-        md << "---\n*Generated by Transcender bench_poc (in-house edition)*\n";
+        md << "2. Q1_5 (1.5 BPW) and Q2 (2.0 BPW) learnable parameters (per-block scales, codebooks) adapt during training\n";
+        md << "3. Q1's block means are trained as Lloyd-style centroids; Q2/Q4 use pinned Lloyd-Max codebooks — all trained end-to-end, adapting per step\n\n";
+        md << "---\n*Generated by TransFormers-Fusion bench_poc (in-house edition)*\n";
     }
 
     std::cout << "\n================================================================================" << std::endl;

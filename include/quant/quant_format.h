@@ -152,7 +152,7 @@ private:
 
 // ===========================================================================
 // QUANT Idx — SHA256 integrity-checked index file format
-// Header: magic "TranscenderIDX" | version | num_tensors
+// Header: magic "TransFormers-FusionIDX" | version | num_tensors
 // Then for each tensor: name_len | name bytes | sha256(name) [32 bytes]
 // On read, each tensor name is re-hashed and compared fail-fast; the first
 // corrupt name is reported by name.
@@ -172,7 +172,7 @@ public:
     explicit QUANTIdxWriter(const std::string& path);
     ~QUANTIdxWriter();
 
-    // Writes the full idx file: header magic "TranscenderIDX", version,
+    // Writes the full idx file: header magic "TransFormers-FusionIDX", version,
     // num_tensors, then per-tensor name + computed sha256(name).
     void write_idx(uint32_t version, const std::vector<std::string>& tensor_names);
 
@@ -203,7 +203,7 @@ private:
     uint32_t version_;
     uint32_t num_tensors_;
     bool checked_;
-    size_t magic_size_ = 15; // 15 = TranscenderIDX, 10 = legacy InNovaIDX
+    size_t magic_size_ = 22; // 22 = TransFormers-FusionIDX, 15 = legacy TransCenderIDX, 10 = legacy InNovaIDX
     std::vector<std::string> names_;
 };
 

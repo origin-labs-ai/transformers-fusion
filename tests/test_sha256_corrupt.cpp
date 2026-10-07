@@ -121,7 +121,7 @@ static void test_corrupt_detection() {
 }
 
 static void test_magic_header() {
-    TEST_SUITE("Test 3: TransCenderIDX magic header");
+    TEST_SUITE("Test 3: TransFormers-FusionIDX magic header");
 
     std::string path = "test_sha256_magic.quantidx";
 
@@ -131,14 +131,14 @@ static void test_magic_header() {
         writer.close();
     }
 
-    // Read first 15 bytes to verify magic
+    // Read first 22 bytes to verify magic
     std::ifstream file(path, std::ios::binary);
-    char magic[15] = {};
-    file.read(magic, 15);
+    char magic[22] = {};
+    file.read(magic, 22);
     file.close();
 
-    TEST_CHECK(std::memcmp(magic, "TranscenderIDX", 14) == 0, "TranscenderIDX magic header present");
-    printf("  Magic: %.15s\n", magic);
+    TEST_CHECK(std::memcmp(magic, "TransFormers-FusionIDX", 21) == 0, "TransFormers-FusionIDX magic header present");
+    printf("  Magic: %.22s\n", magic);
 
     std::filesystem::remove(path);
 }
@@ -238,7 +238,7 @@ int main() {
         log << "|------|--------|\n";
         log << "| QUANTIdx write and read | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
         log << "| SHA256 corrupt detection (one byte) | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
-        log << "| TransCenderIDX magic header | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
+        log << "| TransFormers-FusionIDX magic header | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
         log << "| Truncated idx file detection | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
         log << "| QUANT writer SHA256 dedup | " << (failures == 0 ? "PASSED" : "FAILED") << " |\n";
         log << "\n## Summary\n\n";
@@ -248,7 +248,7 @@ int main() {
         log << "- Verdict: " << (failures == 0 ? "PASSED" : "FAILED") << "\n";
         log << "\n## Proof\n\n";
         log << "- SHA256 hash indexing implemented in src/quant_format.cpp:105-112\n";
-        log << "- TransCenderIDX magic header in QUANTIdxWriter::write_idx() src/codec/quant_format.cpp\n";
+        log << "- TransFormers-FusionIDX magic header in QUANTIdxWriter::write_idx() src/codec/quant_format.cpp\n";
         log << "- Fail-fast corrupt detection with tensor name in QUANTIdxReader::read_idx() src/quant_format.cpp:594\n";
         log << "- Content-addressed dedup via SHA256 in QUANTWriter::write_dedup() src/quant_format.cpp:237\n";
         log << "\nFile: tests/test_sha256_corrupt.cpp\n";

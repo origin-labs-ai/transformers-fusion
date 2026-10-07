@@ -9,19 +9,19 @@
 namespace quant {
 namespace native {
 
-// ─── QUANT4Codebook ───────────────────────────────────────────────
+// ─── Q4Codebook ───────────────────────────────────────────────
 
-QUANT4Codebook::QUANT4Codebook() {
+Q4Codebook::Q4Codebook() {
     for (size_t i = 0; i < K; i++) {
         centroids_[i] = -1.0f + (2.0f * i + 1.0f) / K;
     }
 }
 
-QUANT4Codebook::QUANT4Codebook(const float* centroids) {
+Q4Codebook::Q4Codebook(const float* centroids) {
     std::memcpy(centroids_, centroids, K * sizeof(float));
 }
 
-void QUANT4Codebook::set_quantile_spacing(const float* data, size_t n) {
+void Q4Codebook::set_quantile_spacing(const float* data, size_t n) {
     std::vector<float> sorted(data, data + n);
     std::sort(sorted.begin(), sorted.end());
     for (size_t i = 0; i < K; i++) {
@@ -31,7 +31,7 @@ void QUANT4Codebook::set_quantile_spacing(const float* data, size_t n) {
     }
 }
 
-uint8_t QUANT4Codebook::nearest(float val) const {
+uint8_t Q4Codebook::nearest(float val) const {
     uint8_t best = 0;
     float best_dist = std::abs(val - centroids_[0]);
     for (size_t i = 1; i < K; i++) {
@@ -41,7 +41,7 @@ uint8_t QUANT4Codebook::nearest(float val) const {
     return best;
 }
 
-void QUANT4Codebook::train(const float* data, size_t n, int iterations) {
+void Q4Codebook::train(const float* data, size_t n, int iterations) {
     set_quantile_spacing(data, n);
     if (n < K || iterations < 2) return;
 
@@ -74,20 +74,20 @@ void QUANT4Codebook::train(const float* data, size_t n, int iterations) {
     }
 }
 
-// ─── QUANT8Codebook ───────────────────────────────────────────────
+// ─── Q8Codebook ───────────────────────────────────────────────
 
-QUANT8Codebook::QUANT8Codebook() {
+Q8Codebook::Q8Codebook() {
     // Default: uniform spacing over [-1, 1]
     for (size_t i = 0; i < K; i++) {
         centroids_[i] = -1.0f + (2.0f * i + 1.0f) / K;
     }
 }
 
-QUANT8Codebook::QUANT8Codebook(const float* centroids) {
+Q8Codebook::Q8Codebook(const float* centroids) {
     std::memcpy(centroids_, centroids, K * sizeof(float));
 }
 
-void QUANT8Codebook::set_quantile_spacing(const float* data, size_t n) {
+void Q8Codebook::set_quantile_spacing(const float* data, size_t n) {
     std::vector<float> sorted(data, data + n);
     std::sort(sorted.begin(), sorted.end());
     for (size_t i = 0; i < K; i++) {
@@ -97,7 +97,7 @@ void QUANT8Codebook::set_quantile_spacing(const float* data, size_t n) {
     }
 }
 
-uint8_t QUANT8Codebook::nearest(float val) const {
+uint8_t Q8Codebook::nearest(float val) const {
     uint8_t best = 0;
     float best_dist = std::abs(val - centroids_[0]);
     for (size_t i = 1; i < K; i++) {
@@ -107,7 +107,7 @@ uint8_t QUANT8Codebook::nearest(float val) const {
     return best;
 }
 
-void QUANT8Codebook::train(const float* data, size_t n, int iterations) {
+void Q8Codebook::train(const float* data, size_t n, int iterations) {
     set_quantile_spacing(data, n);
     if (n < K || iterations < 2) return;
 
@@ -140,13 +140,13 @@ void QUANT8Codebook::train(const float* data, size_t n, int iterations) {
     }
 }
 
-QUANT8Codebook& NativeQUANTWeightStore::global_codebook() {
-    static QUANT8Codebook cb;
+Q8Codebook& NativeQWeightStore::global_codebook() {
+    static Q8Codebook cb;
     return cb;
 }
 
-QUANT4Codebook& NativeQUANTWeightStore::global_quant4_codebook() {
-    static QUANT4Codebook cb;
+Q4Codebook& NativeQWeightStore::global_quant4_codebook() {
+    static Q4Codebook cb;
     return cb;
 }
 
@@ -154,26 +154,26 @@ QUANT4Codebook& NativeQUANTWeightStore::global_quant4_codebook() {
 
 float QUANTWeight::dequantize() const {
     switch (fmt) {
-        case NativeFormat::QUANT1: return scale * quant1_value(idx);
-        case NativeFormat::QUANT4:    return scale * NativeQUANTWeightStore::global_quant4_codebook().centroid(idx);
-        case NativeFormat::QUANT8:    return scale * NativeQUANTWeightStore::global_codebook().centroid(idx);
+        case NativeFormat::Q1: return scale * quant1_value(idx);
+        case NativeFormat::Q4:    return scale * NativeQWeightStore::global_quant4_codebook().centroid(idx);
+        case NativeFormat::Q8:    return scale * NativeQWeightStore::global_codebook().centroid(idx);
         default: return 0.0f;
     }
 }
 
 uint8_t QUANTWeight::quantize(float val) const {
     switch (fmt) {
-        case NativeFormat::QUANT1: {
+        case NativeFormat::Q1: {
             float norm = val / scale;
             if (norm > 0.5f) return 2;
             if (norm < -0.5f) return 0;
             return 1;
         }
-        case NativeFormat::QUANT4: {
-            return NativeQUANTWeightStore::global_quant4_codebook().nearest(val / scale);
+        case NativeFormat::Q4: {
+            return NativeQWeightStore::global_quant4_codebook().nearest(val / scale);
         }
-        case NativeFormat::QUANT8: {
-            return NativeQUANTWeightStore::global_codebook().nearest(val / scale);
+        case NativeFormat::Q8: {
+            return NativeQWeightStore::global_codebook().nearest(val / scale);
         }
         default: return 0;
     }
@@ -189,9 +189,9 @@ QUANTBlock::QUANTBlock(NativeFormat f, size_t B)
 
 float QUANTBlock::dequantize(size_t i) const {
     switch (fmt) {
-        case NativeFormat::QUANT1: return scale * quant1_value(indices[i]);
-        case NativeFormat::QUANT4:    return scale * NativeQUANTWeightStore::global_quant4_codebook().centroid(indices[i]);
-        case NativeFormat::QUANT8:    return scale * NativeQUANTWeightStore::global_codebook().centroid(indices[i]);
+        case NativeFormat::Q1: return scale * quant1_value(indices[i]);
+        case NativeFormat::Q4:    return scale * NativeQWeightStore::global_quant4_codebook().centroid(indices[i]);
+        case NativeFormat::Q8:    return scale * NativeQWeightStore::global_codebook().centroid(indices[i]);
         default: return 0.0f;
     }
 }
@@ -199,24 +199,24 @@ float QUANTBlock::dequantize(size_t i) const {
 uint8_t QUANTBlock::quantize(size_t i, float val) const {
     float norm = val / scale;
     switch (fmt) {
-        case NativeFormat::QUANT1: {
+        case NativeFormat::Q1: {
             if (norm > 0.5f) return 2;
             if (norm < -0.5f) return 0;
             return 1;
         }
-        case NativeFormat::QUANT4: {
-            return NativeQUANTWeightStore::global_quant4_codebook().nearest(norm);
+        case NativeFormat::Q4: {
+            return NativeQWeightStore::global_quant4_codebook().nearest(norm);
         }
-        case NativeFormat::QUANT8: {
-            return NativeQUANTWeightStore::global_codebook().nearest(norm);
+        case NativeFormat::Q8: {
+            return NativeQWeightStore::global_codebook().nearest(norm);
         }
         default: return 0;
     }
 }
 
-// ─── NativeQUANTWeightStore ───────────────────────────────────────
+// ─── NativeQWeightStore ───────────────────────────────────────
 
-NativeQUANTWeightStore::NativeQUANTWeightStore(size_t num_weights, size_t block_size)
+NativeQWeightStore::NativeQWeightStore(size_t num_weights, size_t block_size)
     : num_weights_(num_weights), block_size_(block_size)
     , formats_(std::make_unique<NativeFormat[]>((num_weights + block_size - 1) / block_size))
     , indices_(std::make_unique<uint8_t[]>(num_weights))
@@ -225,22 +225,22 @@ NativeQUANTWeightStore::NativeQUANTWeightStore(size_t num_weights, size_t block_
     num_blocks_ = (num_weights_ + block_size_ - 1) / block_size_;
     std::memset(indices_.get(), 0, num_weights * sizeof(uint8_t));
     std::memset(frozen_flag_.get(), 0, num_weights * sizeof(bool));
-    for (size_t b = 0; b < num_blocks_; b++) { formats_[b] = NativeFormat::QUANT1; block_scales_[b] = 1.0f; }
+    for (size_t b = 0; b < num_blocks_; b++) { formats_[b] = NativeFormat::Q1; block_scales_[b] = 1.0f; }
 }
 
-void NativeQUANTWeightStore::initialize(const float* fp32_weights, const float* sensitivity,
+void NativeQWeightStore::initialize(const float* fp32_weights, const float* sensitivity,
                                        float frac_quant8, float frac_quant) {
     reallocate_by_sensitivity(sensitivity, frac_quant8, frac_quant);
     convert_from_fp32(fp32_weights);
 }
 
-void NativeQUANTWeightStore::convert_from_fp32(const float* src) {
+void NativeQWeightStore::convert_from_fp32(const float* src) {
     for (size_t i = 0; i < num_weights_; i++) {
         size_t b = i / block_size_;
         size_t off = i % block_size_;
         NativeFormat fmt = formats_[b];
-        // Initial scale = max absolute value in block (for QUANT/QUANT1)
-        // For QUANT8: scale = range of weights in block
+        // Initial scale = max absolute value in block (for QUANT/Q1)
+        // For Q8: scale = range of weights in block
         if (off == 0) {
             // Compute block scale
             size_t block_end = std::min(num_weights_, (b + 1) * block_size_);
@@ -253,17 +253,17 @@ void NativeQUANTWeightStore::convert_from_fp32(const float* src) {
         // Quantize weight to index
         float norm = src[i] / block_scales_[b];
         switch (fmt) {
-            case NativeFormat::QUANT1: {
+            case NativeFormat::Q1: {
                 if (norm > 0.5f) indices_[i] = 2;
                 else if (norm < -0.5f) indices_[i] = 0;
                 else indices_[i] = 1;
                 break;
             }
-            case NativeFormat::QUANT4: {
+            case NativeFormat::Q4: {
                 indices_[i] = global_quant4_codebook().nearest(norm);
                 break;
             }
-            case NativeFormat::QUANT8: {
+            case NativeFormat::Q8: {
                 indices_[i] = global_codebook().nearest(norm);
                 break;
             }
@@ -271,20 +271,20 @@ void NativeQUANTWeightStore::convert_from_fp32(const float* src) {
     }
 }
 
-void NativeQUANTWeightStore::dequantize(float* dst) const {
+void NativeQWeightStore::dequantize(float* dst) const {
     for (size_t i = 0; i < num_weights_; i++) {
         size_t b = i / block_size_;
         float s = block_scales_[b];
         NativeFormat fmt = formats_[b];
         switch (fmt) {
-            case NativeFormat::QUANT1: dst[i] = s * quant1_value(indices_[i]); break;
-            case NativeFormat::QUANT4:    dst[i] = s * global_quant4_codebook().centroid(indices_[i]); break;
-            case NativeFormat::QUANT8:    dst[i] = s * global_codebook().centroid(indices_[i]); break;
+            case NativeFormat::Q1: dst[i] = s * quant1_value(indices_[i]); break;
+            case NativeFormat::Q4:    dst[i] = s * global_quant4_codebook().centroid(indices_[i]); break;
+            case NativeFormat::Q8:    dst[i] = s * global_codebook().centroid(indices_[i]); break;
         }
     }
 }
 
-void NativeQUANTWeightStore::apply_quant_update(const float* grad, float lr_scale, float lr_weight) {
+void NativeQWeightStore::apply_quant_update(const float* grad, float lr_scale, float lr_weight) {
     for (size_t i = 0; i < num_weights_; i++) {
         size_t b = i / block_size_;
         float s = block_scales_[b];
@@ -292,9 +292,9 @@ void NativeQUANTWeightStore::apply_quant_update(const float* grad, float lr_scal
 
         float cv;
         switch (fmt) {
-            case NativeFormat::QUANT1: cv = quant1_value(indices_[i]); break;
-            case NativeFormat::QUANT4:    cv = global_quant4_codebook().centroid(indices_[i]); break;
-            case NativeFormat::QUANT8:    cv = global_codebook().centroid(indices_[i]); break;
+            case NativeFormat::Q1: cv = quant1_value(indices_[i]); break;
+            case NativeFormat::Q4:    cv = global_quant4_codebook().centroid(indices_[i]); break;
+            case NativeFormat::Q8:    cv = global_codebook().centroid(indices_[i]); break;
         }
         float w = s * cv;
         float g = grad[i];
@@ -313,17 +313,17 @@ void NativeQUANTWeightStore::apply_quant_update(const float* grad, float lr_scal
                 float norm = w_virtual / block_scales_[b];
                 uint8_t new_idx;
                 switch (fmt) {
-                    case NativeFormat::QUANT1: {
+                    case NativeFormat::Q1: {
                         if (norm > 0.5f) new_idx = 2;
                         else if (norm < -0.5f) new_idx = 0;
                         else new_idx = 1;
                         break;
                     }
-                    case NativeFormat::QUANT4: {
+                    case NativeFormat::Q4: {
                         new_idx = global_quant4_codebook().nearest(norm);
                         break;
                     }
-                    case NativeFormat::QUANT8: {
+                    case NativeFormat::Q8: {
                         new_idx = global_codebook().nearest(norm);
                         break;
                     }
@@ -334,7 +334,7 @@ void NativeQUANTWeightStore::apply_quant_update(const float* grad, float lr_scal
     }
 }
 
-void NativeQUANTWeightStore::reallocate_by_sensitivity(const float* sensitivity,
+void NativeQWeightStore::reallocate_by_sensitivity(const float* sensitivity,
                                                       float frac_quant8,
                                                       float frac_quant) {
     if (num_weights_ == 0) return;
@@ -355,42 +355,42 @@ void NativeQUANTWeightStore::reallocate_by_sensitivity(const float* sensitivity,
                   return a.second < b.second;
               });
     
-    // Assign formats: top frac_quant8 → QUANT8, next frac_quant → QUANT1, rest → QUANT4
+    // Assign formats: top frac_quant8 → Q8, next frac_quant → Q1, rest → Q4
     size_t quant8_blocks = (size_t)(num_blocks_ * frac_quant8);
     size_t quant_blocks = (size_t)(num_blocks_ * frac_quant);
     for (size_t i = 0; i < num_blocks_; i++) {
         size_t b = block_sens[i].second;
         if (i < quant8_blocks)
-            formats_[b] = NativeFormat::QUANT8;
+            formats_[b] = NativeFormat::Q8;
         else if (i < quant8_blocks + quant_blocks)
-            formats_[b] = NativeFormat::QUANT1;
+            formats_[b] = NativeFormat::Q1;
         else
-            formats_[b] = NativeFormat::QUANT4;
+            formats_[b] = NativeFormat::Q4;
     }
 }
 
-uint8_t NativeQUANTWeightStore::get_index(size_t i) const {
+uint8_t NativeQWeightStore::get_index(size_t i) const {
     return indices_[i];
 }
 
-float NativeQUANTWeightStore::get_scale(size_t i) const {
+float NativeQWeightStore::get_scale(size_t i) const {
     size_t b = i / block_size_;
     return block_scales_[b];
 }
 
-NativeFormat NativeQUANTWeightStore::get_format(size_t i) const {
+NativeFormat NativeQWeightStore::get_format(size_t i) const {
     size_t b = i / block_size_;
     return formats_[b];
 }
 
-float NativeQUANTWeightStore::get_weight(size_t i) const {
+float NativeQWeightStore::get_weight(size_t i) const {
     size_t b = i / block_size_;
     float s = block_scales_[b];
     NativeFormat fmt = formats_[b];
     switch (fmt) {
-        case NativeFormat::QUANT1: return s * quant1_value(indices_[i]);
-        case NativeFormat::QUANT4:    return s * global_quant4_codebook().centroid(indices_[i]);
-        case NativeFormat::QUANT8:    return s * global_codebook().centroid(indices_[i]);
+        case NativeFormat::Q1: return s * quant1_value(indices_[i]);
+        case NativeFormat::Q4:    return s * global_quant4_codebook().centroid(indices_[i]);
+        case NativeFormat::Q8:    return s * global_codebook().centroid(indices_[i]);
         default: return 0.0f;
     }
 }

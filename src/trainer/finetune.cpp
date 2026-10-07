@@ -150,12 +150,12 @@ void FineTuner::apply_quant_update(const Tensor& fp32_grad, Tensor& quant_weight
     }
 
     if (fmt == Format::Q8) {
-        CodebookQUANT8 cb;
+        CodebookQ8 cb;
         cb.train(wd, (size_t)n);
         Tensor quantized = ste.quantize_with_codebook(updated, cb);
         quantized.copy_to(quant_weight);
     } else if (fmt == Format::Q4) {
-        CodebookQUANT4 cb;
+        CodebookQ4 cb;
         cb.train(wd, (size_t)n);
         Tensor quantized = ste.quantize_with_codebook(updated, cb);
         quantized.copy_to(quant_weight);

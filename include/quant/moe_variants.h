@@ -41,9 +41,9 @@ enum class MoEVariant {
     MAMBA_MOE,           // Mamba (SSM) + MoE hybrid
     QUANTIZED_INT8_MOE,  // INT8 quantized experts
     QUANT_MOE,         // Q1_5 {-1,0,+1} quantized experts
-    Q1_MOE,           // QUANT1 {-1,+1} quantized experts
-    QUANT8_MOE,            // QUANT8 codebook quantized experts
-    QUANT4_MOE             // QUANT4 codebook quantized experts
+    Q1_MOE,           // Q1 {-1,+1} quantized experts
+    Q8_MOE,            // Q8 codebook quantized experts
+    Q4_MOE             // Q4 codebook quantized experts
 };
 
 const char* moe_variant_name(MoEVariant v);
@@ -617,7 +617,7 @@ public:
 };
 
 // ========================================================================
-// 23. QUANT1 MoE — QUANT1 quantized expert weights
+// 23. Q1 MoE — Q1 quantized expert weights
 // ========================================================================
 
 class Quant1MoE {
@@ -637,12 +637,12 @@ public:
 };
 
 // ========================================================================
-// 24. QUANT8 MoE — QUANT8 codebook quantized expert weights
+// 24. Q8 MoE — Q8 codebook quantized expert weights
 // ========================================================================
 
-class QUANT8MoE {
+class Q8MoE {
 public:
-    QUANT8MoE(int64_t hidden_size, const MoEAllConfig& cfg);
+    Q8MoE(int64_t hidden_size, const MoEAllConfig& cfg);
     MoEOutput forward(const Tensor& x);
     float load_balance_loss(const Tensor& gates) const;
     float z_loss(const Tensor& logits) const;
@@ -657,12 +657,12 @@ public:
 };
 
 // ========================================================================
-// 25. QUANT4 MoE — QUANT4 codebook quantized expert weights
+// 25. Q4 MoE — Q4 codebook quantized expert weights
 // ========================================================================
 
-class QUANT4MoE {
+class Q4MoE {
 public:
-    QUANT4MoE(int64_t hidden_size, const MoEAllConfig& cfg);
+    Q4MoE(int64_t hidden_size, const MoEAllConfig& cfg);
     MoEOutput forward(const Tensor& x);
     float load_balance_loss(const Tensor& gates) const;
     float z_loss(const Tensor& logits) const;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Transcender distribution builder
+# TransFormers-Fusion distribution builder (formerly known as TransFormers-Fusion)
 # Usage: bash scripts/make_dist.sh [version]
 set -euo pipefail
 
@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # P2 fix: default version was stale "v0.1.0-engine-prod". Derive the one-truth
-# from CMakeLists.txt (project(Transcender VERSION x.y.z)) unless overridden.
+# from CMakeLists.txt (project(TransFormers-Fusion VERSION x.y.z)) unless overridden.
 DEFAULT_VERSION="$(grep -m1 -oE 'VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | awk '{print $2}')"
 VERSION="${1:-v${DEFAULT_VERSION:-1.1.0}}"
 OUTDIR="dist"
@@ -46,17 +46,17 @@ cd "$ROOT"
 
 # --- Source tarball ---
 # P2 fix: must include cmake/ (root CMakeLists does include(arch)/include(compiler)),
-# quant_config.h.in (configure_file template), and sops/ (built unconditionally).
+# quant_config.h.in (configure_file template), and inferno/ (built unconditionally).
 tar --exclude='.git' --exclude='build*' --exclude='dist' --exclude='.kilo' \
     --exclude='.research' --exclude='.github' \
-    -czf "$OUTDIR/Transcender-$VERSION-source.tar.gz" \
+    -czf "$OUTDIR/TransFormers-Fusion-$VERSION-source.tar.gz" \
     CMakeLists.txt quant_config.h.in LICENSE README.md \
-    cmake/ src/ include/ engines/ tests/ bench/ tools/ sops/
+    cmake/ src/ include/ engines/ tests/ bench/ tools/ inferno/
 
 cd "$OUTDIR"
-sha256sum "Transcender-$VERSION-source.tar.gz" > "Transcender-$VERSION-source.tar.gz.sha256"
+sha256sum "TransFormers-Fusion-$VERSION-source.tar.gz" > "TransFormers-Fusion-$VERSION-source.tar.gz.sha256"
 cd "$ROOT"
 
 echo "=== Distribution built at $OUTDIR/ ==="
 echo "Binaries: $OUTDIR/$PLAT/"
-echo "Source:   $OUTDIR/Transcender-$VERSION-source.tar.gz"
+echo "Source:   $OUTDIR/TransFormers-Fusion-$VERSION-source.tar.gz"

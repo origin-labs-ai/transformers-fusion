@@ -156,7 +156,7 @@ int main() {
     // With those fixed the live leg passes on the AMD iGPU: relu/gelu/silu/
     // add/mul all match the CPU reference (verified by an out-of-tree probe).
     // Live dispatch therefore runs BY DEFAULT.
-    // Escape hatch: TRANSCENDER_TEST_SKIP_LIVE_GPU=1 skips it on a host whose
+    // Escape hatch: TRANSFORMERS_FUSION_TEST_SKIP_LIVE_GPU=1 skips it on a host whose
     // driver misbehaves.
     std::printf("[T4] ComputeBackend dispatch: fail-loud when down, correct when live\n");
     {
@@ -192,13 +192,13 @@ int main() {
                 // opt-in because it killed the driver; the three bugs behind
                 // that are fixed (see the T4 header note), so skipping is now
                 // the exceptional path.
-                const char* skip_opt = std::getenv("TRANSCENDER_TEST_SKIP_LIVE_GPU");
+                const char* skip_opt = std::getenv("TRANSFORMERS_FUSION_TEST_SKIP_LIVE_GPU");
                 bool skip_live = (skip_opt && skip_opt[0] == '1');
                 if (skip_live) {
                     char msg[192];
                     std::snprintf(msg, sizeof(msg),
                                   "%s live: dispatch SKIPPED by request "
-                                  "(TRANSCENDER_TEST_SKIP_LIVE_GPU=1; presence "
+                                  "(TRANSFORMERS_FUSION_TEST_SKIP_LIVE_GPU=1; presence "
                                   "pinned, no fake pass)",
                                   be->name());
                     std::printf("  [info] %s\n", msg);

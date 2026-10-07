@@ -1,5 +1,5 @@
 // ============================================================================
-// vision.h — Vision processing types for Transcender
+// vision.h — Vision processing types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

@@ -630,8 +630,9 @@ QUANTIdxWriter::~QUANTIdxWriter() {
 
 void QUANTIdxWriter::write_idx(uint32_t version, const std::vector<std::string>& tensor_names) {
     if (!file_.is_open()) return;
-    // Header: magic "TranscenderIDX" | version | num_tensors
-    static const char MAGIC[15] = {'T','r','a','n','s','c','e','n','d','e','r','I','D','X','\0'};
+    // Header: magic "TransFormers-FusionIDX" | version | num_tensors
+    // 22B incl NUL; legacy readers accept 15B TransCenderIDX / 10B InNovaIDX.
+    static const char MAGIC[22] = {'T','r','a','n','s','F','o','r','m','e','r','s','-','F','u','s','i','o','n','I','D','X'};
     file_.write(MAGIC, 15);
     file_.write((const char*)&version, sizeof(version));
     uint32_t num = (uint32_t)tensor_names.size();
@@ -669,12 +670,14 @@ QUANTIdxReader::QUANTIdxReader(const std::string& path)
     mapped_file_ = mf;
     data_ = mapped_file_->ptr();
     file_size_ = mapped_file_->size();
-    // Magic: "TranscenderIDX" (15B, current) or legacy "InNovaIDX" (10B).
-    // Reader accepts both; writer always emits current. Minimum size uses legacy.
+    // Magic: "TransFormers-FusionIDX" (22B, current), legacy "TransCenderIDX"
+    // (15B) or "InNovaIDX" (10B). Reader accepts all; writer emits current.
+    // Minimum size uses legacy.
     // P0 hardening: every early return after ownership transfer nulls
     // mapped_file_ — otherwise ~QUANTIdxReader double-frees the dangling ptr.
     if (file_size_ < 18) { delete mf; mapped_file_ = nullptr; return; }
-    if (memcmp(data_, "TranscenderIDX", 14) == 0) { magic_size_ = 15; }
+    if (memcmp(data_, "TransFormers-FusionIDX", 21) == 0) { magic_size_ = 22; }
+    else if (memcmp(data_, "TransCenderIDX", 14) == 0) { magic_size_ = 15; }
     else if (memcmp(data_, "InNovaIDX", 9) == 0) { magic_size_ = 10; }
     else { data_ = nullptr; delete mf; mapped_file_ = nullptr; return; }
     size_t off = magic_size_;

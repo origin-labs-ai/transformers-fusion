@@ -145,7 +145,7 @@ std::string SimpleJSON::escape(const std::string& s) {
 
 HTTPClient::HTTPClient() : session_(nullptr) {
 #if defined(_WIN32)
-    session_ = WinHttpOpen(L"Transcender/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY,
+    session_ = WinHttpOpen(L"TransFormers-Fusion/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY,
                            WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 #else
     // POSIX: all transfers go through the curl subprocess (get_binary and

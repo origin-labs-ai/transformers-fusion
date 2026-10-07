@@ -168,7 +168,7 @@ static void test_novograd() {
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    printf("Transcender — Optimizer Test Suite\n");
+    printf("TransFormers-Fusion — Optimizer Test Suite\n");
     printf("==========================================\n");
 
     test_adamw();

@@ -15,7 +15,7 @@
 namespace quant {
 namespace kernel {
 
-// Q24 format (Transcender custom FP24):
+// Q24 format (TransFormers-Fusion custom FP24):
 // Byte 0: exponent (8 bits, same as FP32 exponent, biased by 127)
 // Byte 1-2: mantissa (16 bits, top 16 of 23 FP32 mantissa bits)
 // Sign is stored in the MSB of the exponent byte (bit 7)

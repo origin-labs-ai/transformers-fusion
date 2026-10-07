@@ -187,7 +187,7 @@ static void test_sentencepiece_tsv() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Transcender - Wave 7 Missing Modules (L079) + SP (L072) Suite\n");
+    printf("TransFormers-Fusion - Wave 7 Missing Modules (L079) + SP (L072) Suite\n");
     printf("=============================================================\n");
 
     test_world_model_legacy();

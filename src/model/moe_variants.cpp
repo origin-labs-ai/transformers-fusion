@@ -1258,7 +1258,7 @@ MoEOutput QuantMoE::forward(const Tensor& x) {
     return out;
 }
 
-// 23. QUANT1 MoE
+// 23. Q1 MoE
 Quant1MoE::Quant1MoE(int64_t hidden, const MoEAllConfig& cfg)
     : config(cfg), hidden_size(hidden), router(hidden, cfg.num_experts) {
     experts = create_experts(cfg.num_experts, hidden, cfg.expert_hidden_size, Activation::SiLU);
@@ -1294,8 +1294,8 @@ MoEOutput Quant1MoE::forward(const Tensor& x) {
     return out;
 }
 
-// 24. QUANT8 MoE — codebook quantized experts
-QUANT8MoE::QUANT8MoE(int64_t hidden, const MoEAllConfig& cfg)
+// 24. Q8 MoE — codebook quantized experts
+Q8MoE::Q8MoE(int64_t hidden, const MoEAllConfig& cfg)
     : config(cfg), hidden_size(hidden), router(hidden, cfg.num_experts) {
     experts = create_experts(cfg.num_experts, hidden, cfg.expert_hidden_size, Activation::SiLU);
     codebooks.resize(cfg.num_experts);
@@ -1306,7 +1306,7 @@ QUANT8MoE::QUANT8MoE(int64_t hidden, const MoEAllConfig& cfg)
     }
 }
 
-MoEOutput QUANT8MoE::forward(const Tensor& x) {
+MoEOutput Q8MoE::forward(const Tensor& x) {
     int64_t B = x.dim(0), S = x.dim(1), D = hidden_size;
     int64_t T = B * S, E = config.num_experts, K = config.top_k;
     Tensor x_flat = x.reshape({T, D});
@@ -1336,8 +1336,8 @@ MoEOutput QUANT8MoE::forward(const Tensor& x) {
     return out;
 }
 
-// 25. QUANT4 MoE — 4-bit codebook quantized experts
-QUANT4MoE::QUANT4MoE(int64_t hidden, const MoEAllConfig& cfg)
+// 25. Q4 MoE — 4-bit codebook quantized experts
+Q4MoE::Q4MoE(int64_t hidden, const MoEAllConfig& cfg)
     : config(cfg), hidden_size(hidden), router(hidden, cfg.num_experts) {
     experts = create_experts(cfg.num_experts, hidden, cfg.expert_hidden_size, Activation::SiLU);
     codebooks.resize(cfg.num_experts);
@@ -1348,7 +1348,7 @@ QUANT4MoE::QUANT4MoE(int64_t hidden, const MoEAllConfig& cfg)
     }
 }
 
-MoEOutput QUANT4MoE::forward(const Tensor& x) {
+MoEOutput Q4MoE::forward(const Tensor& x) {
     int64_t B = x.dim(0), S = x.dim(1), D = hidden_size;
     int64_t T = B * S, E = config.num_experts, K = config.top_k;
     Tensor x_flat = x.reshape({T, D});

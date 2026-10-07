@@ -1,3 +1,0 @@
-reference=thecodacus/llama.cpp:fable5/prefetch-experts
-commit=5e7f6271c06b9104862ab799278a1b7f1323a449
-retrieved_utc=2026-08-17T14:06:41.2106154Z

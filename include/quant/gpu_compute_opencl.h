@@ -16,6 +16,21 @@ public:
     void copy_to_host(void* dst, const void* src, size_t size);
 
     void launch_gemm(int m, int n, int k, const float* a, const float* b, float* c);
+    void launch_gemv(int m, int n, const float* a, const float* x, float* y);
+    void launch_relu(int n, const float* x, float* y);
+    void launch_gelu(int n, const float* x, float* y);
+    void launch_silu(int n, const float* x, float* y);
+    void launch_add(int n, const float* a, const float* b, float* c);
+    void launch_mul(int n, const float* a, const float* b, float* c);
+    void launch_scale(int n, float s, const float* x, float* y);
+    void launch_softmax(int rows, int cols, const float* x, float* y);
+    void launch_rms_norm(int rows, int cols, const float* x, const float* g, float eps, float* y);
+    void launch_layer_norm(int rows, int cols, const float* x, const float* g, const float* b, float eps, float* y);
+    void run_norm_impl(const char* src, const char* name, int op, float eps,
+                       int rows, int cols, const float* x, const float* g,
+                       const float* b, float* y);
+    void run_elt_impl(const char* src, const char* name, int op, float s, int n,
+                      const float* a, const float* b, float* c);
 
 private:
     void* lib_handle_;

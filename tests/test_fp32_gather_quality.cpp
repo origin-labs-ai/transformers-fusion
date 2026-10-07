@@ -11,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << " Transcender FP32 Codebook Gather Quality Test" << std::endl;
+    std::cout << " TransFormers-Fusion FP32 Codebook Gather Quality Test" << std::endl;
     std::cout << "=========================================" << std::endl;
 
     std::cout << "[Test 1] Verifying FP32 centroid gather precision..." << std::endl;

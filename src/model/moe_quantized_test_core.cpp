@@ -373,11 +373,11 @@ bool test_moe_variant_routing() {
         report("Q1_MOE", ok);
     }
 
-    // 24. QUANT8_MOE
+    // 24. Q8_MOE
     {
         MoEAllConfig cfg;
         cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT8MoE moe(D, cfg);
+        Q8MoE moe(D, cfg);
         MoEOutput out = moe.forward(x);
         bool ok = out.output.shape().dims[0] == B && out.output.shape().dims[1] == S && out.output.shape().dims[2] == D;
         ok = ok && check_finite(out.output);
@@ -386,14 +386,14 @@ bool test_moe_variant_routing() {
         ok = ok && moe.compute_capacity(T) >= 1;
         auto w = moe.export_weights();
         ok = ok && !w.empty();
-        report("QUANT8_MOE", ok);
+        report("Q8_MOE", ok);
     }
 
-    // 25. QUANT4_MOE
+    // 25. Q4_MOE
     {
         MoEAllConfig cfg;
         cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT4MoE moe(D, cfg);
+        Q4MoE moe(D, cfg);
         MoEOutput out = moe.forward(x);
         bool ok = out.output.shape().dims[0] == B && out.output.shape().dims[1] == S && out.output.shape().dims[2] == D;
         ok = ok && check_finite(out.output);
@@ -405,7 +405,7 @@ bool test_moe_variant_routing() {
         moe.import_weights(w);
         auto w2 = moe.export_weights();
         ok = ok && w.size() == w2.size();
-        report("QUANT4_MOE", ok);
+        report("Q4_MOE", ok);
     }
 
     // 26. MMoE (Multi-gate with task_id)
@@ -609,17 +609,17 @@ bool test_moe_load_balance_loss() {
     }
     {
         MoEAllConfig cfg; cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT8MoE moe(D, cfg);
+        Q8MoE moe(D, cfg);
         MoEOutput out = moe.forward(x);
         float lb = moe.load_balance_loss(out.router_logits);
-        test_lb_equality("QUANT8_MOE", lb, 0.0f, 10.0f);
+        test_lb_equality("Q8_MOE", lb, 0.0f, 10.0f);
     }
     {
         MoEAllConfig cfg; cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT4MoE moe(D, cfg);
+        Q4MoE moe(D, cfg);
         MoEOutput out = moe.forward(x);
         float lb = moe.load_balance_loss(out.router_logits);
-        test_lb_equality("QUANT4_MOE", lb, 0.0f, 10.0f);
+        test_lb_equality("Q4_MOE", lb, 0.0f, 10.0f);
     }
     printf("=== Load Balance Loss Test Complete ===\n");
     return true;

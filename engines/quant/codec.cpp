@@ -9,14 +9,14 @@
 namespace quant {
 namespace quant8 {
 
-QUANT8Encoder::QUANT8Encoder(const CodecConfig& cfg)
+Q8Encoder::Q8Encoder(const CodecConfig& cfg)
     : config_(cfg) {}
 
-CodecConfig QUANT8Encoder::config() const {
+CodecConfig Q8Encoder::config() const {
     return config_;
 }
 
-EncodedBlock QUANT8Encoder::encode(const float* weights, uint32_t num_weights, uint32_t block_id) {
+EncodedBlock Q8Encoder::encode(const float* weights, uint32_t num_weights, uint32_t block_id) {
     EncodedBlock block;
     block.block_id = block_id;
     block.num_weights = num_weights;
@@ -31,7 +31,7 @@ EncodedBlock QUANT8Encoder::encode(const float* weights, uint32_t num_weights, u
     return block;
 }
 
-std::vector<EncodedBlock> QUANT8Encoder::encode_tensor(const Tensor& t, const std::string& name) {
+std::vector<EncodedBlock> Q8Encoder::encode_tensor(const Tensor& t, const std::string& name) {
     const float* data = t.data<float>();
     uint32_t total = static_cast<uint32_t>(t.numel());
     uint32_t bs = static_cast<uint32_t>(config_.block_size);
@@ -47,9 +47,9 @@ std::vector<EncodedBlock> QUANT8Encoder::encode_tensor(const Tensor& t, const st
     return blocks;
 }
 
-QUANT8Decoder::QUANT8Decoder() {}
+Q8Decoder::Q8Decoder() {}
 
-Tensor QUANT8Decoder::decode(const EncodedBlock& block) {
+Tensor Q8Decoder::decode(const EncodedBlock& block) {
     Tensor out(Shape(static_cast<int64_t>(block.num_weights)), DType::F32);
     float* out_data = out.data<float>();
 
@@ -60,7 +60,7 @@ Tensor QUANT8Decoder::decode(const EncodedBlock& block) {
     return out;
 }
 
-Tensor QUANT8Decoder::decode_blocks(const std::vector<EncodedBlock>& blocks, const Shape& original_shape) {
+Tensor Q8Decoder::decode_blocks(const std::vector<EncodedBlock>& blocks, const Shape& original_shape) {
     int64_t total = original_shape.numel();
     Tensor out(Shape(total), DType::F32);
     float* out_data = out.data<float>();

@@ -9,16 +9,16 @@ namespace quant {
 namespace engines {
 
 // ===========================================================================
-// QUANT8 Engine: 256-entry FP32 codebook, 8-bit indices
+// Q8 Engine: 256-entry FP32 codebook, 8-bit indices
 // ===========================================================================
 
-QUANT8Engine::QUANT8Engine() {
+Q8Engine::Q8Engine() {
     codebook_.resize(256);
     for (int i = 0; i < 256; ++i)
         codebook_[(size_t)i] = (float)(i - 128) * 0.01f;
 }
 
-void QUANT8Engine::train_codebook(const float* data, int64_t n) {
+void Q8Engine::train_codebook(const float* data, int64_t n) {
     for (int iter = 0; iter < 10; ++iter) {
         std::vector<int> counts(256, 0);
         std::vector<double> sums(256, 0.0);
@@ -39,7 +39,7 @@ void QUANT8Engine::train_codebook(const float* data, int64_t n) {
     }
 }
 
-void QUANT8Engine::train_codebook_per_block(const float* data, int64_t n,
+void Q8Engine::train_codebook_per_block(const float* data, int64_t n,
                                            int64_t block_size, int lloyd_iters) {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -89,7 +89,7 @@ void QUANT8Engine::train_codebook_per_block(const float* data, int64_t n,
     }
 }
 
-void QUANT8Engine::quantize_per_block(const float* data, int64_t n, int64_t block_size,
+void Q8Engine::quantize_per_block(const float* data, int64_t n, int64_t block_size,
                                      uint8_t* indices_out, float* scales_out) const {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -118,7 +118,7 @@ void QUANT8Engine::quantize_per_block(const float* data, int64_t n, int64_t bloc
     }
 }
 
-void QUANT8Engine::dequantize_per_block(const uint8_t* indices, const float* scales,
+void Q8Engine::dequantize_per_block(const uint8_t* indices, const float* scales,
                                        int64_t n, int64_t block_size, float* out) const {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -133,7 +133,7 @@ void QUANT8Engine::dequantize_per_block(const uint8_t* indices, const float* sca
     }
 }
 
-uint8_t QUANT8Engine::quantize(float val) const {
+uint8_t Q8Engine::quantize(float val) const {
     if (!use_stochastic_) {
         int best = 0;
         float best_dist = 1e10f;
@@ -175,11 +175,11 @@ uint8_t QUANT8Engine::quantize(float val) const {
     return (uint8_t)(r < p_far ? i2 : i1);
 }
 
-float QUANT8Engine::dequantize(uint8_t idx) const {
+float Q8Engine::dequantize(uint8_t idx) const {
     return codebook_[(size_t)idx];
 }
 
-Tensor QUANT8Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
+Tensor Q8Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
     Tensor out({n});
     float* od = out.data<float>();
 #ifdef QUANT_HAS_AVX2
@@ -194,10 +194,10 @@ Tensor QUANT8Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
 }
 
 // ===========================================================================
-// QUANT8 Engine: Extensions
+// Q8 Engine: Extensions
 // ===========================================================================
 
-Tensor QUANT8Engine::quantize_tensor(const float* data, int64_t n) const {
+Tensor Q8Engine::quantize_tensor(const float* data, int64_t n) const {
     Tensor out({n}, quant::DType::U8);
     uint8_t* od = out.data<uint8_t>();
     for (int64_t i = 0; i < n; ++i)
@@ -205,7 +205,7 @@ Tensor QUANT8Engine::quantize_tensor(const float* data, int64_t n) const {
     return out;
 }
 
-Tensor QUANT8Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
+Tensor Q8Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
                                int64_t M, int64_t N, int64_t K) const {
     Tensor C({M, N});
     C.zero_();
@@ -226,9 +226,9 @@ Tensor QUANT8Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
     return C;
 }
 
-void QUANT8Engine::quantize_per_channel(const Tensor& t, int channel_dim,
+void Q8Engine::quantize_per_channel(const Tensor& t, int channel_dim,
                                        Tensor& q, Tensor& scales) const {
-    QUANT_CHECK(t.rank() == 2, "QUANT8 per-channel expects 2D tensor");
+    QUANT_CHECK(t.rank() == 2, "Q8 per-channel expects 2D tensor");
     int64_t d0 = t.dim(0), d1 = t.dim(1);
     int64_t channels = (channel_dim == 0) ? d0 : d1;
     int64_t other = (channel_dim == 0) ? d1 : d0;
@@ -253,9 +253,9 @@ void QUANT8Engine::quantize_per_channel(const Tensor& t, int channel_dim,
     }
 }
 
-void QUANT8Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
+void Q8Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                          int channel_dim, Tensor& out) const {
-    QUANT_CHECK(q.rank() == 2, "QUANT8 dequantize_per_channel expects 2D q tensor");
+    QUANT_CHECK(q.rank() == 2, "Q8 dequantize_per_channel expects 2D q tensor");
     out = Tensor(q.shape());
     int64_t d0 = q.dim(0), d1 = q.dim(1);
     int64_t channels = (channel_dim == 0) ? d0 : d1;
@@ -272,11 +272,11 @@ void QUANT8Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
     }
 }
 
-float QUANT8Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
+float Q8Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_mse(original, reconstructed);
 }
 
-float QUANT8Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
+float Q8Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_snr(original, reconstructed);
 }
 

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TransCenderDatasetManifest (P3/P13/P14)",
+  "title": "TransFormers-FusionDatasetManifest (P3/P13/P14)",
   "description": "DRM-clean provenance gate. Every training row must pin source bytes (sha256), a license from the allow-list, and drm=false. Anything else is REJECTED by the ingest gate (see tests/test_data_trust.cpp).",
   "type": "object",
   "required": ["dataset", "commit", "rows"],

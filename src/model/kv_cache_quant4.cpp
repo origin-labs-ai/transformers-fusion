@@ -7,15 +7,15 @@
 namespace quant {
 
 // ===========================================================================
-// QUANT4KVCache — QUANT4-quantized KV cache implementation
+// Q4KVCache — Q4-quantized KV cache implementation
 // ===========================================================================
 
-QUANT4KVCache::QUANT4KVCache(int num_layers, int64_t max_seq_len, int64_t num_heads,
+Q4KVCache::Q4KVCache(int num_layers, int64_t max_seq_len, int64_t num_heads,
                            int64_t head_dim, int64_t block_size) {
     init(num_layers, max_seq_len, num_heads, head_dim, block_size);
 }
 
-void QUANT4KVCache::init(int num_layers, int64_t max_seq_len, int64_t num_heads,
+void Q4KVCache::init(int num_layers, int64_t max_seq_len, int64_t num_heads,
                          int64_t head_dim, int64_t block_size) {
     num_layers_ = num_layers;
     max_seq_len_ = max_seq_len;
@@ -33,38 +33,38 @@ void QUANT4KVCache::init(int num_layers, int64_t max_seq_len, int64_t num_heads,
         int64_t nblocks = total_blocks();
         c.k_indices.resize((size_t)((total + 1) / 2), 0);
         c.v_indices.resize((size_t)((total + 1) / 2), 0);
-        c.k_codebooks.resize((size_t)(nblocks * QUANT4_CODEBOOK_SIZE), 0);
-        c.v_codebooks.resize((size_t)(nblocks * QUANT4_CODEBOOK_SIZE), 0);
+        c.k_codebooks.resize((size_t)(nblocks * Q4_CODEBOOK_SIZE), 0);
+        c.v_codebooks.resize((size_t)(nblocks * Q4_CODEBOOK_SIZE), 0);
         c.current_pos = 0;
     }
 }
 
-int64_t QUANT4KVCache::elements_per_block() const {
+int64_t Q4KVCache::elements_per_block() const {
     return block_size_;
 }
 
-int64_t QUANT4KVCache::indices_per_token() const {
+int64_t Q4KVCache::indices_per_token() const {
     return num_heads_ * head_dim_;
 }
 
-int64_t QUANT4KVCache::total_elements() const {
+int64_t Q4KVCache::total_elements() const {
     return max_seq_len_ * num_heads_ * head_dim_;
 }
 
-int64_t QUANT4KVCache::total_blocks() const {
+int64_t Q4KVCache::total_blocks() const {
     int64_t total = total_elements();
     return (total + elements_per_block() - 1) / elements_per_block();
 }
 
-int64_t QUANT4KVCache::codebook_bytes_per_block() const {
-    return QUANT4_CODEBOOK_SIZE * 2; // 16 × FP16
+int64_t Q4KVCache::codebook_bytes_per_block() const {
+    return Q4_CODEBOOK_SIZE * 2; // 16 × FP16
 }
 
-int64_t QUANT4KVCache::index_bytes_per_block() const {
+int64_t Q4KVCache::index_bytes_per_block() const {
     return (elements_per_block() + 1) / 2;
 }
 
-int64_t QUANT4KVCache::bytes_per_block() const {
+int64_t Q4KVCache::bytes_per_block() const {
     return index_bytes_per_block() + codebook_bytes_per_block();
 }
 
@@ -87,7 +87,7 @@ void lloyd_max_16(const float* data, int64_t n, uint16_t* codebook_fp16,
     if (max_val - min_val < 1e-10f) {
         for (int64_t i = 0; i < n; i++) indices[i] = 8;
         for (int i = 0; i < 16; i++)
-            codebook_fp16[i] = CodebookQUANT4::float_to_half(min_val);
+            codebook_fp16[i] = CodebookQ4::float_to_half(min_val);
         return;
     }
 
@@ -148,25 +148,25 @@ void lloyd_max_16(const float* data, int64_t n, uint16_t* codebook_fp16,
 
     // Store as FP16
     for (int i = 0; i < 16; i++)
-        codebook_fp16[i] = CodebookQUANT4::float_to_half(centroids[i]);
+        codebook_fp16[i] = CodebookQ4::float_to_half(centroids[i]);
 }
 
 void dequantize_16(const uint8_t* indices, const uint16_t* codebook_fp16,
                     float* dst, int64_t n) {
     for (int64_t i = 0; i < n; i++) {
         uint8_t idx = indices[i] & 0x0F;
-        dst[i] = CodebookQUANT4::half_to_float(codebook_fp16[idx]);
+        dst[i] = CodebookQ4::half_to_float(codebook_fp16[idx]);
     }
 }
 
 } // anonymous namespace
 
-void QUANT4KVCache::quantize_block_quant4(const float* src, uint8_t* indices,
+void Q4KVCache::quantize_block_quant4(const float* src, uint8_t* indices,
                                         uint16_t* codebook_fp16, int64_t n) {
     lloyd_max_16(src, n, codebook_fp16, indices);
 }
 
-void QUANT4KVCache::dequantize_block_quant4(const uint8_t* indices,
+void Q4KVCache::dequantize_block_quant4(const uint8_t* indices,
                                           const uint16_t* codebook_fp16,
                                           float* dst, int64_t n) {
     dequantize_16(indices, codebook_fp16, dst, n);
@@ -204,7 +204,7 @@ void unpack_indices(const uint8_t* packed, uint8_t* raw, int64_t n) {
 // Core operations
 // ===========================================================================
 
-void QUANT4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
+void Q4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
     if (layer >= num_layers_) return;
     auto& c = caches_[layer];
 
@@ -244,7 +244,7 @@ void QUANT4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
             for (int64_t i = 0; i < chunk; i++)
                 chunk_data[i] = ksrc[src_pos + i];
 
-            std::vector<uint16_t> cb(QUANT4_CODEBOOK_SIZE);
+            std::vector<uint16_t> cb(Q4_CODEBOOK_SIZE);
             lloyd_max_16(chunk_data.data(), chunk, cb.data(), raw_indices.data());
 
             // Pack indices into 4-bit
@@ -261,9 +261,9 @@ void QUANT4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
 
             // Store codebook (only for full blocks or if it's a new block)
             if (cur_offset == 0 || c.current_pos == 0) {
-                int64_t cb_offset = cur_block_idx * QUANT4_CODEBOOK_SIZE;
+                int64_t cb_offset = cur_block_idx * Q4_CODEBOOK_SIZE;
                 std::memcpy(c.k_codebooks.data() + cb_offset, cb.data(),
-                            QUANT4_CODEBOOK_SIZE * sizeof(uint16_t));
+                            Q4_CODEBOOK_SIZE * sizeof(uint16_t));
             }
 
             // V cache: same quantization
@@ -277,9 +277,9 @@ void QUANT4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
             if (packed_size > 0)
                 std::memcpy(c.v_indices.data() + idx_bytes_offset, packed.data(), (size_t)packed_size);
 
-            int64_t cb_offset = cur_block_idx * QUANT4_CODEBOOK_SIZE;
+            int64_t cb_offset = cur_block_idx * Q4_CODEBOOK_SIZE;
             std::memcpy(c.v_codebooks.data() + cb_offset, cb.data(),
-                        QUANT4_CODEBOOK_SIZE * sizeof(uint16_t));
+                        Q4_CODEBOOK_SIZE * sizeof(uint16_t));
 
             elems_remaining -= chunk;
             src_pos += chunk;
@@ -290,7 +290,7 @@ void QUANT4KVCache::append(int layer, const Tensor& k, const Tensor& v) {
     c.current_pos += (int)seq_len;
 }
 
-std::pair<Tensor, Tensor> QUANT4KVCache::get_range(int layer, int64_t start,
+std::pair<Tensor, Tensor> Q4KVCache::get_range(int layer, int64_t start,
                                                     int64_t end) const {
     if (layer >= num_layers_) return {};
     const auto& c = caches_[layer];
@@ -335,7 +335,7 @@ std::pair<Tensor, Tensor> QUANT4KVCache::get_range(int layer, int64_t start,
             unpack_indices(packed.data(), raw_indices.data(), chunk);
 
             // Get codebook
-            int64_t cb_offset = cur_block_idx * QUANT4_CODEBOOK_SIZE;
+            int64_t cb_offset = cur_block_idx * Q4_CODEBOOK_SIZE;
             std::vector<float> deq((size_t)chunk);
             dequantize_16(raw_indices.data(), c.k_codebooks.data() + cb_offset,
                           deq.data(), chunk);
@@ -361,15 +361,15 @@ std::pair<Tensor, Tensor> QUANT4KVCache::get_range(int layer, int64_t start,
     return {k_out, v_out};
 }
 
-std::pair<Tensor, Tensor> QUANT4KVCache::get_all(int layer) const {
+std::pair<Tensor, Tensor> Q4KVCache::get_all(int layer) const {
     return get_range(layer, 0, caches_[layer].current_pos);
 }
 
-int QUANT4KVCache::context_len() const {
+int Q4KVCache::context_len() const {
     return caches_.empty() ? 0 : caches_[0].current_pos;
 }
 
-size_t QUANT4KVCache::size_bytes() const {
+size_t Q4KVCache::size_bytes() const {
     size_t total = 0;
     for (auto& c : caches_) {
         total += c.k_indices.size() + c.v_indices.size();
@@ -379,20 +379,20 @@ size_t QUANT4KVCache::size_bytes() const {
     return total;
 }
 
-size_t QUANT4KVCache::size_bytes_fp32_equivalent() const {
+size_t Q4KVCache::size_bytes_fp32_equivalent() const {
     int64_t per_token = num_heads_ * head_dim_;
     int64_t tokens = caches_.empty() ? 0 : caches_[0].current_pos;
     return (size_t)(tokens * per_token * 2 * sizeof(float));
 }
 
-double QUANT4KVCache::compression_ratio() const {
+double Q4KVCache::compression_ratio() const {
     size_t fp32_eq = size_bytes_fp32_equivalent();
     size_t quant4 = size_bytes();
     if (quant4 == 0) return 0.0;
     return (double)fp32_eq / (double)quant4;
 }
 
-void QUANT4KVCache::clear() {
+void Q4KVCache::clear() {
     for (auto& c : caches_) {
         std::fill(c.k_indices.begin(), c.k_indices.end(), 0);
         std::fill(c.v_indices.begin(), c.v_indices.end(), 0);
@@ -402,7 +402,7 @@ void QUANT4KVCache::clear() {
     }
 }
 
-void QUANT4KVCache::resize(int64_t new_max_seq_len) {
+void Q4KVCache::resize(int64_t new_max_seq_len) {
     max_seq_len_ = new_max_seq_len;
     for (int i = 0; i < num_layers_; i++) {
         auto& c = caches_[i];
@@ -410,8 +410,8 @@ void QUANT4KVCache::resize(int64_t new_max_seq_len) {
         int64_t nblocks = total_blocks();
         c.k_indices.resize((size_t)((total + 1) / 2), 0);
         c.v_indices.resize((size_t)((total + 1) / 2), 0);
-        c.k_codebooks.resize((size_t)(nblocks * QUANT4_CODEBOOK_SIZE), 0);
-        c.v_codebooks.resize((size_t)(nblocks * QUANT4_CODEBOOK_SIZE), 0);
+        c.k_codebooks.resize((size_t)(nblocks * Q4_CODEBOOK_SIZE), 0);
+        c.v_codebooks.resize((size_t)(nblocks * Q4_CODEBOOK_SIZE), 0);
         c.current_pos = 0;
     }
 }

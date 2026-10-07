@@ -1,6 +1,6 @@
 #pragma once
 // ============================================================================
-// constants.h — Named Constants for Transcender
+// constants.h — Named Constants for TransFormers-Fusion
 // ============================================================================
 // Eliminates magic numbers across the entire codebase.
 // Every numeric literal with semantic meaning lives here.
@@ -33,14 +33,14 @@ constexpr int64_t LARGE_MODEL_PARAMS   = 7'000'000'000LL; // 7B
 
 // ── Quantization Constants ────────────────────────────────────────────────
 
-constexpr int    QUANT4_CODEBOOK_SIZE    = 16;
-constexpr int    QUANT8_CODEBOOK_SIZE    = 256;
+constexpr int    Q4_CODEBOOK_SIZE    = 16;
+constexpr int    Q8_CODEBOOK_SIZE    = 256;
 constexpr int    Q1_CENTROIDS        = 1;
 constexpr int    Q2_CENTROIDS        = 4;
-constexpr int    QUANT4_CENTROIDS        = 16;
-constexpr int    QUANT8_CENTROIDS        = 256;
+constexpr int    Q4_CENTROIDS        = 16;
+constexpr int    Q8_CENTROIDS        = 256;
 constexpr int    Q1_5_CENTROIDS    = 4;
-constexpr int    QUANT16_CENTROIDS       = 0;    // QUANT16 stores raw FP16, no centroids
+constexpr int    Q16_CENTROIDS       = 0;    // Q16 stores raw FP16, no centroids
 constexpr int    QUANT_FORMAT_COUNT      = 15;
 
 constexpr float  FP16_MAX_VALUE        = 65504.0f;

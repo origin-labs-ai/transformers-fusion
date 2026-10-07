@@ -3,7 +3,7 @@
 // continual_engine.h — Continual Learning Engine
 // ============================================================================
 // Production continual learning system with:
-//   - CompressedReplayBuffer (QUANT4 quantized replay)
+//   - CompressedReplayBuffer (Q4 quantized replay)
 //   - ECC (Elastic Weight Consolidation) integration
 //   - Forgetting benchmark
 //   - Theorems 11 & 12 proofs
@@ -11,7 +11,7 @@
 
 #include "quant/types.h"
 #include "quant/format_registry.h"
-#include "quant/sops_integration.h"
+#include "quant/inferno_integration.h"
 #include "quant/thread_safety.h"
 #include <vector>
 #include <cstdint>
@@ -23,7 +23,7 @@
 namespace quant {
 
 // ── Compressed Replay Buffer ──────────────────────────────────────────────
-// Stores replay samples in QUANT4-quantized form to save memory.
+// Stores replay samples in Q4-quantized form to save memory.
 // Fisher-weighted importance sampling for retrieval.
 
 struct CompressedReplayEntry {

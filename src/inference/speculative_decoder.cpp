@@ -112,11 +112,11 @@ SpeculativeDecoder::StepResult SpeculativeDecoder::decode_step(
         if (draft_token == target_token) {
             context.push_back(draft_token);
             result.tokens_accepted.push_back(draft_token);
-            sops_hook_speculative_accept(1);
+            inferno_hook_speculative_accept(1);
         } else {
             context.push_back(target_token);
             result.tokens_rejected++;
-            sops_hook_speculative_propose(1);
+            inferno_hook_speculative_propose(1);
             // Reject path: rewind the KV cache to the checkpoint so rejected
             // draft rows never leak into later steps (truncate = exact).
             rewind_kv(cache, ckpt, start_len + result.tokens_accepted.size());
@@ -137,12 +137,12 @@ SpeculativeDecoder::StepResult SpeculativeDecoder::decode_step(
         acceptance_window_.erase(acceptance_window_.begin());
     }
 
-    sops_hook_draft_length_tune(
+    inferno_hook_draft_length_tune(
         cfg_.draft_k, acceptance_rate(),
         cfg_.min_draft_k, cfg_.max_draft_k,
         cfg_.target_acceptance_rate);
 
-    cfg_.draft_k = sops_global().current_draft_k.load(std::memory_order_relaxed);
+    cfg_.draft_k = inferno_global().current_draft_k.load(std::memory_order_relaxed);
 
     return result;
 }
@@ -232,7 +232,9 @@ VerificationResult SmallBatchVerifier::verify(
     result.accepted.resize(n, false);
     result.first_rejection_pos = n;
 
-    sops_hook_small_batch(format_index_, n);
+    inferno_hook_small_batch(format_index_, n);
+    result.verify_flops = (double)n * 2.0;
+    result.verify_inferno = result.verify_flops;
 
     for (int i = 0; i < n; ++i) {
         if (token_match(draft_logits[i], target_logits[i], temperature)) {

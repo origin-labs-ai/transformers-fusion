@@ -57,8 +57,8 @@ const char* moe_variant_name(MoEVariant v) {
         case MoEVariant::QUANTIZED_INT8_MOE: return "QUANTIZED_INT8_MOE";
         case MoEVariant::QUANT_MOE: return "QUANT_MOE";
         case MoEVariant::Q1_MOE: return "Q1_MOE";
-        case MoEVariant::QUANT8_MOE: return "QUANT8_MOE";
-        case MoEVariant::QUANT4_MOE: return "QUANT4_MOE";
+        case MoEVariant::Q8_MOE: return "Q8_MOE";
+        case MoEVariant::Q4_MOE: return "Q4_MOE";
         default: return "UNKNOWN";
     }
 }
@@ -537,13 +537,13 @@ std::unique_ptr<void, void(*)(void*)> create_moe_variant(MoEVariant variant, int
             auto* p = new Quant1MoE(hidden, cfg);
             return {p, [](void* v) { delete static_cast<Quant1MoE*>(v); }};
         }
-        case MoEVariant::QUANT8_MOE: {
-            auto* p = new QUANT8MoE(hidden, cfg);
-            return {p, [](void* v) { delete static_cast<QUANT8MoE*>(v); }};
+        case MoEVariant::Q8_MOE: {
+            auto* p = new Q8MoE(hidden, cfg);
+            return {p, [](void* v) { delete static_cast<Q8MoE*>(v); }};
         }
-        case MoEVariant::QUANT4_MOE: {
-            auto* p = new QUANT4MoE(hidden, cfg);
-            return {p, [](void* v) { delete static_cast<QUANT4MoE*>(v); }};
+        case MoEVariant::Q4_MOE: {
+            auto* p = new Q4MoE(hidden, cfg);
+            return {p, [](void* v) { delete static_cast<Q4MoE*>(v); }};
         }
         default:
             return std::unique_ptr<void, void(*)(void*)>(nullptr, [](void*){});

@@ -58,7 +58,7 @@ int detect_cpu_isa() {
     return (val == 0) ? -1.0f : (val == 1) ? 0.0f : 1.0f;
 }
 
-// ── QUANT4 helpers ───────────────────────────────────────────────────────────
+// ── Q4 helpers ───────────────────────────────────────────────────────────
 
 // FP16 bits -> float — see quant/detail/fp16.h (DEDUP).
 using quant::detail::fp16_to_float;

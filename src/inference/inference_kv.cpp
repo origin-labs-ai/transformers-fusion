@@ -15,7 +15,7 @@
 namespace quant {
 
 // ===========================================================================
-// D4: Compressed KV cache — QUANT4 QUANT encoding
+// D4: Compressed KV cache — Q4 QUANT encoding
 // ===========================================================================
 CompressedKVCache::CompressedKVCache(int64_t max_seq, int64_t n_layers, int64_t head_dim)
     : max_seq_(max_seq), n_layers_(n_layers), head_dim_(head_dim) {
@@ -35,7 +35,7 @@ void CompressedKVCache::append(int layer, const Tensor& k, const Tensor& v) {
     const float* kd = k.data<float>();
     const float* vd = v.data<float>();
     for (int64_t i = 0; i < n; i++) {
-        // QUANT4 QUANT: 2-bit per element, packed 4 per byte
+        // Q4 QUANT: 2-bit per element, packed 4 per byte
         // 00 = -1, 01 = 0, 10 = +1, 11 = unused
         // Use threshold of 0.1 * max_abs to determine zero
         int8_t k_ter = (kd[i] > 0.1f) ? 1 : ((kd[i] < -0.1f) ? -1 : 0);

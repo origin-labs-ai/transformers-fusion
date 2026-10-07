@@ -1,5 +1,5 @@
 // ============================================================================
-// video.h — Video processing types for Transcender
+// video.h — Video processing types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

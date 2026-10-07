@@ -1,5 +1,5 @@
 // ============================================================================
-// embeddings.h — Embedding model types for Transcender
+// embeddings.h — Embedding model types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

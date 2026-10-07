@@ -24,9 +24,9 @@ static float max_abs_err(const float* a, const float* b, int64_t n) {
     return m;
 }
 
-// Append helper: QUANT4KVCache::append reads k.shape().dims[2] as seq_len and
+// Append helper: Q4KVCache::append reads k.shape().dims[2] as seq_len and
 // expects at least seq_len * num_heads * head_dim floats (layout {1,H,S,D}).
-static void append_tokens(quant::QUANT4KVCache& cache, int layer,
+static void append_tokens(quant::Q4KVCache& cache, int layer,
                           const std::vector<float>& k_all,
                           const std::vector<float>& v_all,
                           int64_t num_heads, int64_t head_dim, int64_t seq_len) {
@@ -47,10 +47,10 @@ void test_block_roundtrip_full() {
     for (int64_t i = 0; i < n; i++) src[i] = (float)(i % 9 - 4) * 0.25f;
     std::vector<uint8_t> idx((size_t)n, 0);
     std::vector<uint16_t> cb(16, 0);
-    quant::QUANT4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), n);
+    quant::Q4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), n);
     for (int64_t i = 0; i < n; i++) assert((idx[(size_t)i] & 0xF0) == 0);
     std::vector<float> dst((size_t)n, 0.0f);
-    quant::QUANT4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), n);
+    quant::Q4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), n);
     for (int64_t i = 0; i < n; i++) assert(std::isfinite(dst[(size_t)i]));
     assert(max_abs_err(src.data(), dst.data(), n) < 0.6f);
 }
@@ -62,9 +62,9 @@ void test_block_roundtrip_partial() {
         for (int64_t i = 0; i < n; i++) src[i] = (float)(i % 5 - 2) * 0.3f + 0.1f;
         std::vector<uint8_t> idx((size_t)n, 0);
         std::vector<uint16_t> cb(16, 0);
-        quant::QUANT4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), n);
+        quant::Q4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), n);
         std::vector<float> dst((size_t)n, 0.0f);
-        quant::QUANT4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), n);
+        quant::Q4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), n);
         for (int64_t i = 0; i < n; i++) assert(std::isfinite(dst[(size_t)i]));
         assert(max_abs_err(src.data(), dst.data(), n) < 0.6f);
     }
@@ -73,9 +73,9 @@ void test_block_roundtrip_partial() {
         std::vector<float> src(7, 0.5f);
         std::vector<uint8_t> idx(7, 0);
         std::vector<uint16_t> cb(16, 0);
-        quant::QUANT4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), 7);
+        quant::Q4KVCache::quantize_block_quant4(src.data(), idx.data(), cb.data(), 7);
         std::vector<float> dst(7, 0.0f);
-        quant::QUANT4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), 7);
+        quant::Q4KVCache::dequantize_block_quant4(idx.data(), cb.data(), dst.data(), 7);
         for (int i = 0; i < 7; i++) assert(std::isfinite(dst[(size_t)i]));
     }
 }
@@ -84,7 +84,7 @@ void test_append_singletons_partial() {
     // per_token=12 does not divide block_size=32: each singleton lands at a
     // partial-block offset (lines 263-267: cur_offset != 0 codebook path).
     const int64_t H = 2, D = 6, per_token = H * D;
-    quant::QUANT4KVCache cache(1, 16, H, D, 32);
+    quant::Q4KVCache cache(1, 16, H, D, 32);
     for (int t = 0; t < 3; t++) {
         std::vector<float> k((size_t)per_token), v((size_t)per_token);
         for (int64_t i = 0; i < per_token; i++) {
@@ -105,7 +105,7 @@ void test_append_straddles_blocks() {
     // 5 tokens * 12 elems = 60 elems straddles the 32-elem block boundary
     // (chunk split across cur_block_idx / cur_block_idx+1).
     const int64_t H = 2, D = 6, S = 5;
-    quant::QUANT4KVCache cache(1, 16, H, D, 32);
+    quant::Q4KVCache cache(1, 16, H, D, 32);
     std::vector<float> k((size_t)(S * H * D)), v((size_t)(S * H * D));
     for (int64_t i = 0; i < S * H * D; i++) {
         k[(size_t)i] = (float)(i % 9 - 4) * 0.25f;
@@ -126,7 +126,7 @@ void test_odd_per_token_offsets() {
     // Odd per_token=7 hits the cur_offset/2 byte-truncation edge for packed
     // 4-bit indices; append must stay finite without OOB.
     const int64_t H = 1, D = 7, S = 3;
-    quant::QUANT4KVCache cache(1, 16, H, D, 32);
+    quant::Q4KVCache cache(1, 16, H, D, 32);
     std::vector<float> k((size_t)(S * H * D)), v((size_t)(S * H * D));
     for (int64_t i = 0; i < S * H * D; i++) {
         k[(size_t)i] = (float)(i % 5 - 2) * 0.3f;
@@ -145,7 +145,7 @@ void test_odd_per_token_offsets() {
 void test_tail_partial_and_clear() {
     // Total 5*12=60 elems over 32-elem blocks leaves a partial tail block.
     const int64_t H = 2, D = 6, S = 5;
-    quant::QUANT4KVCache cache(1, 5, H, D, 32);
+    quant::Q4KVCache cache(1, 5, H, D, 32);
     assert(cache.block_size() == 32);
     std::vector<float> k((size_t)(S * H * D)), v((size_t)(S * H * D));
     for (int64_t i = 0; i < S * H * D; i++) {
@@ -162,13 +162,13 @@ void test_tail_partial_and_clear() {
 }
 
 int main() {
-    std::cout << "[Test] Running QUANT4KVCache test..." << std::endl;
+    std::cout << "[Test] Running Q4KVCache test..." << std::endl;
     test_block_roundtrip_full();
     test_block_roundtrip_partial();
     test_append_singletons_partial();
     test_append_straddles_blocks();
     test_odd_per_token_offsets();
     test_tail_partial_and_clear();
-    std::cout << "QUANT4KVCache test passed!" << std::endl;
+    std::cout << "Q4KVCache test passed!" << std::endl;
     return 0;
 }

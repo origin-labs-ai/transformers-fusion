@@ -41,7 +41,7 @@ public:
     void init_weights();
     // Seeded variant (BUGFIX bug census round-14): init_weights() used
     // std::random_device, so every call produced different weights — the
-    // convergence test compared FP32 vs QUANT8 from DIFFERENT inits and went
+    // convergence test compared FP32 vs Q8 from DIFFERENT inits and went
     // flaky (delta 0.19 one run, 0.42 the next). seed=0 keeps legacy entropy;
     // tests pass an explicit seed for identical inits.
     void init_weights(uint64_t seed);

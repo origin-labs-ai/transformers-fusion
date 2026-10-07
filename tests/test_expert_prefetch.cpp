@@ -11,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "  Transcender MoE Expert Prefetching Test    " << std::endl;
+    std::cout << "  TransFormers-Fusion MoE Expert Prefetching Test    " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     constexpr int num_experts = 8;

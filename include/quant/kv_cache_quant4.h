@@ -8,7 +8,7 @@
 namespace quant {
 
 // ===========================================================================
-// QUANT4KVCache — QUANT4-quantized KV cache (4-bit indices + per-block FP16 codebook)
+// Q4KVCache — Q4-quantized KV cache (4-bit indices + per-block FP16 codebook)
 //
 // Memory layout per block:
 //   - indices:  (block_elements + 1) / 2 bytes  (4-bit packed, 2 per byte)
@@ -22,10 +22,10 @@ namespace quant {
 // Larger blocks → better compression, slightly worse quality.
 // ===========================================================================
 
-class QUANT4KVCache {
+class Q4KVCache {
 public:
-    QUANT4KVCache() = default;
-    QUANT4KVCache(int num_layers, int64_t max_seq_len, int64_t num_heads,
+    Q4KVCache() = default;
+    Q4KVCache(int num_layers, int64_t max_seq_len, int64_t num_heads,
                 int64_t head_dim, int64_t block_size = 64);
 
     void init(int num_layers, int64_t max_seq_len, int64_t num_heads,
@@ -55,7 +55,7 @@ public:
                                        const uint16_t* codebook_fp16,
                                        float* dst, int64_t n);
 
-    static constexpr int QUANT4_CODEBOOK_SIZE = 16;
+    static constexpr int Q4_CODEBOOK_SIZE = 16;
 
 private:
     struct LayerCache {

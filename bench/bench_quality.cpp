@@ -47,7 +47,7 @@ static double cosine_sim(const float* a, const float* b, int64_t n) {
 }
 
 // ---------------------------------------------------------------------------
-// Quantize float array to QUANT8 (8-bit codebook lookup)
+// Quantize float array to Q8 (8-bit codebook lookup)
 // ---------------------------------------------------------------------------
 static void quantize_quant8(const float* src, uint8_t* dst,
                            const float* codebook, int64_t n) {
@@ -67,7 +67,7 @@ static void quantize_quant8(const float* src, uint8_t* dst,
 }
 
 // ---------------------------------------------------------------------------
-// Quantize float array to QUANT4 (4-bit codebook lookup, 16 entries)
+// Quantize float array to Q4 (4-bit codebook lookup, 16 entries)
 // ---------------------------------------------------------------------------
 static void quantize_quant4(const float* src, uint8_t* dst,
                            const float* codebook, int64_t n) {
@@ -100,7 +100,7 @@ static void quantize_quant(const float* src, int8_t* dst, int64_t n) {
 }
 
 // ---------------------------------------------------------------------------
-// Quantize to QUANT1: {-1, +1}
+// Quantize to Q1: {-1, +1}
 // ---------------------------------------------------------------------------
 static void quantize_quant1(const float* src, int8_t* dst, int64_t n) {
     for (int64_t i = 0; i < n; i++) {
@@ -116,7 +116,7 @@ static void dequantize_quant(const int8_t* src, float* dst, int64_t n) {
 }
 
 // ---------------------------------------------------------------------------
-// Dequantize QUANT1 back to float
+// Dequantize Q1 back to float
 // ---------------------------------------------------------------------------
 static void dequantize_quant1(const int8_t* src, float* dst, int64_t n) {
     for (int64_t i = 0; i < n; i++) dst[i] = (float)src[i];
@@ -208,7 +208,7 @@ int main() {
     }
 
     {
-        // QUANT8
+        // Q8
         std::vector<uint8_t> indices(N);
         std::vector<float> decoded(N);
 
@@ -221,7 +221,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "QUANT8";
+        r.format = "Q8";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -232,7 +232,7 @@ int main() {
     }
 
     {
-        // QUANT4
+        // Q4
         std::vector<uint8_t> packed((N + 1) / 2, 0);
         std::vector<float> decoded(N, 0.0f);
 
@@ -248,7 +248,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "QUANT4";
+        r.format = "Q4";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -283,7 +283,7 @@ int main() {
     }
 
     {
-        // QUANT1
+        // Q1
         std::vector<int8_t> indices(N);
         std::vector<float> decoded(N);
 
@@ -296,7 +296,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "QUANT1";
+        r.format = "Q1";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -320,10 +320,10 @@ int main() {
     for (auto& r : results) {
         float bpw = 0.0f;
         if (r.format == "FP32")        bpw = 32.0f;
-        if (r.format == "QUANT8")        bpw = 8.0f;
-        if (r.format == "QUANT4")        bpw = 4.0f;
+        if (r.format == "Q8")        bpw = 8.0f;
+        if (r.format == "Q4")        bpw = 4.0f;
         if (r.format == "BITNET_158")  bpw = 1.585f;  // log2(3) for ternary
-        if (r.format == "QUANT1")        bpw = 1.0f;
+        if (r.format == "Q1")        bpw = 1.0f;
 
         std::cout << std::left
                   << std::setw(12) << r.format
@@ -363,10 +363,10 @@ int main() {
     for (auto& r : results) {
         float bpw = 0.0f;
         if (r.format == "FP32")        bpw = 32.0f;
-        if (r.format == "QUANT8")        bpw = 8.0f;
-        if (r.format == "QUANT4")        bpw = 4.0f;
+        if (r.format == "Q8")        bpw = 8.0f;
+        if (r.format == "Q4")        bpw = 4.0f;
         if (r.format == "BITNET_158")  bpw = 1.585f;
-        if (r.format == "QUANT1")        bpw = 1.0f;
+        if (r.format == "Q1")        bpw = 1.0f;
         double compression = 32.0 / bpw;
         std::cout << r.format << ","
                   << std::setprecision(2) << bpw << ","

@@ -11,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "  Transcender QUAD_MIX Mixed Precision Proof  " << std::endl;
+    std::cout << "  TransFormers-Fusion QUAD_MIX Mixed Precision Proof  " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     constexpr float target_bpws[7] = {3.5f, 4.5f, 6.5f, 8.5f, 12.5f, 16.5f, 24.5f};

@@ -1,7 +1,7 @@
 #undef NDEBUG   // Release defines NDEBUG (/O2 /Ob2 /DNDEBUG), which compiles every
                 // assert() below out of the binary. Tests that rely on assert()
                 // were passing vacuously; this keeps them live in Release too.
-// test_math.cpp — Unit test for Transcender math library (activations, norms, BLAS)
+// test_math.cpp — Unit test for TransFormers-Fusion math library (activations, norms, BLAS)
 #include "quant/math.h"
 #include "quant/tensor.h"
 #include "quant/test.h"
@@ -12,7 +12,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      Transcender Math Library Unit Test      " << std::endl;
+    std::cout << "      TransFormers-Fusion Math Library Unit Test      " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     constexpr int N = 256;

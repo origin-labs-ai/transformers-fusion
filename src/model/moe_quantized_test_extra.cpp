@@ -349,15 +349,15 @@ bool test_moe_routing_statistics() {
     }
     {
         MoEAllConfig cfg; cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT8MoE m(D, cfg); auto out = m.forward(x);
+        Q8MoE m(D, cfg); auto out = m.forward(x);
         out.tokens_dropped = 0;
-        check_routing_stats("QUANT8_MOE_stats", out, B, S, D, passed, total);
+        check_routing_stats("Q8_MOE_stats", out, B, S, D, passed, total);
     }
     {
         MoEAllConfig cfg; cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT4MoE m(D, cfg); auto out = m.forward(x);
+        Q4MoE m(D, cfg); auto out = m.forward(x);
         out.tokens_dropped = 0;
-        check_routing_stats("QUANT4_MOE_stats", out, B, S, D, passed, total);
+        check_routing_stats("Q4_MOE_stats", out, B, S, D, passed, total);
     }
 
     printf("=== Routing Statistics: %lld/%lld passed ===\n", passed, total);
@@ -442,8 +442,8 @@ bool test_moe_z_loss() {
     }
     {
         MoEAllConfig cfg; cfg.num_experts = 8; cfg.top_k = 2; cfg.expert_hidden_size = 256;
-        QUANT8MoE m(D, cfg); auto out = m.forward(x);
-        check_zl("QUANT8_MOE_z", m.z_loss(out.router_logits));
+        Q8MoE m(D, cfg); auto out = m.forward(x);
+        check_zl("Q8_MOE_z", m.z_loss(out.router_logits));
     }
 
     printf("=== Z-Loss Test: %lld/%lld passed ===\n", passed, total);

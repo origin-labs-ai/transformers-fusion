@@ -18,7 +18,7 @@ struct NativeTrainConfig {
     // CID allocation fractions
     float frac_quant8 = 0.01f;     // top 1% by sensitivity
     float frac_quant = 0.95f;  // middle 95%
-    // remainder (4%) → QUANT1
+    // remainder (4%) → Q1
     
     // Learning rates
     float lr_scale = 1e-4f;      // learning rate for continuous scale updates
@@ -88,7 +88,7 @@ public:
     void warmup_phase(const std::vector<std::vector<float>>& data);
 
     // Access
-    NativeQUANTWeightStore& weight_store() { return *weight_store_; }
+    NativeQWeightStore& weight_store() { return *weight_store_; }
     const NativeTrainConfig& config() const { return cfg_; }
     
 private:
@@ -109,7 +109,7 @@ private:
     
     DenseModel* model_;
     NativeTrainConfig cfg_;
-    std::unique_ptr<NativeQUANTWeightStore> weight_store_;
+    std::unique_ptr<NativeQWeightStore> weight_store_;
     
     // Gradient buffer (accumulated from model's FP32 gradients)
     std::unique_ptr<float[]> grad_buffer_;

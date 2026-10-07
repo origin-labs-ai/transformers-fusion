@@ -12,9 +12,9 @@ namespace engines {
 // Matches FormatRegistry::quantize_quant1() behavior
 // ===========================================================================
 
-Quant1Engine::Quant1Engine() {}
+Q1Engine::Q1Engine() {}
 
-Tensor Quant1Engine::quantize(const Tensor& weight) {
+Tensor Q1Engine::quantize(const Tensor& weight) {
     int64_t n = weight.numel();
     int64_t block_size = 32;
     int64_t num_blocks = (n + block_size - 1) / block_size;
@@ -31,7 +31,7 @@ Tensor Quant1Engine::quantize(const Tensor& weight) {
     return out;
 }
 
-Tensor Quant1Engine::dequantize(const Tensor& packed, float, int64_t n) {
+Tensor Q1Engine::dequantize(const Tensor& packed, float, int64_t n) {
     int64_t block_size = 32;
     int64_t num_blocks = (n + block_size - 1) / block_size;
     const float* pd = packed.data<float>();
@@ -50,15 +50,15 @@ Tensor Quant1Engine::dequantize(const Tensor& packed, float, int64_t n) {
 // Quant1 Engine: Extensions
 // ===========================================================================
 
-Tensor Quant1Engine::quantize_batch(const Tensor& t) {
+Tensor Q1Engine::quantize_batch(const Tensor& t) {
     return quantize(t);
 }
 
-Tensor Quant1Engine::dequantize_batch(const Tensor& q) {
+Tensor Q1Engine::dequantize_batch(const Tensor& q) {
     return dequantize(q, 0.0f, 0);
 }
 
-Tensor Quant1Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
+Tensor Q1Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
                                  float, int64_t M, int64_t N, int64_t K) {
     Tensor C({M, N});
     C.zero_();
@@ -81,7 +81,7 @@ Tensor Quant1Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
     return C;
 }
 
-void Quant1Engine::quantize_per_channel(const Tensor& t, int channel_dim,
+void Q1Engine::quantize_per_channel(const Tensor& t, int channel_dim,
                                           Tensor& q, Tensor& scales) {
     QUANT_CHECK(t.rank() == 2, "Quant1 per-channel expects 2D tensor");
     int64_t d0 = t.dim(0), d1 = t.dim(1);
@@ -114,7 +114,7 @@ void Quant1Engine::quantize_per_channel(const Tensor& t, int channel_dim,
     }
 }
 
-void Quant1Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
+void Q1Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                             int channel_dim, Tensor& out) {
     // NOTE (bug census round-29): validated non-unity scales here in an
     // earlier edit, but quantize_per_channel writes REAL per-channel max_abs
@@ -123,7 +123,7 @@ void Quant1Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
     // reconstructs from block means only (pre-existing lossy behavior, now
     // stated instead of hidden). channel_dim still validated (0/1 only).
     if (channel_dim != 0 && channel_dim != 1)
-        throw Error("Quant1Engine::dequantize_per_channel: channel_dim must be 0/1");
+        throw Error("Q1Engine::dequantize_per_channel: channel_dim must be 0/1");
     (void)scales; // documented-unused: block-mean reconstruction (lossy, pre-existing)
     float* od = out.data<float>();
     const float* qd = q.data<float>();
@@ -138,11 +138,11 @@ void Quant1Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
     }
 }
 
-float Quant1Engine::quant_error(const Tensor& original, const Tensor& reconstructed) {
+float Q1Engine::quant_error(const Tensor& original, const Tensor& reconstructed) {
     return compute_quant_mse(original, reconstructed);
 }
 
-float Quant1Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) {
+float Q1Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) {
     return compute_quant_snr(original, reconstructed);
 }
 

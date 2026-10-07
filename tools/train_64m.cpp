@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     printf("  64M NativeQUANT Training (1.50 BPW)\n");
     printf("  Live HuggingFace streaming — zero disk storage\n");
     printf("  64M params | 1024 tok/param | 2 epochs\n");
-    printf("  QUANT: 95%% QUANT | 4%% QUANT4 | 1%% QUANT8\n");
+    printf("  QUANT: 95%% QUANT | 4%% Q4 | 1%% Q8\n");
     printf("================================================\n\n");
 
     // ─── Model Config ──────────────────────────────────────────
@@ -115,7 +115,7 @@ BatchGenerator mixer(V);
 
     // ─── Native QUANT Weight Store ───────────────────────────────
     size_t quant_params = (size_t)total_params;
-    native::NativeQUANTWeightStore quant_store(quant_params, 128);
+    native::NativeQWeightStore quant_store(quant_params, 128);
 
     // Initialize with FP32 weights → QUANT
     {
@@ -171,11 +171,11 @@ BatchGenerator mixer(V);
         size_t quant8 = 0, quant_q0 = 0, quant4 = 0;
         for (size_t i = 0; i < quant_params; i++) {
             auto f = quant_store.get_format(i);
-            if (f == native::NativeFormat::QUANT8) quant8++;
-            else if (f == native::NativeFormat::QUANT1) quant_q0++;
+            if (f == native::NativeFormat::Q8) quant8++;
+            else if (f == native::NativeFormat::Q1) quant_q0++;
             else quant4++;
         }
-        printf("  QUANT8: %.1f%% | QUANT1: %.1f%% | QUANT4: %.1f%%\n",
+        printf("  Q8: %.1f%% | Q1: %.1f%% | Q4: %.1f%%\n",
                100.0f * quant8 / quant_params,
                100.0f * quant_q0 / quant_params,
                100.0f * quant4 / quant_params);
@@ -214,7 +214,7 @@ BatchGenerator mixer(V);
     printf("\n--- Starting NativeQUANT Training ---\n");
     printf("  Target: %lld tokens (%.1fB) | Batch: %lld × %lld\n",
            (long long)max_tokens, max_tokens / 1e9, (long long)B, (long long)S);
-    printf("  QUANT format: 95%% QUANT + 4%% QUANT4 + 1%% QUANT8 (1.50 BPW)\n\n");
+    printf("  QUANT format: 95%% QUANT + 4%% Q4 + 1%% Q8 (1.50 BPW)\n\n");
 
     RNG rng(42);
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -297,7 +297,7 @@ BatchGenerator mixer(V);
     printf("  NativeQUANT Training Complete\n");
     printf("================================================\n");
     printf("  Params:           %lld (%.1fM)\n", (long long)total_params, total_params / 1e6);
-    printf("  Format:           1.50 BPW (95%% QUANT + 4%% QUANT4 + 1%% QUANT8)\n");
+    printf("  Format:           1.50 BPW (95%% QUANT + 4%% Q4 + 1%% Q8)\n");
     printf("  Weight size:      %.2f MB\n", quant_params * 1.5f / 8.0f / 1e6f);
     printf("  Final loss:       %.4f\n", ema_loss);
     printf("  Final val_loss:   %.4f  PPL: %.2f\n", final_val, std::exp(final_val));

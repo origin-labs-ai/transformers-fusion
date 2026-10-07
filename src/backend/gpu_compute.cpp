@@ -29,7 +29,7 @@ using namespace Microsoft::WRL;
 // HLSL compute shader sources (compiled at runtime via D3DCompile)
 // ========================================================================
 
-static const char* g_gemm_cs = R"(
+static const char* g_gemm_naive_cs = R"(
 cbuffer Const : register(b0) { uint M,N,K,_p0; float alpha,beta,_p1,_p2; };
 RWStructuredBuffer<float> C : register(u0);
 StructuredBuffer<float> A : register(t0);
@@ -39,6 +39,30 @@ void main(uint3 t : SV_DispatchThreadID) {
     if(t.x>=N||t.y>=M)return; float s=0;
     for(uint i=0;i<K;i++) s+=A[t.y*K+i]*B[i*N+t.x];
     C[t.y*N+t.x]=alpha*s+beta*C[t.y*N+t.x];
+})";
+
+static const char* g_gemm_cs = R"(
+cbuffer Const : register(b0) { uint M,N,K,_p0; float alpha,beta,_p1,_p2; };
+RWStructuredBuffer<float> C : register(u0);
+StructuredBuffer<float> A : register(t0);
+StructuredBuffer<float> B : register(t1);
+groupshared float As[16][16];
+groupshared float Bs[16][16];
+[numthreads(16,16,1)]
+void main(uint3 t : SV_DispatchThreadID, uint3 g : SV_GroupThreadID, uint3 gid : SV_GroupID) {
+    uint row = gid.y * 16 + g.y;
+    uint col = gid.x * 16 + g.x;
+    float acc = 0;
+    for (uint t0 = 0; t0 < K; t0 += 16) {
+        uint aCol = t0 + g.x;
+        uint bRow = t0 + g.y;
+        As[g.y][g.x] = (row < M && aCol < K) ? A[row * K + aCol] : 0;
+        Bs[g.y][g.x] = (bRow < K && col < N) ? B[bRow * N + col] : 0;
+        GroupMemoryBarrierWithGroupSync();
+        for (uint k = 0; k < 16; ++k) acc += As[g.y][k] * Bs[k][g.x];
+        GroupMemoryBarrierWithGroupSync();
+    }
+    if (row < M && col < N) C[row * N + col] = alpha * acc + beta * C[row * N + col];
 })";
 
 static const char* g_gemv_cs = R"(
@@ -583,7 +607,7 @@ void DirectXCompute::gemm(float alpha, const void* A, const void* B, float beta,
     }
     if (!bA || !bB || !bC) return;
 
-    auto pso = impl_->make_pso(g_gemm_cs, "main");
+    auto pso = impl_->make_pso(g_gemm_naive_cs, "main");
     ID3D12Resource* uavs[] = { bC->res.Get() };
     UINT64 uavSizes[] = { bC->size };
     ID3D12Resource* srvs[] = { bA->res.Get(), bB->res.Get() };

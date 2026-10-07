@@ -2,7 +2,7 @@
 // kernel_production.h — Production SIMD kernels for QUANT inference
 // ----------------------------------------------------------------------------
 // Tiled GEMV, batch GEMV, and calibration-aware kernels for:
-//   Q1_5 (1.50-bit, 4 values/byte), QUANT4 (4-bit, 2/byte), QUANT8 (8-bit, 1/byte)
+//   Q1_5 (1.50-bit, 4 values/byte), Q4 (4-bit, 2/byte), Q8 (8-bit, 1/byte)
 //
 // ISA dispatch: AVX2 > SSE4.1 > Scalar (runtime CPU detection)
 // ============================================================================
@@ -52,7 +52,7 @@ void gemv_quant8_batch(const uint8_t* indices, const float* codebook,
 
 // ── Calibration-aware importance scoring ──────────────────────────────────
 // Given weights + sample activations, compute per-block importance scores.
-// Higher score → more important → deserves QUANT8 or QUANT4.
+// Higher score → more important → deserves Q8 or Q4.
 // importance array must be pre-allocated with num_blocks elements.
 
 void calibrate_quant_importance(const float* weights, const float* activations,

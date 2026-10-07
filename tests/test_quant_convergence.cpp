@@ -106,7 +106,7 @@ static TrainResult train_fp32(int64_t hidden, int64_t num_layers, int64_t seq_le
     return result;
 }
 
-// Train with QUANT8 quantized forward + FP32 master weights
+// Train with Q8 quantized forward + FP32 master weights
 static TrainResult train_quant8_mixed(int64_t hidden, int64_t num_layers, int64_t seq_len,
                                      int64_t vocab_size, int64_t steps, float lr) {
     quant::TransformerConfig cfg;
@@ -129,8 +129,8 @@ static TrainResult train_quant8_mixed(int64_t hidden, int64_t num_layers, int64_
         opt.add_param(p);
     }
 
-    // QUANT8 engine with stochastic rounding for zero-mean noise
-    quant::engines::QUANT8Engine quant8;
+    // Q8 engine with stochastic rounding for zero-mean noise
+    quant::engines::Q8Engine quant8;
     quant8.enable_stochastic_rounding(true, 0.5f);
 
     TrainResult result;
@@ -148,7 +148,7 @@ static TrainResult train_quant8_mixed(int64_t hidden, int64_t num_layers, int64_
         }
 
         // --- Mixed-precision forward with quantized weights ---
-        // For proof of concept: quantize each linear layer weight with QUANT8
+        // For proof of concept: quantize each linear layer weight with Q8
         // before the forward pass, then dequantize output
         // In real training: STE gradient handles this automatically
 
@@ -175,12 +175,12 @@ static TrainResult train_quant8_mixed(int64_t hidden, int64_t num_layers, int64_
     return result;
 }
 
-// Direct quantization noise analysis: measure SNR and bias for QUANT8
+// Direct quantization noise analysis: measure SNR and bias for Q8
 static void test_quant_noise_analysis() {
     printf("\n=== Quantization Noise Analysis (SNR + Bias) ===\n");
     
-    quant::engines::QUANT8Engine quant8_det;
-    quant::engines::QUANT8Engine quant8_stoch;
+    quant::engines::Q8Engine quant8_det;
+    quant::engines::Q8Engine quant8_stoch;
     quant8_stoch.enable_stochastic_rounding(true, 0.5f);
     
     std::mt19937 rng(42);
@@ -227,8 +227,8 @@ static void test_quant_noise_analysis() {
     // many draws, which is measured below across 20 codebook draws.
     printf("  Single-run |bias|: deterministic %.3e vs stochastic %.3e\n",
            std::abs(bias_det), std::abs(bias_stoch));
-    CHECK(std::isfinite(snr_det) && snr_det > 20.0, "deterministic QUANT8 SNR > 20 dB");
-    CHECK(std::isfinite(snr_stoch) && snr_stoch > 20.0, "stochastic QUANT8 SNR > 20 dB");
+    CHECK(std::isfinite(snr_det) && snr_det > 20.0, "deterministic Q8 SNR > 20 dB");
+    CHECK(std::isfinite(snr_stoch) && snr_stoch > 20.0, "stochastic Q8 SNR > 20 dB");
     // Stochastic sampling must not be materially worse than argmin. Before the
     // 2026-09-12 fix this ratio was ~99x (MSE 4.55e-01 vs 4.59e-03).
     CHECK(mse_stoch < 4.0 * mse_det, "stochastic MSE within 4x of deterministic argmin");
@@ -238,7 +238,7 @@ static void test_quant_noise_analysis() {
     double mean_bias = 0;
     int trials = 20;
     for (int t = 0; t < trials; ++t) {
-        quant::engines::QUANT8Engine engine;
+        quant::engines::Q8Engine engine;
         engine.enable_stochastic_rounding(true, 0.5f);
         engine.train_codebook(data.data(), N);
         double bias = 0;
@@ -263,7 +263,7 @@ int main() {
     test_quant_noise_analysis();
     
     // Part 2: Training convergence comparison
-    printf("\n=== Training Convergence: FP32 vs QUANT8 Mixed ===\n");
+    printf("\n=== Training Convergence: FP32 vs Q8 Mixed ===\n");
     int64_t hidden = 64;
     int64_t num_layers = 4;
     int64_t seq_len = 64;
@@ -280,13 +280,13 @@ int main() {
     printf("  Final loss: %.4f  Perplexity: %.2f  Time: %.2fs\n",
            fp32_res.final_loss, fp32_res.final_ppl, fp32_res.wall_sec);
     
-    printf("\n--- Training with QUANT8 mixed precision ---\n");
+    printf("\n--- Training with Q8 mixed precision ---\n");
     auto quant8_res = train_quant8_mixed(hidden, num_layers, seq_len, vocab_size, steps, lr);
     printf("  Final loss: %.4f  Perplexity: %.2f  Time: %.2fs\n",
            quant8_res.final_loss, quant8_res.final_ppl, quant8_res.wall_sec);
     
     printf("\n--- Convergence comparison ---\n");
-    printf("  Step   FP32 Loss   QUANT8 Loss   Delta\n");
+    printf("  Step   FP32 Loss   Q8 Loss   Delta\n");
     int64_t max_steps = std::min((int64_t)fp32_res.losses.size(),
                                   (int64_t)quant8_res.losses.size());
     for (int64_t s = 0; s < max_steps; ++s) {
@@ -305,7 +305,7 @@ int main() {
     else if (final_delta < 0.2f) printf("CLOSE TO FP32 QUALITY");
     else printf("BELOW FP32 QUALITY");
     printf(")\n");
-    printf("  Perplexity ratio (QUANT8/FP32): %.4f", ppl_ratio);
+    printf("  Perplexity ratio (Q8/FP32): %.4f", ppl_ratio);
     if (ppl_ratio < 1.05f) printf(" — WITHIN 5%% OF FP32");
     printf("\n");
 
@@ -316,9 +316,9 @@ int main() {
     // rounding fix this pair measured delta 0.3939 / ratio 1.4827 and would
     // have failed here, which is the point.
     CHECK(std::isfinite(fp32_res.final_loss), "FP32 training loss finite");
-    CHECK(std::isfinite(quant8_res.final_loss), "QUANT8 mixed training loss finite");
-    CHECK(final_delta < 0.25f, "QUANT8 mixed final loss within 0.25 of FP32");
-    CHECK(ppl_ratio < 1.15f, "QUANT8 mixed perplexity within 15% of FP32");
+    CHECK(std::isfinite(quant8_res.final_loss), "Q8 mixed training loss finite");
+    CHECK(final_delta < 0.25f, "Q8 mixed final loss within 0.25 of FP32");
+    CHECK(ppl_ratio < 1.15f, "Q8 mixed perplexity within 15% of FP32");
     
     // Part 3: Format comparison
     printf("\n=== Format Quality Comparison (theoretical SNR) ===\n");
@@ -327,17 +327,17 @@ int main() {
     printf("  +---------+--------+----------+-------------+\n");
     printf("  | FP32    | 32     | ~160     | Reference   |\n");
     printf("  | FP16    | 16     | ~96      | Near-exact  |\n");
-    printf("  | QUANT8    | 8      | ~48      | Matches(QAT)|\n");
+    printf("  | Q8    | 8      | ~48      | Matches(QAT)|\n");
     printf("  | FP8 E4  | 8      | ~42      | Good(range) |\n");
     printf("  | FP8 E5  | 8      | ~36      | Good(exp)   |\n");
-    printf("  | QUANT4    | 4      | ~24      | PEFT fine-tuning |\n");
+    printf("  | Q4    | 4      | ~24      | PEFT fine-tuning |\n");
     printf("  | QUANT   | ~1.6   | ~12      | Specialized |\n");
-    printf("  | QUANT1    | 1      | ~6       | Specialized |\n");
+    printf("  | Q1    | 1      | ~6       | Specialized |\n");
     printf("  +---------+--------+----------+-------------+\n");
     printf("\n  With stochastic rounding + STE + FP32 master weights:\n");
-    printf("  QUANT8 matches FP32 quality for training (proof above).\n");
-    printf("  QUANT4 is best for PEFT/parameter-efficient fine-tuning.\n");
-    printf("  QUANT/QUANT1 excels for extreme compression inference.\n");
+    printf("  Q8 matches FP32 quality for training (proof above).\n");
+    printf("  Q4 is best for PEFT/parameter-efficient fine-tuning.\n");
+    printf("  QUANT/Q1 excels for extreme compression inference.\n");
     printf("\nNOTE: the table above is THEORETICAL (nominal SNR per bit width), not a\n"
            "measurement. The measured numbers are the ones checked earlier in this run.\n");
 

@@ -252,7 +252,7 @@ static void test_chunked_rejected_live() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Transcender - OpenAI Server Contract (L076) Test Suite\n");
+    printf("TransFormers-Fusion - OpenAI Server Contract (L076) Test Suite\n");
     printf("======================================================\n");
 
     test_openai_error_shape();

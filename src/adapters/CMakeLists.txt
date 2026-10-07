@@ -1,5 +1,5 @@
 # ============================================================================
-# ADAPTER-EDITION — Subdirectory of main Transcender project
+# ADAPTER-EDITION — Subdirectory of main TransFormers-Fusion project
 # ----------------------------------------------------------------------------
 # Links against the parent project's already-built libraries (quant_core,
 # quant_format, quant_kernel, quant_model, quant_math).  Does NOT recompile parent
@@ -9,7 +9,7 @@
 # (scratch + continual modes) + delta-adapter host + MTP-head trainer.
 # ============================================================================
 cmake_minimum_required(VERSION 3.20)
-project(Transcender_Adapter_Edition LANGUAGES CXX)
+project(TransFormers_Fusion_Adapter_Edition LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

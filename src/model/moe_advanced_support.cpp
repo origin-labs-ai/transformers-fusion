@@ -1304,8 +1304,8 @@ void Quant1MoE::import_weights(const std::vector<uint8_t>& data) {
     std::memcpy(router.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)nr * sizeof(float));
 }
 
-// ---- QUANT8_MOE ----
-float QUANT8MoE::load_balance_loss(const Tensor& gates) const {
+// ---- Q8_MOE ----
+float Q8MoE::load_balance_loss(const Tensor& gates) const {
     int64_t T = gates.dim(0), E = gates.dim(1);
     const float* g = gates.data<float>();
     std::vector<double> frac(E, 0.0);
@@ -1328,7 +1328,7 @@ float QUANT8MoE::load_balance_loss(const Tensor& gates) const {
     return (float)(cv + codebook_entropy / ((double)E * 256.0));
 }
 
-float QUANT8MoE::z_loss(const Tensor& logits) const {
+float Q8MoE::z_loss(const Tensor& logits) const {
     const float* d = logits.data<float>();
     int64_t n = logits.numel();
     float maxv = d[0];
@@ -1339,12 +1339,12 @@ float QUANT8MoE::z_loss(const Tensor& logits) const {
     return 0.001f * lse * lse / 256.0f;
 }
 
-int64_t QUANT8MoE::compute_capacity(int64_t T) const {
+int64_t Q8MoE::compute_capacity(int64_t T) const {
     int64_t E = config.num_experts, K = config.top_k;
     return (K * T + E - 1) / E;
 }
 
-std::vector<uint8_t> QUANT8MoE::export_weights() const {
+std::vector<uint8_t> Q8MoE::export_weights() const {
     int64_t nr = router.weight.numel();
     std::vector<uint8_t> d(sizeof(int64_t) + (size_t)nr * sizeof(float));
     std::memcpy(d.data(), &nr, sizeof(int64_t));
@@ -1352,13 +1352,13 @@ std::vector<uint8_t> QUANT8MoE::export_weights() const {
     return d;
 }
 
-void QUANT8MoE::import_weights(const std::vector<uint8_t>& data) {
+void Q8MoE::import_weights(const std::vector<uint8_t>& data) {
     int64_t nr = 0; std::memcpy(&nr, data.data(), sizeof(int64_t));
     std::memcpy(router.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)nr * sizeof(float));
 }
 
-// ---- QUANT4_MOE ----
-float QUANT4MoE::load_balance_loss(const Tensor& gates) const {
+// ---- Q4_MOE ----
+float Q4MoE::load_balance_loss(const Tensor& gates) const {
     int64_t T = gates.dim(0), E = gates.dim(1);
     const float* g = gates.data<float>();
     std::vector<double> frac(E, 0.0), prob(E, 0.0);
@@ -1383,7 +1383,7 @@ float QUANT4MoE::load_balance_loss(const Tensor& gates) const {
     return (float)(loss * (double)E);
 }
 
-float QUANT4MoE::z_loss(const Tensor& logits) const {
+float Q4MoE::z_loss(const Tensor& logits) const {
     const float* d = logits.data<float>();
     int64_t n = logits.numel();
     float sum = 0.0f, maxv = d[0];
@@ -1392,12 +1392,12 @@ float QUANT4MoE::z_loss(const Tensor& logits) const {
     return mean_abs * maxv / 16.0f;
 }
 
-int64_t QUANT4MoE::compute_capacity(int64_t T) const {
+int64_t Q4MoE::compute_capacity(int64_t T) const {
     int64_t E = config.num_experts, K = config.top_k;
     return (K * T + E - 1) / E;
 }
 
-std::vector<uint8_t> QUANT4MoE::export_weights() const {
+std::vector<uint8_t> Q4MoE::export_weights() const {
     int64_t nr = router.weight.numel();
     std::vector<uint8_t> d(sizeof(int64_t) + (size_t)nr * sizeof(float));
     std::memcpy(d.data(), &nr, sizeof(int64_t));
@@ -1405,7 +1405,7 @@ std::vector<uint8_t> QUANT4MoE::export_weights() const {
     return d;
 }
 
-void QUANT4MoE::import_weights(const std::vector<uint8_t>& data) {
+void Q4MoE::import_weights(const std::vector<uint8_t>& data) {
     int64_t nr = 0; std::memcpy(&nr, data.data(), sizeof(int64_t));
     std::memcpy(router.weight.data<float>(), data.data() + sizeof(int64_t), (size_t)nr * sizeof(float));
 }

@@ -1,6 +1,6 @@
 #pragma once
 // ============================================================================
-// thread_safety.h — Lock-Free & Thread-Safe Primitives for Transcender
+// thread_safety.h — Lock-Free & Thread-Safe Primitives for TransFormers-Fusion
 // ============================================================================
 // Provides:
 //   1. SPSCQueue<T>  — Single-Producer Single-Consumer lock-free ring buffer

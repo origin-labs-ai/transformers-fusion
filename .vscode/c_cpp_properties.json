@@ -25,7 +25,7 @@
                 "${workspaceFolder}/engines/trainer/multimodal/ocr",
                 "${workspaceFolder}/engines/trainer/multimodal/text",
                 "${workspaceFolder}/engines/trainer/multimodal/video",
-                "${workspaceFolder}/sops",
+                "${workspaceFolder}/inferno",
                 "${workspaceFolder}/build"
             ],
             "defines": [
@@ -50,7 +50,7 @@
                     "${workspaceFolder}/include",
                     "${workspaceFolder}/src",
                     "${workspaceFolder}/engines",
-                    "${workspaceFolder}/sops"
+                    "${workspaceFolder}/inferno"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             }

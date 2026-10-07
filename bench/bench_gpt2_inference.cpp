@@ -118,14 +118,14 @@ struct QuantizedWeight {
 static QuantizedWeight quantize_weight(const float* src, int64_t n) {
     QuantizedWeight q;
 
-    // QUANT8: per-block 256-entry Lloyd-Max
+    // Q8: per-block 256-entry Lloyd-Max
     static const int BLOCK8 = 4096;
     q.indices_8bit.resize(n);
     q.codebook_8.resize(256);
     {
         for (int64_t b = 0; b < n; b += BLOCK8) {
             int64_t bsz = std::min((int64_t)BLOCK8, n - b);
-            CodebookQUANT8 cb;
+            CodebookQ8 cb;
             cb.train(src + b, (size_t)bsz);
             for (int i = 0; i < 256; i++) q.codebook_8[i] = cb.centroids[i];
             for (int64_t i = 0; i < bsz; i++)
@@ -133,17 +133,17 @@ static QuantizedWeight quantize_weight(const float* src, int64_t n) {
         }
     }
 
-    // QUANT4: per-block 16-entry Lloyd-Max
+    // Q4: per-block 16-entry Lloyd-Max
     static const int BLOCK4 = 1024;
     q.indices_4bit.resize((n + 1) / 2, 0);
     q.codebook_4.resize(16);
     {
         for (int64_t b = 0; b < n; b += BLOCK4) {
             int64_t bsz = std::min((int64_t)BLOCK4, n - b);
-            CodebookQUANT4 cb;
+            CodebookQ4 cb;
             cb.train(src + b, (size_t)bsz);
             for (int i = 0; i < 16; i++)
-                q.codebook_4[i] = CodebookQUANT4::half_to_float(cb.centroids[i]);
+                q.codebook_4[i] = CodebookQ4::half_to_float(cb.centroids[i]);
             for (int64_t i = 0; i < bsz; i++) {
                 uint8_t idx = cb.quantize(src[b + i]);
                 int64_t flat = b + i;
@@ -191,7 +191,7 @@ static void dequantize_quant(const QuantizedWeight& q, float* dst, int64_t n) {
 // ===========================================================================
 // GPT-2 Minimal Forward Pass
 // ===========================================================================
-enum class QuantMode { FP32, QUANT8, QUANT4, BITNET_158 };
+enum class QuantMode { FP32, Q8, Q4, BITNET_158 };
 
 struct QuantizedGPT2Weights {
     GPT2Config cfg;
@@ -277,8 +277,8 @@ static std::vector<float> get_dequantized_weight(
     out_n = n;
     std::vector<float> result(n);
     switch (mode) {
-        case QuantMode::QUANT8:     dequantize_quant8(*qwp, result.data(), n); break;
-        case QuantMode::QUANT4:     dequantize_quant4(*qwp, result.data(), n); break;
+        case QuantMode::Q8:     dequantize_quant8(*qwp, result.data(), n); break;
+        case QuantMode::Q4:     dequantize_quant4(*qwp, result.data(), n); break;
         case QuantMode::BITNET_158:  dequantize_quant(*qwp, result.data(), n); break;
         default: break;
     }
@@ -488,8 +488,8 @@ int main(int argc, char** argv) {
         {"Once upon a time", "Creative start"},
     };
 
-    std::vector<QuantMode> modes = {QuantMode::FP32, QuantMode::QUANT8, QuantMode::QUANT4, QuantMode::BITNET_158};
-    std::vector<std::string> mode_names = {"FP32", "QUANT8", "QUANT4", "BITNET_158"};
+    std::vector<QuantMode> modes = {QuantMode::FP32, QuantMode::Q8, QuantMode::Q4, QuantMode::BITNET_158};
+    std::vector<std::string> mode_names = {"FP32", "Q8", "Q4", "BITNET_158"};
 
     std::vector<QuantizedGPT2Weights> precomputed;
     for (auto mode : modes) {

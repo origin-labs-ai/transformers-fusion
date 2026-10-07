@@ -19,13 +19,13 @@ void tl2_gemm(const Tensor& weights, const Tensor& activations,
 void tl2_precompute_lut(const int8_t* activations, int8_t* lut,
                         int K, float scales);
 
-// QUANT8: Codebook lookup GEMM
+// Q8: Codebook lookup GEMM
 // weights = uint8_t indices, codebook = float[256], activations = float
 void quant8_gemm(const uint8_t* indices, const float* codebook,
                const float* activations, float* output,
                int M, int N, int K);
 
-// QUANT4: Codebook lookup GEMM
+// Q4: Codebook lookup GEMM
 // weights = nibble packed indices, codebook = uint16_t[16] (FP16), activations = float
 void quant4_gemm(const uint8_t* packed_indices, const uint16_t* codebook,
                const float* activations, float* output,

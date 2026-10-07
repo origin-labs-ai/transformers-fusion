@@ -1,5 +1,5 @@
 // ============================================================================
-// ocr.h — OCR (Optical Character Recognition) types for Transcender
+// ocr.h — OCR (Optical Character Recognition) types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

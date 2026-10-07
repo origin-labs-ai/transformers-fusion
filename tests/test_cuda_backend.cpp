@@ -11,7 +11,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "   Transcender Dynamic CUDA Backend Test     " << std::endl;
+    std::cout << "   TransFormers-Fusion Dynamic CUDA Backend Test     " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     quant::gpu::GPUComputeCuda cuda_backend;

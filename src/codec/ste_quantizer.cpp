@@ -55,14 +55,14 @@ Tensor STEQuantizer::forward(const Tensor& fp32_weight) {
             break;
         }
         case Format::Q8: {
-            CodebookQUANT8 cb8;
+            CodebookQ8 cb8;
             cb8.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb8.dequantize(cb8.quantize(src[i]));
             break;
         }
         case Format::Q4: {
-            CodebookQUANT4 cb4;
+            CodebookQ4 cb4;
             cb4.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb4.dequantize(cb4.quantize(src[i]));
@@ -121,7 +121,7 @@ float STEQuantizer::find_scale(const float* data, int64_t n) {
     return max_abs > 1e-10f ? max_abs : 1.0f;
 }
 
-Tensor STEQuantizer::quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT8& codebook) {
+Tensor STEQuantizer::quantize_with_codebook(const Tensor& fp32_weight, CodebookQ8& codebook) {
     int64_t n = fp32_weight.numel();
     const float* src = (const float*)fp32_weight.data();
 
@@ -145,7 +145,7 @@ Tensor STEQuantizer::quantize_with_codebook(const Tensor& fp32_weight, CodebookQ
     return result;
 }
 
-Tensor STEQuantizer::quantize_with_codebook(const Tensor& fp32_weight, CodebookQUANT4& codebook) {
+Tensor STEQuantizer::quantize_with_codebook(const Tensor& fp32_weight, CodebookQ4& codebook) {
     int64_t n = fp32_weight.numel();
     const float* src = (const float*)fp32_weight.data();
 
@@ -223,14 +223,14 @@ Tensor STEQuantizer::forward_mixed(const Tensor& weights, const std::vector<Form
                 break;
             }
             case Format::Q8: {
-                CodebookQUANT8 cb;
+                CodebookQ8 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
             case Format::Q4: {
-                CodebookQUANT4 cb;
+                CodebookQ4 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));

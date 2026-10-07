@@ -11,16 +11,16 @@ namespace quant {
 namespace native {
 
 enum class NativeFormat : uint8_t {
-    QUANT8 = 0,  // 8-bit index, 256-entry FP32 codebook, per-weight scale
-    QUANT1 = 1,  // 1-bit index, 3 centroids {-1,0,+1}, per-block scale (B=128 default)
-    QUANT4 = 2,  // 4-bit index, 16-entry FP32 codebook, per-block scale (B=128 default)
+    Q8 = 0,  // 8-bit index, 256-entry FP32 codebook, per-weight scale
+    Q1 = 1,  // 1-bit index, 3 centroids {-1,0,+1}, per-block scale (B=128 default)
+    Q4 = 2,  // 4-bit index, 16-entry FP32 codebook, per-block scale (B=128 default)
 };
 
 inline const char* native_format_name(NativeFormat f) {
     switch (f) {
-        case NativeFormat::QUANT8: return "native_quant8";
-        case NativeFormat::QUANT1: return "native_quant1";
-        case NativeFormat::QUANT4: return "native_quant4";
+        case NativeFormat::Q8: return "native_quant8";
+        case NativeFormat::Q1: return "native_quant1";
+        case NativeFormat::Q4: return "native_quant4";
         default: return "unknown";
     }
 }
@@ -30,12 +30,12 @@ inline float quant1_value(uint8_t idx) {
     return static_cast<float>(static_cast<int>(idx)) - 1.0f; // 0→-1, 1→0, 2→+1
 }
 
-// QUANT4 codebook — 16 FP32 centroids shared per block
-class QUANT4Codebook {
+// Q4 codebook — 16 FP32 centroids shared per block
+class Q4Codebook {
 public:
     static constexpr size_t K = 16;
-    QUANT4Codebook();
-    explicit QUANT4Codebook(const float* centroids);
+    Q4Codebook();
+    explicit Q4Codebook(const float* centroids);
     void train(const float* data, size_t n, int iterations = 10);
     uint8_t nearest(float val) const;
     float centroid(uint8_t idx) const { return centroids_[idx]; }
@@ -49,19 +49,19 @@ private:
 // Dead zone threshold per format (Δ_c/2 where Δ_c = min codebook gap)
 inline float dead_zone_radius(NativeFormat fmt, float scale) {
     switch (fmt) {
-        case NativeFormat::QUANT8: return scale * 0.00390625f; // 1/256 of normalized range
-        case NativeFormat::QUANT1: return scale * 0.5f;       // Δ_c=1 between {-1,0} or {0,+1}
-        case NativeFormat::QUANT4: return scale * 0.0625f;    // Δ_c≈0.125 for 16-entry uniform codebook over [-1,1]
+        case NativeFormat::Q8: return scale * 0.00390625f; // 1/256 of normalized range
+        case NativeFormat::Q1: return scale * 0.5f;       // Δ_c=1 between {-1,0} or {0,+1}
+        case NativeFormat::Q4: return scale * 0.0625f;    // Δ_c≈0.125 for 16-entry uniform codebook over [-1,1]
         default: return 0.0f;
     }
 }
 
-// Shared QUANT8 codebook: 256 FP32 entries, trained once via k-means or quantile spacing
-class QUANT8Codebook {
+// Shared Q8 codebook: 256 FP32 entries, trained once via k-means or quantile spacing
+class Q8Codebook {
 public:
     static constexpr size_t K = 256;
-    QUANT8Codebook();
-    explicit QUANT8Codebook(const float* centroids);
+    Q8Codebook();
+    explicit Q8Codebook(const float* centroids);
     void train(const float* data, size_t n, int iterations = 20);
     uint8_t nearest(float val) const;
     float centroid(uint8_t idx) const { return centroids_[idx]; }
@@ -97,13 +97,13 @@ struct QUANTBlock {
 };
 
 // Native QUANT weight store — no FP32 master weights
-class NativeQUANTWeightStore {
+class NativeQWeightStore {
 public:
-    NativeQUANTWeightStore(size_t num_weights, size_t block_size = 128);
-    ~NativeQUANTWeightStore() = default;
+    NativeQWeightStore(size_t num_weights, size_t block_size = 128);
+    ~NativeQWeightStore() = default;
 
     // Initialize from FP32 weights + sensitivity estimates
-    // allocate: assign QUANT8 to top frac_quant8 by sensitivity, QUANT1 to middle, QUANT4 to bottom
+    // allocate: assign Q8 to top frac_quant8 by sensitivity, Q1 to middle, Q4 to bottom
     void initialize(const float* fp32_weights, const float* sensitivity,
                     float frac_quant8 = 0.01f, float frac_quant1 = 0.95f);
 
@@ -139,8 +139,8 @@ public:
     const NativeFormat* formats_data() const { return formats_.get(); }
 
     // Static codebooks (shared across all instances)
-    static QUANT8Codebook& global_codebook();
-    static QUANT4Codebook& global_quant4_codebook();
+    static Q8Codebook& global_codebook();
+    static Q4Codebook& global_quant4_codebook();
 
 private:
     size_t num_weights_;

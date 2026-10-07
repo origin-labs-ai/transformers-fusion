@@ -551,7 +551,7 @@ struct VulkanBackend::Impl {
 
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Transcender QUANT";
+        appInfo.pApplicationName = "TransFormers-Fusion QUANT";
         appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
         VkInstanceCreateInfo ci = {};
@@ -1510,7 +1510,9 @@ void VulkanBackend::mul(const void* a, const void* b, void* c, int64_t n) {
 }
 
 void VulkanBackend::scale(float s, const void* x, void* y, int64_t n) {
-    // H6 honest-fallback: no SPIR-V scale shader; silent CPU ONLY when !vulkan_ok.
+    // No scale SPIR-V in tree and no glslang on this host to mint one —
+    // hand-writing SPIR-V words by hand is how the five bad blobs happened.
+    // Honest: CPU fallback ONLY when !vulkan_ok, fail-loud otherwise.
     if (!impl_->vulkan_ok) {
         cpu_scale(s, (const float*)x, (float*)y, n);
         return;

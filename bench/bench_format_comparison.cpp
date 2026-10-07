@@ -543,7 +543,7 @@ void verdict(const std::string& a_name, const BenchEntry& a,
 
 int main(int argc, char** argv) {
     std::cout << "==================================================================\n";
-    std::cout << " Transcender Engine — REAL codec benchmark (no hardcoded numbers)\n";
+    std::cout << " TransFormers-Fusion Engine — REAL codec benchmark (no hardcoded numbers)\n";
     std::cout << "==================================================================\n";
 
     std::vector<float> gauss(kN);

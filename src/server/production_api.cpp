@@ -269,7 +269,7 @@ void ModelZoo::scan_directory(std::vector<ModelInfo>& out) const {
                 name.substr(0, name.find_last_of('.')),
                 full_path,
                 params,
-                "QUANT8"
+                "Q8"
             });
         } while (FindNextFileA(hFind, &findData) != 0);
         FindClose(hFind);
@@ -307,7 +307,7 @@ void ModelZoo::scan_directory(std::vector<ModelInfo>& out) const {
             name.substr(0, name.size() - 6),
             full_path,
             params,
-            "QUANT8"
+            "Q8"
         });
     }
     closedir(dir);
@@ -325,8 +325,8 @@ std::vector<ModelZoo::ModelInfo> ModelZoo::list_models() const {
 
     // If no models found, add defaults
     if (cache_.empty()) {
-        cache_.push_back({"tiny", zoo_path_ + "tiny.quant", 85000000, "QUANT8"});
-        cache_.push_back({"small", zoo_path_ + "small.quant", 350000000, "QUANT8"});
+        cache_.push_back({"tiny", zoo_path_ + "tiny.quant", 85000000, "Q8"});
+        cache_.push_back({"small", zoo_path_ + "small.quant", 350000000, "Q8"});
     }
 
     cache_valid_ = true;
@@ -388,7 +388,7 @@ Model* ModelZoo::load(const std::string& name) {
         model->load(direct_path);
         {
             std::lock_guard<std::mutex> lock(zoo_mtx_);
-            cache_.push_back({name, direct_path, model->param_count(), "QUANT8"});
+            cache_.push_back({name, direct_path, model->param_count(), "Q8"});
         }
         return model;
     } catch (...) {

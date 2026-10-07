@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 # Display version: R0001.01 (owner scheme). CMake needs numeric: 1.1.0 mirrors R0001.01.
-project(Transcender VERSION 1.1.0 LANGUAGES CXX)
+project(TransFormers-Fusion VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -438,7 +438,7 @@ if(QUANT_BUILD_TESTS)
                  --output-file ${QUANT_COVERAGE_LCOV_DIR}/coverage_filtered.info
         COMMAND ${GENHTML_PATH} ${QUANT_COVERAGE_LCOV_DIR}/coverage_filtered.info
                  --output-directory ${QUANT_COVERAGE_LCOV_DIR}/html
-                 --title "Transcender Coverage"
+                 --title "TransFormers-Fusion Coverage"
                  --legend
         COMMENT "Generating code coverage report in ${QUANT_COVERAGE_LCOV_DIR}/html"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -494,14 +494,16 @@ if(QUANT_BUILD_BENCHMARKS)
   target_link_libraries(bench_format_comparison PRIVATE quant_trainer quant_continual quant_format quant_core quant_math quant_model quant_engine)
 endif()
 
-# SOPS tools + integration
-add_library(quant_sops STATIC
-  sops/sops_scheduler.cpp
-  src/core/sops_integration.cpp
+# Inferno kernel interconnect: dispatch across all 18 backend compute paths,
+# FLOPS measured first, INFERNO derived. Links backend (dispatch) + math (SIMD).
+add_library(quant_inferno STATIC
+  inferno/inferno_scheduler.cpp
+  src/core/inferno_integration.cpp
+  src/core/inferno_kernel.cpp
 )
-target_include_directories(quant_sops PUBLIC include sops)
-target_link_libraries(quant_sops PUBLIC quant_core)
-set_target_properties(quant_sops PROPERTIES CXX_STANDARD 20)
+target_include_directories(quant_inferno PUBLIC include inferno)
+target_link_libraries(quant_inferno PUBLIC quant_core quant_math quant_backend quant_kernel)
+set_target_properties(quant_inferno PROPERTIES CXX_STANDARD 20)
 
 # Thread safety primitives
 add_library(quant_thread_safety STATIC
@@ -526,31 +528,31 @@ add_library(quant_continual STATIC
   src/trainer/continual_engine.cpp
 )
 target_include_directories(quant_continual PUBLIC include)
-target_link_libraries(quant_continual PUBLIC quant_format quant_sops)
+target_link_libraries(quant_continual PUBLIC quant_format quant_inferno)
 
 # Speculative decoding engine
 add_library(quant_speculative STATIC
   src/inference/speculative_decoder.cpp
 )
 target_include_directories(quant_speculative PUBLIC include)
-target_link_libraries(quant_speculative PUBLIC quant_model quant_sops)
+target_link_libraries(quant_speculative PUBLIC quant_model quant_inferno)
 
-add_executable(bench_sops sops/sops_bench.cpp)
-target_include_directories(bench_sops PRIVATE include)
-target_link_libraries(bench_sops PRIVATE quant_core)
-set_target_properties(bench_sops PROPERTIES CXX_STANDARD 20)
+add_executable(bench_inferno inferno/inferno_bench.cpp)
+target_include_directories(bench_inferno PRIVATE include)
+target_link_libraries(bench_inferno PRIVATE quant_inferno quant_backend quant_math quant_core)
+set_target_properties(bench_inferno PROPERTIES CXX_STANDARD 20)
 
-add_executable(sops_info sops/sops_format_info.cpp)
-target_include_directories(sops_info PRIVATE include)
-set_target_properties(sops_info PROPERTIES CXX_STANDARD 20)
+add_executable(inferno_info inferno/inferno_format_info.cpp)
+target_include_directories(inferno_info PRIVATE include)
+set_target_properties(inferno_info PROPERTIES CXX_STANDARD 20)
 
-add_executable(sops_train_sim sops/sops_training_sim.cpp)
-target_include_directories(sops_train_sim PRIVATE include)
-target_link_libraries(sops_train_sim PRIVATE quant_core)
-set_target_properties(sops_train_sim PROPERTIES CXX_STANDARD 20)
+add_executable(inferno_train_sim inferno/inferno_training_sim.cpp)
+target_include_directories(inferno_train_sim PRIVATE include)
+target_link_libraries(inferno_train_sim PRIVATE quant_core)
+set_target_properties(inferno_train_sim PROPERTIES CXX_STANDARD 20)
 
 # Adapter bridge tree (P18: wired, no file missed, no delete).
-# Default OFF because adapters still reference pre-QG names (QUANT_Q1_G/TWI_MIX era)
+# Default OFF because adapters still reference pre-QG names (QG1sparse/TWI_MIX era)
 # and need migration to QG4/QG_4_K_M/QG_4.5/Q_MX_4.5/QG_MX_4.5. EXCLUDE_FROM_ALL
 # keeps default build green while `cmake --build build --target quant_adapter`
 # still works when -DQUANT_BUILD_ADAPTERS=ON.
@@ -576,7 +578,7 @@ install(DIRECTORY include/quant DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 # Generated header (not the .in template): version/feature macros live in the
 # configured copy at ${CMAKE_BINARY_DIR}/quant_config.h.
 install(FILES "${CMAKE_BINARY_DIR}/quant_config.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-set(CPACK_PACKAGE_NAME "TransCender")
+set(CPACK_PACKAGE_NAME "TransFormers-Fusion")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR "ORIGIN Labs")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Zero-dependency C++20 AI engine (QUANT format)")

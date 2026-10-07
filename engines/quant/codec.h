@@ -18,14 +18,14 @@ struct CodecConfig {
 struct EncodedBlock {
     uint32_t block_id;
     std::string name;
-    CodebookQUANT8 codebook;
+    CodebookQ8 codebook;
     std::vector<uint8_t> indices;
     uint32_t num_weights;
 };
 
-class QUANT8Encoder {
+class Q8Encoder {
 public:
-    explicit QUANT8Encoder(const CodecConfig& cfg = CodecConfig());
+    explicit Q8Encoder(const CodecConfig& cfg = CodecConfig());
     EncodedBlock encode(const float* weights, uint32_t num_weights, uint32_t block_id);
     std::vector<EncodedBlock> encode_tensor(const Tensor& t, const std::string& name);
     CodecConfig config() const;
@@ -33,9 +33,9 @@ private:
     CodecConfig config_;
 };
 
-class QUANT8Decoder {
+class Q8Decoder {
 public:
-    QUANT8Decoder();
+    Q8Decoder();
     Tensor decode(const EncodedBlock& block);
     Tensor decode_blocks(const std::vector<EncodedBlock>& blocks, const Shape& original_shape);
 };

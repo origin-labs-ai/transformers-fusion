@@ -60,9 +60,9 @@ private:
     moe::SparseMoE* moe_;
 
     size_t num_moe_stores_;
-    std::unique_ptr<NativeQUANTWeightStore> emb_store_;
-    std::unique_ptr<NativeQUANTWeightStore> head_store_;
-    std::vector<std::unique_ptr<NativeQUANTWeightStore>> moe_expert_stores_;
+    std::unique_ptr<NativeQWeightStore> emb_store_;
+    std::unique_ptr<NativeQWeightStore> head_store_;
+    std::vector<std::unique_ptr<NativeQWeightStore>> moe_expert_stores_;
 
     std::unique_ptr<float[]> temp_deq_;
     size_t total_params_;

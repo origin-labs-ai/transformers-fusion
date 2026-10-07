@@ -190,7 +190,7 @@ int main() {
     // P53: single-binary distribution — DOCUMENTED
     {
         struct SingleBin { std::string bin, version; std::vector<std::string> weights; };
-        SingleBin s{"Transcender.exe", "0.2.0", {"model.quant"}};
+        SingleBin s{"TransFormers-Fusion.exe", "0.2.0", {"model.quant"}};
         TEST_CHECK(!s.bin.empty() && !s.version.empty() && !s.weights.empty(),
                    "P53: single-binary record shape (doc, not a built exe claim)");
     }

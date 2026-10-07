@@ -91,7 +91,7 @@ void test_q12_kernel() {
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      Transcender Block Codec Unit Tests      " << std::endl;
+    std::cout << "      TransFormers-Fusion Block Codec Unit Tests      " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     test_q24_codec();

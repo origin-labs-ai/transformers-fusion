@@ -163,7 +163,7 @@ bool VulkanCompute::init(int64_t device_id) {
     struct VkApplicationInfo {
         uint32_t sType; const void* pNext; const char* pApplicationName;
         uint32_t applicationVersion; const char* pEngineName; uint32_t engineVersion; uint32_t apiVersion;
-    } appInfo = {12, nullptr, "Transcender", 1, "Transcender", 1, VK_API_VERSION_1_0};
+    } appInfo = {12, nullptr, "TransFormers-Fusion", 1, "TransFormers-Fusion", 1, VK_API_VERSION_1_0};
     // VkInstanceCreateInfo
     struct VkInstanceCreateInfo {
         uint32_t sType; const void* pNext; uint32_t flags;

@@ -9,7 +9,7 @@
 // COMMITMENT LOSS: Encourages encoder outputs to stay close to codebook
 // vectors. Without it, codebook vectors collapse to a few entries.
 //
-// FORMATS: Supports QUANT8 (256 entries, FP32) and QUANT4 (16 entries, FP16).
+// FORMATS: Supports Q8 (256 entries, FP32) and Q4 (16 entries, FP16).
 // ============================================================================
 
 #include "quant/tensor.h"
@@ -78,21 +78,21 @@ private:
 };
 
 // ============================================================================
-// QUANT8 Codebook VQ — 256-entry FP32 codebook for salient weights
+// Q8 Codebook VQ — 256-entry FP32 codebook for salient weights
 // ============================================================================
 // Maps quantized indices (uint8) back to FP32 values via lookup table.
 // Used for the 1% most important weights in the QUANT format.
 // ============================================================================
 
-class QUANT8VectorQuantizer {
+class Q8VectorQuantizer {
 public:
-    QUANT8VectorQuantizer();
-    explicit QUANT8VectorQuantizer(const std::vector<float>& initial_codebook);
+    Q8VectorQuantizer();
+    explicit Q8VectorQuantizer(const std::vector<float>& initial_codebook);
 
-    // Quantize FP32 weights to QUANT8 indices
+    // Quantize FP32 weights to Q8 indices
     std::vector<uint8_t> quantize(const float* weights, int64_t n);
 
-    // Dequantize QUANT8 indices back to FP32
+    // Dequantize Q8 indices back to FP32
     void dequantize(const uint8_t* indices, float* output, int64_t n) const;
 
     // Update codebook via EMA
@@ -110,22 +110,22 @@ private:
 };
 
 // ============================================================================
-// QUANT4 Codebook VQ — 16-entry FP16 codebook for moderate importance weights
+// Q4 Codebook VQ — 16-entry FP16 codebook for moderate importance weights
 // ============================================================================
 // Uses packed nibble indices (2 indices per byte).
-// 4x compression vs QUANT8, used for the next4% of weights.
+// 4x compression vs Q8, used for the next4% of weights.
 // ============================================================================
 
-class QUANT4VectorQuantizer {
+class Q4VectorQuantizer {
 public:
-    QUANT4VectorQuantizer();
-    explicit QUANT4VectorQuantizer(const std::vector<uint16_t>& initial_codebook);
+    Q4VectorQuantizer();
+    explicit Q4VectorQuantizer(const std::vector<uint16_t>& initial_codebook);
 
-    // Quantize FP32 weights to QUANT4 packed nibble indices
+    // Quantize FP32 weights to Q4 packed nibble indices
     // Returns packed: each byte holds 2 nibble indices
     std::vector<uint8_t> quantize(const float* weights, int64_t n);
 
-    // Dequantize QUANT4 packed indices back to FP32
+    // Dequantize Q4 packed indices back to FP32
     void dequantize(const uint8_t* packed_indices, float* output, int64_t n) const;
 
     // Update codebook via EMA

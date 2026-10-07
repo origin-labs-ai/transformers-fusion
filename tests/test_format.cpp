@@ -168,7 +168,7 @@ void test_all_requested_formats() {
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "      Transcender Q-Series Format Test        " << std::endl;
+    std::cout << "      TransFormers-Fusion Q-Series Format Test        " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     test_format_enum_properties();

@@ -158,7 +158,7 @@ static void test_tiled_gemm_parity() {
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    printf("Transcender — SIMD Math Test Suite\n");
+    printf("TransFormers-Fusion — SIMD Math Test Suite\n");
     printf("==========================================\n");
 
     test_rms_norm_parity();

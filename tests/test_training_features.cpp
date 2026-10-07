@@ -415,7 +415,7 @@ static void test_ema_training() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Transcender — Training Features Test Suite\n");
+    printf("TransFormers-Fusion — Training Features Test Suite\n");
     printf("==========================================\n");
 
     test_gradient_noise_injection();

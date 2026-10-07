@@ -163,7 +163,7 @@ static void test_compile_smoke() {
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    printf("Transcender — CodeGen Test Suite\n");
+    printf("TransFormers-Fusion — CodeGen Test Suite\n");
     printf("==========================================\n");
 
     test_gemm_templates();

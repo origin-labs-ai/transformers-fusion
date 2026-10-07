@@ -15,30 +15,30 @@ CompileFlags:
     - -D_CRT_SECURE_NO_WARNINGS
     - -DQUANT_USE_DIRECTX
     - -DQUANT_USE_VULKAN
-    - -IC:/Users/thaku/Downloads/Transcender/include
-    - -IC:/Users/thaku/Downloads/Transcender/src
-    - -IC:/Users/thaku/Downloads/Transcender/src/adapters/include
-    - -IC:/Users/thaku/Downloads/Transcender/engines/inference
-    - -IC:/Users/thaku/Downloads/Transcender/engines/quant
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/dense
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/vision
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/audio
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/embeddings
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/image
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/ocr
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/text
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/moe/video
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/vision
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/audio
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/embeddings
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/image
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/ocr
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/text
-    - -IC:/Users/thaku/Downloads/Transcender/engines/trainer/multimodal/video
-    - -IC:/Users/thaku/Downloads/Transcender/sops
-    - -IC:/Users/thaku/Downloads/Transcender/build
+    - -Iinclude
+    - -Isrc
+    - -Isrc/adapters/include
+    - -Iengines/inference
+    - -Iengines/quant
+    - -Iengines/trainer/dense
+    - -Iengines/trainer/moe
+    - -Iengines/trainer/moe/vision
+    - -Iengines/trainer/moe/audio
+    - -Iengines/trainer/moe/embeddings
+    - -Iengines/trainer/moe/image
+    - -Iengines/trainer/moe/ocr
+    - -Iengines/trainer/moe/text
+    - -Iengines/trainer/moe/video
+    - -Iengines/trainer/multimodal
+    - -Iengines/trainer/multimodal/vision
+    - -Iengines/trainer/multimodal/audio
+    - -Iengines/trainer/multimodal/embeddings
+    - -Iengines/trainer/multimodal/image
+    - -Iengines/trainer/multimodal/ocr
+    - -Iengines/trainer/multimodal/text
+    - -Iengines/trainer/multimodal/video
+    - -Iinferno
+    - -Ibuild
   Remove:
     - -march=*
     - -mavx*

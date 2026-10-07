@@ -13,7 +13,7 @@ namespace quant {
 // IEEE 754 FP16 <-> FP32 conversion
 // ===========================================================================
 
-uint16_t CodebookQUANT4::float_to_half(float f) {
+uint16_t CodebookQ4::float_to_half(float f) {
     uint32_t u;
     std::memcpy(&u, &f, sizeof(u));
     uint16_t sign = (uint16_t)((u >> 16) & 0x8000);
@@ -33,7 +33,7 @@ uint16_t CodebookQUANT4::float_to_half(float f) {
     return sign | ((uint16_t)exp << 10) | (uint16_t)(mant >> 13);
 }
 
-float CodebookQUANT4::half_to_float(uint16_t h) {
+float CodebookQ4::half_to_float(uint16_t h) {
     uint16_t sign = h & 0x8000;
     int32_t exp = (h >> 10) & 0x1F;
     uint16_t mant = h & 0x03FF;
@@ -64,10 +64,10 @@ float CodebookQUANT4::half_to_float(uint16_t h) {
 }
 
 // ===========================================================================
-// CodebookQUANT8
+// CodebookQ8
 // ===========================================================================
 
-void CodebookQUANT8::train(const float* data, size_t count) {
+void CodebookQ8::train(const float* data, size_t count) {
     if (count == 0) return;
 
     RNG rng;
@@ -128,7 +128,7 @@ void CodebookQUANT8::train(const float* data, size_t count) {
     }
 }
 
-void CodebookQUANT8::ema_update(const float* data, const uint8_t* assign, size_t count, float lr) {
+void CodebookQ8::ema_update(const float* data, const uint8_t* assign, size_t count, float lr) {
     if (count == 0 || lr <= 0.0f) return;
 
     std::vector<double> sums(SIZE, 0.0);
@@ -148,7 +148,7 @@ void CodebookQUANT8::ema_update(const float* data, const uint8_t* assign, size_t
     }
 }
 
-void CodebookQUANT8::ema_update(float decay) {
+void CodebookQ8::ema_update(float decay) {
     QUANT_CHECK(decay > 0.0f && decay < 1.0f, "EMA decay must be in (0,1)");
     for (int c = 0; c < SIZE; c++) {
         double bc = batch_counts_[c];
@@ -163,7 +163,7 @@ void CodebookQUANT8::ema_update(float decay) {
     }
 }
 
-uint16_t CodebookQUANT8::quantize(float val) const {
+uint16_t CodebookQ8::quantize(float val) const {
     uint16_t best = 0;
     float best_dist = std::numeric_limits<float>::max();
     for (int i = 0; i < SIZE; i++) {
@@ -179,40 +179,40 @@ uint16_t CodebookQUANT8::quantize(float val) const {
     return best;
 }
 
-float CodebookQUANT8::dequantize(uint16_t idx) const {
-    if (idx >= SIZE) throw Error("CodebookQUANT8::dequantize: index out of range");
+float CodebookQ8::dequantize(uint16_t idx) const {
+    if (idx >= SIZE) throw Error("CodebookQ8::dequantize: index out of range");
     return centroids[idx];
 }
 
-size_t CodebookQUANT8::serialized_size() const {
+size_t CodebookQ8::serialized_size() const {
     return sizeof(uint32_t) + SIZE * sizeof(float);
 }
 
-size_t CodebookQUANT8::serialize(uint8_t* dst) const {
+size_t CodebookQ8::serialize(uint8_t* dst) const {
     uint32_t magic = 0x51554138; // "QUA8"
     std::memcpy(dst, &magic, sizeof(magic));
     std::memcpy(dst + sizeof(magic), centroids, SIZE * sizeof(float));
     return serialized_size();
 }
 
-CodebookQUANT8 CodebookQUANT8::deserialize(const uint8_t* src, size_t& offset, size_t size) {
-    CodebookQUANT8 cb;
+CodebookQ8 CodebookQ8::deserialize(const uint8_t* src, size_t& offset, size_t size) {
+    CodebookQ8 cb;
     if (offset + sizeof(uint32_t) + SIZE * sizeof(float) > size)
-        throw Error("CodebookQUANT8::deserialize: buffer overflow");
+        throw Error("CodebookQ8::deserialize: buffer overflow");
     uint32_t magic;
     std::memcpy(&magic, src + offset, sizeof(magic));
     offset += sizeof(magic);
-    if (magic != 0x51554138) throw Error("CodebookQUANT8::deserialize: invalid magic");
+    if (magic != 0x51554138) throw Error("CodebookQ8::deserialize: invalid magic");
     std::memcpy(cb.centroids, src + offset, SIZE * sizeof(float));
     offset += SIZE * sizeof(float);
     return cb;
 }
 
 // ===========================================================================
-// CodebookQUANT4
+// CodebookQ4
 // ===========================================================================
 
-void CodebookQUANT4::train(const float* data, size_t count) {
+void CodebookQ4::train(const float* data, size_t count) {
     if (count == 0) return;
 
     RNG rng;
@@ -276,7 +276,7 @@ void CodebookQUANT4::train(const float* data, size_t count) {
     }
 }
 
-void CodebookQUANT4::ema_update(const float* data, const uint8_t* assign, size_t count, float lr) {
+void CodebookQ4::ema_update(const float* data, const uint8_t* assign, size_t count, float lr) {
     if (count == 0 || lr <= 0.0f) return;
 
     std::vector<double> sums(SIZE, 0.0);
@@ -298,7 +298,7 @@ void CodebookQUANT4::ema_update(const float* data, const uint8_t* assign, size_t
     }
 }
 
-void CodebookQUANT4::ema_update(float decay) {
+void CodebookQ4::ema_update(float decay) {
     QUANT_CHECK(decay > 0.0f && decay < 1.0f, "EMA decay must be in (0,1)");
     for (int c = 0; c < SIZE; c++) {
         double bc = batch_counts_[c];
@@ -313,7 +313,7 @@ void CodebookQUANT4::ema_update(float decay) {
     }
 }
 
-uint16_t CodebookQUANT4::quantize(float val) const {
+uint16_t CodebookQ4::quantize(float val) const {
     uint16_t best = 0;
     float best_dist = std::numeric_limits<float>::max();
     for (int i = 0; i < SIZE; i++) {
@@ -329,30 +329,30 @@ uint16_t CodebookQUANT4::quantize(float val) const {
     return best;
 }
 
-float CodebookQUANT4::dequantize(uint16_t idx) const {
-    if (idx >= SIZE) throw Error("CodebookQUANT4::dequantize: index out of range");
+float CodebookQ4::dequantize(uint16_t idx) const {
+    if (idx >= SIZE) throw Error("CodebookQ4::dequantize: index out of range");
     return half_to_float(centroids[idx]);
 }
 
-size_t CodebookQUANT4::serialized_size() const {
+size_t CodebookQ4::serialized_size() const {
     return sizeof(uint32_t) + SIZE * sizeof(uint16_t);
 }
 
-size_t CodebookQUANT4::serialize(uint8_t* dst) const {
+size_t CodebookQ4::serialize(uint8_t* dst) const {
     uint32_t magic = 0x51554134; // "QUA4"
     std::memcpy(dst, &magic, sizeof(magic));
     std::memcpy(dst + sizeof(magic), centroids, SIZE * sizeof(uint16_t));
     return serialized_size();
 }
 
-CodebookQUANT4 CodebookQUANT4::deserialize(const uint8_t* src, size_t& offset, size_t size) {
-    CodebookQUANT4 cb;
+CodebookQ4 CodebookQ4::deserialize(const uint8_t* src, size_t& offset, size_t size) {
+    CodebookQ4 cb;
     if (offset + sizeof(uint32_t) + SIZE * sizeof(uint16_t) > size)
-        throw Error("CodebookQUANT4::deserialize: buffer overflow");
+        throw Error("CodebookQ4::deserialize: buffer overflow");
     uint32_t magic;
     std::memcpy(&magic, src + offset, sizeof(magic));
     offset += sizeof(magic);
-    if (magic != 0x51554134) throw Error("CodebookQUANT4::deserialize: invalid magic");
+    if (magic != 0x51554134) throw Error("CodebookQ4::deserialize: invalid magic");
     std::memcpy(cb.centroids, src + offset, SIZE * sizeof(uint16_t));
     offset += SIZE * sizeof(uint16_t);
     return cb;
@@ -411,7 +411,7 @@ static void k_means_train(T* centroids, int size, const float* data, size_t coun
     }
     for (int c = 0; c < size; c++) {
         if constexpr (std::is_same_v<T, uint16_t>) {
-            centroids[c] = CodebookQUANT4::float_to_half(fp_centroids[c]);
+            centroids[c] = CodebookQ4::float_to_half(fp_centroids[c]);
         } else {
             centroids[c] = fp_centroids[c];
         }
@@ -452,14 +452,14 @@ void CodebookQ12::train(const float* data, size_t count) { k_means_train(centroi
 uint16_t CodebookQ12::quantize(float val) const {
     uint16_t best = 0; float best_dist = std::numeric_limits<float>::max();
     for (int i = 0; i < SIZE; i++) {
-        float d = val - CodebookQUANT4::half_to_float(centroids[i]); float dist = d * d;
+        float d = val - CodebookQ4::half_to_float(centroids[i]); float dist = d * d;
         if (dist < best_dist) { best_dist = dist; best = (uint16_t)i; }
     }
     return best;
 }
 float CodebookQ12::dequantize(uint16_t idx) const {
     if (idx >= SIZE) throw Error("CodebookQ12::dequantize: index out of range");
-    return CodebookQUANT4::half_to_float(centroids[idx]);
+    return CodebookQ4::half_to_float(centroids[idx]);
 }
 
 } // namespace quant

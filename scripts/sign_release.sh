@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# sign_release.sh — Transcender v1.1.0 (R0001.01) Release Signing Script
+# sign_release.sh — TransFormers-Fusion v1.1.0 (R0001.01) Release Signing Script
 #
 # Steps:
 #   1. Generate SHA-256 and MD5 checksums for all build artifacts
@@ -45,7 +45,7 @@ if [[ -z "${AUTHENTICODE_PASSWORD:-}" ]]; then
 fi
 
 # GPG key ID for signing
-GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSCENDER2026KEY}"
+GPG_KEY_ID="${GPG_KEY_ID:-0xTRANSFORMERSFUSION2026KEY}"
 GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
 
 # ─── Validate build directory ───────────────────────────────────────
@@ -116,7 +116,7 @@ log "Step 3: Generating checksums..."
 
 CHECKSUMS_FILE="${OUTPUT_DIR}/checksums_${VERSION}.txt"
 
-echo "# Transcender v${VERSION} Release Checksums" > "$CHECKSUMS_FILE"
+echo "# TransFormers-Fusion v${VERSION} Release Checksums" > "$CHECKSUMS_FILE"
 echo "# Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$CHECKSUMS_FILE"
 echo "# " >> "$CHECKSUMS_FILE"
 echo "# SHA-256 checksums:" >> "$CHECKSUMS_FILE"
@@ -185,7 +185,7 @@ log "  Checksums file verified: $(wc -l < "$CHECKSUMS_FILE") lines"
 
 log "Step 6: Creating release archive..."
 
-ARCHIVE_NAME="Transcender-v${VERSION}-release"
+ARCHIVE_NAME="TransFormers-Fusion-v${VERSION}-release"
 ARCHIVE_DIR="${OUTPUT_DIR}"
 
 cp "$CHECKSUMS_FILE" "$ARCHIVE_DIR/" 2>/dev/null || true
@@ -206,5 +206,5 @@ fi
 
 echo ""
 log "============================================"
-log "  Transcender v${VERSION} Release Signing Complete"
+log "  TransFormers-Fusion v${VERSION} Release Signing Complete"
 log "============================================"

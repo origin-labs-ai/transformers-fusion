@@ -406,31 +406,31 @@ static void quant_gemm_fp8_avx2(const float* ad, float* cd,
 #endif // QUANT_HAS_AVX2
 
 // ===========================================================================
-// QUANT16 Engine: FP16 storage (2 bytes per weight), no codebook
+// Q16 Engine: FP16 storage (2 bytes per weight), no codebook
 // ===========================================================================
 
-Tensor QUANT16Engine::quantize(const Tensor& weight) const {
+Tensor Q16Engine::quantize(const Tensor& weight) const {
     int64_t n = weight.numel();
     Tensor out({n}, quant::DType::F16);
     math::vec_fp32_to_fp16(out.data<uint16_t>(), weight.data<float>(), (int)n);
     return out;
 }
 
-Tensor QUANT16Engine::dequantize(const Tensor& packed, int64_t n) const {
+Tensor Q16Engine::dequantize(const Tensor& packed, int64_t n) const {
     Tensor out({n});
     math::vec_fp16_to_fp32(out.data<float>(), packed.data<uint16_t>(), (int)n);
     return out;
 }
 
-Tensor QUANT16Engine::quantize_batch(const Tensor& t) const {
+Tensor Q16Engine::quantize_batch(const Tensor& t) const {
     return quantize(t);
 }
 
-Tensor QUANT16Engine::dequantize_batch(const Tensor& q) const {
+Tensor Q16Engine::dequantize_batch(const Tensor& q) const {
     return dequantize(q, q.numel());
 }
 
-Tensor QUANT16Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
+Tensor Q16Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
                                 int64_t M, int64_t N, int64_t K) const {
     Tensor C({M, N});
     C.zero_();
@@ -450,9 +450,9 @@ Tensor QUANT16Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
     return C;
 }
 
-void QUANT16Engine::quantize_per_channel(const Tensor& t, int channel_dim,
+void Q16Engine::quantize_per_channel(const Tensor& t, int channel_dim,
                                         Tensor& q, Tensor& scales) const {
-    QUANT_CHECK(t.rank() == 2, "QUANT16 per-channel expects 2D tensor");
+    QUANT_CHECK(t.rank() == 2, "Q16 per-channel expects 2D tensor");
     int64_t d0 = t.dim(0), d1 = t.dim(1);
     int64_t channels = (channel_dim == 0) ? d0 : d1;
     int64_t other = (channel_dim == 0) ? d1 : d0;
@@ -471,12 +471,12 @@ void QUANT16Engine::quantize_per_channel(const Tensor& t, int channel_dim,
         if (max_abs < 1e-10f) max_abs = 1.0f;
         for (int64_t i = 0; i < other; ++i) {
             int64_t idx = (channel_dim == 0) ? c * other + i : i * channels + c;
-            qd[idx] = CodebookQUANT4::float_to_half(td[idx] / max_abs);
+            qd[idx] = CodebookQ4::float_to_half(td[idx] / max_abs);
         }
     }
 }
 
-void QUANT16Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
+void Q16Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                           int channel_dim, Tensor& out) const {
     int64_t total = scales.numel();
     int64_t d0 = total, d1 = 1;
@@ -491,44 +491,44 @@ void QUANT16Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales
         int64_t other = out.numel() / total;
         for (int64_t i = 0; i < other; ++i) {
             int64_t idx = (channel_dim == 0) ? c * other + i : i * total + c;
-            od[idx] = CodebookQUANT4::half_to_float(qd[idx]) * scale;
+            od[idx] = CodebookQ4::half_to_float(qd[idx]) * scale;
         }
     }
 }
 
-float QUANT16Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
+float Q16Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_mse(original, reconstructed);
 }
 
-float QUANT16Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
+float Q16Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_snr(original, reconstructed);
 }
 
 // ===========================================================================
-// QUANT32 Engine: FP32 identity (lossless) — just copies data
+// Q32 Engine: FP32 identity (lossless) — just copies data
 // ===========================================================================
 
-Tensor QUANT32Engine::quantize(const Tensor& weight) const {
+Tensor Q32Engine::quantize(const Tensor& weight) const {
     Tensor out(weight.shape(), quant::DType::F32);
     std::memcpy(out.data<float>(), weight.data<float>(), (size_t)weight.numel() * sizeof(float));
     return out;
 }
 
-Tensor QUANT32Engine::dequantize(const Tensor& packed, int64_t n) const {
+Tensor Q32Engine::dequantize(const Tensor& packed, int64_t n) const {
     Tensor out({n});
     std::memcpy(out.data<float>(), packed.data<float>(), (size_t)n * sizeof(float));
     return out;
 }
 
-Tensor QUANT32Engine::quantize_batch(const Tensor& t) const {
+Tensor Q32Engine::quantize_batch(const Tensor& t) const {
     return quantize(t);
 }
 
-Tensor QUANT32Engine::dequantize_batch(const Tensor& q) const {
+Tensor Q32Engine::dequantize_batch(const Tensor& q) const {
     return dequantize(q, q.numel());
 }
 
-Tensor QUANT32Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
+Tensor Q32Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
                                 int64_t M, int64_t N, int64_t K) const {
     Tensor C({M, N});
     C.zero_();
@@ -546,9 +546,9 @@ Tensor QUANT32Engine::quant_gemm(const Tensor& a, const Tensor& b_packed,
     return C;
 }
 
-void QUANT32Engine::quantize_per_channel(const Tensor& t, int channel_dim,
+void Q32Engine::quantize_per_channel(const Tensor& t, int channel_dim,
                                         Tensor& q, Tensor& scales) const {
-    QUANT_CHECK(t.rank() == 2, "QUANT32 per-channel expects 2D tensor");
+    QUANT_CHECK(t.rank() == 2, "Q32 per-channel expects 2D tensor");
     int64_t d0 = t.dim(0), d1 = t.dim(1);
     int64_t channels = (channel_dim == 0) ? d0 : d1;
     q = Tensor(t.shape(), quant::DType::F32);
@@ -557,30 +557,30 @@ void QUANT32Engine::quantize_per_channel(const Tensor& t, int channel_dim,
     std::fill(scales.data<float>(), scales.data<float>() + channels, 1.0f);
 }
 
-void QUANT32Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
+void Q32Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                           int channel_dim, Tensor& out) const {
     // BUGFIX (bug census): silently discarded scales+channel_dim — callers
     // passing a scaled tensor got raw values with no error. FP32 is the
     // identity format: any non-unity scale is a contract violation, not a
     // no-op. Validate instead of pretending.
     if (channel_dim != 0 && channel_dim != 1)
-        throw Error("QUANT32Engine::dequantize_per_channel: channel_dim must be 0/1");
+        throw Error("Q32Engine::dequantize_per_channel: channel_dim must be 0/1");
     const float* sd = scales.numel() ? scales.data<float>() : nullptr;
     if (sd) {
         for (int64_t i = 0; i < scales.numel(); i++) {
             if (sd[i] != 1.0f)
-                throw Error("QUANT32Engine::dequantize_per_channel: non-unity scale on identity format");
+                throw Error("Q32Engine::dequantize_per_channel: non-unity scale on identity format");
         }
     }
     out = Tensor(q.shape(), quant::DType::F32);
     std::memcpy(out.data<float>(), q.data<float>(), (size_t)q.numel() * sizeof(float));
 }
 
-float QUANT32Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
+float Q32Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_mse(original, reconstructed);
 }
 
-float QUANT32Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
+float Q32Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_snr(original, reconstructed);
 }
 

@@ -51,7 +51,7 @@ int main() {
     std::ofstream f("docs/COMPARISON_CHARTS.md");
     if (!f.is_open()) { std::cerr << "ERROR: cannot open docs/COMPARISON_CHARTS.md\n"; return 3; }
 
-    f << "# Transcender vs Industrial Baselines — REAL Measured Charts\n\n";
+    f << "# TransFormers-Fusion vs Industrial Baselines — REAL Measured Charts\n\n";
     f << "> Generated from `bench_format_comparison.csv` by `tools/generate_comparison_visuals.cpp`.\n";
     f << "> Every number below comes from a measured round-trip of the production codec.\n";
     f << "> BPW ironclad: each format stores EXACTLY the BPW in its name.\n\n";
@@ -93,14 +93,14 @@ int main() {
                 f << "<text x='" << (int)X(r.bpw) + 5 << "' y='" << (int)Y(r.psnr) - 4 << "' fill='" << col << "'>" << r.format << "</text>\n";
         }
         f << "<rect x='" << W - 260 << "' y='" << 8 << "' width='252' height='52' fill='#fff' stroke='#ccc'/>\n";
-        f << "<circle cx='" << W - 246 << "' cy='20' r='3' fill='#06c'/><text x='" << W - 238 << "' y='23'>Transcender plain</text>\n";
-        f << "<circle cx='" << W - 246 << "' cy='34' r='3' fill='#083'/><text x='" << W - 238 << "' y='37'>Transcender GRP/K_G</text>\n";
-        f << "<circle cx='" << W - 246 << "' cy='48' r='3' fill='#c6a700'/><text x='" << W - 238 << "' y='51'>Transcender MXQ mix</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='20' r='3' fill='#06c'/><text x='" << W - 238 << "' y='23'>TransFormers-Fusion plain</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='34' r='3' fill='#083'/><text x='" << W - 238 << "' y='37'>TransFormers-Fusion GRP/K_G</text>\n";
+        f << "<circle cx='" << W - 246 << "' cy='48' r='3' fill='#c6a700'/><text x='" << W - 238 << "' y='51'>TransFormers-Fusion MXQ mix</text>\n";
         f << "<circle cx='" << W - 140 << "' cy='20' r='4' fill='#d33' stroke='#900'/><text x='" << W - 132 << "' y='23'>[ref] industrial</text>\n";
         f << "</svg>\n\n";
 
         // Same-BPW industrial head-to-head table computed from CSV.
-        f << "| Transcender | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |\n|---|---|---|---|---|---|---|---|\n";
+        f << "| TransFormers-Fusion | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |\n|---|---|---|---|---|---|---|---|\n";
         struct PairDef { const char* a; const char* b; };
         PairDef pairs[] = {
             {"Q16", "[ref] IEEE FP16"},

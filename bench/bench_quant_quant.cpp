@@ -43,7 +43,7 @@ static QuantBenchResult bench_all_quant_gemm(int64_t M, int64_t N, int64_t K) {
     });
     std::cerr << "  FP32 done: " << r.fp32_gflops << " GFLOPS\n";
 
-    // QUANT8: uint8 indices + float codebook[256]
+    // Q8: uint8 indices + float codebook[256]
     {
         float codebook[256];
         for (int i = 0; i < 256; i++) codebook[i] = (float)(i - 128) / 128.0f;
@@ -59,7 +59,7 @@ static QuantBenchResult bench_all_quant_gemm(int64_t M, int64_t N, int64_t K) {
                               out_buf.data(), (int)M, (int)N, (int)K);
         });
     }
-    std::cerr << "  QUANT8 done: " << r.quant8_gflops << " GFLOPS\n";
+    std::cerr << "  Q8 done: " << r.quant8_gflops << " GFLOPS\n";
 
     // TL1: QUANT packed ternary weights — the kernel's layout is one
     // ceil(K/4)-byte packed row per (m,n) pair, i.e. M*N*ceil(K/4) bytes.
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     std::cout << "=== QUANT Quantized GEMM Benchmarks (" << M << "x" << N << "x" << K << ") ===\n";
     QuantBenchResult r = bench_all_quant_gemm(M, N, K);
     std::cout << "FP32:  " << r.fp32_gflops << " GFLOPS\n";
-    std::cout << "QUANT8:  " << r.quant8_gflops << " GFLOPS";
+    std::cout << "Q8:  " << r.quant8_gflops << " GFLOPS";
     if (r.fp32_gflops > 0 && r.quant8_gflops > 0)
         std::cout << "  (" << (r.quant8_gflops / r.fp32_gflops) << "x vs FP32)";
     std::cout << "\n";

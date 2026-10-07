@@ -326,7 +326,7 @@ struct PerFormatStats {
 
 int main() {
     std::printf("=========================================\n");
-    std::printf("   Transcender Block Codec Fuzz (L036)\n");
+    std::printf("   TransFormers-Fusion Block Codec Fuzz (L036)\n");
     std::printf("=========================================\n");
 
     const std::vector<quant::Format> formats = supported_formats();

@@ -1,5 +1,5 @@
 // ============================================================================
-// Transcender Fine-Tuning Engine — implementation of the three native strategies
+// TransFormers-Fusion Fine-Tuning Engine — implementation of the three native strategies
 // declared in quant/fine_tuning.h. See the header for the design notes.
 // ============================================================================
 

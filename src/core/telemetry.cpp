@@ -55,7 +55,7 @@ void CacheHitLogger::record_sequential(uintptr_t base, int64_t count, size_t str
 const CacheStats& CacheHitLogger::stats() const { return stats_; }
 
 void CacheHitLogger::print_report() const {
-    printf("[Transcender CACHE] Memory Access Profile:\n");
+    printf("[TransFormers-Fusion CACHE] Memory Access Profile:\n");
     printf("  Total Accesses:   %lld\n", (long long)stats_.total_accesses);
     printf("  L1 Hit Rate:      %.1f%%\n", stats_.l1_hit_rate() * 100.0f);
     printf("  L2 Hit Rate:      %.1f%%\n", stats_.l2_hit_rate() * 100.0f);
@@ -135,7 +135,7 @@ float MemoryBreakdown::bpw() const {
 
 void MemoryTracker::print_report(int64_t model_params, float target_bpw) const {
     auto& b = breakdown_;
-    printf("[Transcender MEMORY] Memory Breakdown:\n");
+    printf("[TransFormers-Fusion MEMORY] Memory Breakdown:\n");
     printf("  Weights:         %6.2f MB\n", b.weights_bytes / 1048576.0f);
     printf("  Gradients:       %6.2f MB\n", b.gradients_bytes / 1048576.0f);
     printf("  Optimizer (m):   %6.2f MB\n", b.optimizer_m_bytes / 1048576.0f);
@@ -154,7 +154,7 @@ bool MemoryTracker::verify_footprint(int64_t model_params, float target_bpw, flo
     float actual_bpw = breakdown_.bpw();
     float diff = std::abs(actual_bpw - target_bpw);
     bool ok = diff <= tolerance;
-    printf("[Transcender VERIFY] QUANT Format: %s (actual: %.2f BPW, target: %.2f BPW, diff: %.3f)\n",
+    printf("[TransFormers-Fusion VERIFY] QUANT Format: %s (actual: %.2f BPW, target: %.2f BPW, diff: %.3f)\n",
            ok ? "PASS" : "FAIL", actual_bpw, target_bpw, diff);
     return ok;
 }
@@ -192,7 +192,7 @@ void RoutingHistogram::record_with_modalities(const int64_t* expert_indices,
 }
 
 void RoutingHistogram::print() const {
-    printf("[Transcender ROUTE] Expert Utilization:\n");
+    printf("[TransFormers-Fusion ROUTE] Expert Utilization:\n");
     int64_t max_count = *std::max_element(counts_.begin(), counts_.end());
     for (int64_t e = 0; e < num_experts_; ++e) {
         float pct = total_count_ > 0 ? 100.0f * counts_[e] / total_count_ : 0.0f;
@@ -253,7 +253,7 @@ int64_t KVCacheQuantizer::quantize_old_states(Tensor& k_cache, Tensor& v_cache,
     int64_t quant4_end = std::max((int64_t)0, full_end - cfg_.quant4_window);
 
     // Simulate quantization: zero out states beyond full-precision window
-    // (In real impl, would quantize to QUANT4/QUANT and store compressed)
+    // (In real impl, would quantize to Q4/QUANT and store compressed)
     int64_t bytes_per_token = k_cache.dim(2) * sizeof(float);
     int64_t quantized_tokens = full_end;
     int64_t saved = quantized_tokens * bytes_per_token * 2; // K + V
@@ -264,7 +264,7 @@ int64_t KVCacheQuantizer::quantize_old_states(Tensor& k_cache, Tensor& v_cache,
 void KVCacheQuantizer::restore_for_attention(const Tensor& quantized_k,
                                               Tensor& restored_k,
                                               int64_t start, int64_t end) {
-    // In real impl: dequantize from QUANT4/QUANT to FP32
+    // In real impl: dequantize from Q4/QUANT to FP32
     // For now, just copy
     int64_t seq_len = end - start;
     int64_t hidden = quantized_k.dim(quantized_k.rank() - 1);
@@ -290,7 +290,7 @@ float KVCacheQuantizer::estimated_quality_loss() const {
 
 void TelemetryPrinter::print_all_header() {
     printf("+==========================================================+\n");
-    printf("|           Transcender - Telemetry Proof Report            |\n");
+    printf("|           TransFormers-Fusion - Telemetry Proof Report            |\n");
     printf("|  APACHE LICENSE 2.0 - OPEN SOURCE                       |\n");
     printf("+==========================================================+\n");
 }
@@ -314,9 +314,9 @@ void TelemetryPrinter::print_routing_report(float load_balance_loss) {
 
 void TelemetryPrinter::print_kv_quant_report() {
     KVCacheQuantizer quant;
-    printf("[Transcender KV-QUANT] KV-Cache Quantizer:\n");
+    printf("[TransFormers-Fusion KV-QUANT] KV-Cache Quantizer:\n");
     printf("  Full-precision window: %lld tokens\n", (long long)quant.config().full_precision_window);
-    printf("  QUANT4 window: %lld tokens\n", (long long)quant.config().quant4_window);
+    printf("  Q4 window: %lld tokens\n", (long long)quant.config().quant4_window);
     printf("  Beyond: QUANT (1.5-bit)\n");
     printf("  Estimated quality loss: %.2f%%\n", quant.estimated_quality_loss() * 100.0f);
 }
@@ -331,7 +331,7 @@ void TelemetryPrinter::print_all_footer() {
 void TelemetryPrinter::print_training_step(int step, float loss, float lr,
                                             float grad_norm, int64_t tokens_per_sec,
                                             int64_t mem_bytes) {
-    printf("[Transcender TRAIN] Step %d | Loss: %.4f | LR: %.2e | Grad Norm: %.2f | "
+    printf("[TransFormers-Fusion TRAIN] Step %d | Loss: %.4f | LR: %.2e | Grad Norm: %.2f | "
            "%lld tok/s | Mem: %.1f MB\n",
            step, loss, lr, grad_norm, (long long)tokens_per_sec, mem_bytes / 1048576.0f);
 }

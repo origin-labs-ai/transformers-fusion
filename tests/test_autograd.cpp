@@ -243,7 +243,7 @@ static void test_grad_chain() {
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    printf("Transcender — Autograd Test Suite\n");
+    printf("TransFormers-Fusion — Autograd Test Suite\n");
     printf("==========================================\n");
 
     test_matmul_backward();

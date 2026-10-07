@@ -9,16 +9,16 @@ namespace quant {
 namespace engines {
 
 // ===========================================================================
-// QUANT4 Engine: 16-entry FP16 codebook, 4-bit indices
+// Q4 Engine: 16-entry FP16 codebook, 4-bit indices
 // ===========================================================================
 
-QUANT4Engine::QUANT4Engine() {
+Q4Engine::Q4Engine() {
     codebook_.resize(16);
     for (int i = 0; i < 16; ++i)
         codebook_[(size_t)i] = (float)(i - 8) * 0.1f;
 }
 
-void QUANT4Engine::train_codebook(const float* data, int64_t n) {
+void Q4Engine::train_codebook(const float* data, int64_t n) {
     if (n == 0) return;
     float dmin = data[0], dmax = data[0];
     for (int64_t i = 1; i < n; ++i) {
@@ -48,7 +48,7 @@ void QUANT4Engine::train_codebook(const float* data, int64_t n) {
     }
 }
 
-void QUANT4Engine::train_codebook_per_block(const float* data, int64_t n,
+void Q4Engine::train_codebook_per_block(const float* data, int64_t n,
                                            int64_t block_size, int lloyd_iters) {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -99,7 +99,7 @@ void QUANT4Engine::train_codebook_per_block(const float* data, int64_t n,
     }
 }
 
-void QUANT4Engine::quantize_per_block(const float* data, int64_t n, int64_t block_size,
+void Q4Engine::quantize_per_block(const float* data, int64_t n, int64_t block_size,
                                      uint8_t* indices_out, float* scales_out) const {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -133,7 +133,7 @@ void QUANT4Engine::quantize_per_block(const float* data, int64_t n, int64_t bloc
     }
 }
 
-void QUANT4Engine::dequantize_per_block(const uint8_t* indices, const float* scales,
+void Q4Engine::dequantize_per_block(const uint8_t* indices, const float* scales,
                                        int64_t n, int64_t block_size, float* out) const {
     int64_t num_blocks = n / block_size;
     if (n % block_size != 0) num_blocks++;
@@ -149,13 +149,13 @@ void QUANT4Engine::dequantize_per_block(const uint8_t* indices, const float* sca
     }
 }
 
-uint8_t QUANT4Engine::quantize(float val) const {
+uint8_t Q4Engine::quantize(float val) const {
     if (use_stochastic_) {
         // Two-nearest-centroid stochastic rounding: unbiased and minimum
         // variance. BUG FIXED 2026-09-12 — this was a softmax over all 16
         // centroids with weight exp(-d/T), which depends on the raw distance
         // rather than the local scale, is far too flat, and sampled almost
-        // uniformly across the codebook (same defect as QUANT8, where it made
+        // uniformly across the codebook (same defect as Q8, where it made
         // MSE ~100x worse than argmin).
         int i1 = 0, i2 = 0;
         float d1 = 1e10f, d2 = 1e10f;
@@ -197,12 +197,12 @@ uint8_t QUANT4Engine::quantize(float val) const {
 #endif
 }
 
-float QUANT4Engine::dequantize(uint8_t idx) const {
+float Q4Engine::dequantize(uint8_t idx) const {
     if (idx >= 16) idx = 0;
     return codebook_[idx];
 }
 
-Tensor QUANT4Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
+Tensor Q4Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
     Tensor out({n});
     float* od = out.data<float>();
 #ifdef QUANT_HAS_AVX2
@@ -220,10 +220,10 @@ Tensor QUANT4Engine::dequant_tensor(const uint8_t* indices, int64_t n) const {
 }
 
 // ===========================================================================
-// QUANT4 Engine: Extensions
+// Q4 Engine: Extensions
 // ===========================================================================
 
-Tensor QUANT4Engine::quantize_tensor(const float* data, int64_t n) const {
+Tensor Q4Engine::quantize_tensor(const float* data, int64_t n) const {
     int64_t packed_size = (n + 1) / 2;
     Tensor out({packed_size}, quant::DType::U8);
     uint8_t* od = out.data<uint8_t>();
@@ -235,7 +235,7 @@ Tensor QUANT4Engine::quantize_tensor(const float* data, int64_t n) const {
     return out;
 }
 
-Tensor QUANT4Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
+Tensor Q4Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
                                int64_t M, int64_t N, int64_t K) const {
     Tensor C({M, N});
     C.zero_();
@@ -260,9 +260,9 @@ Tensor QUANT4Engine::quant_gemm(const Tensor& a, const uint8_t* b_idx,
     return C;
 }
 
-void QUANT4Engine::quantize_per_channel(const Tensor& t, int channel_dim,
+void Q4Engine::quantize_per_channel(const Tensor& t, int channel_dim,
                                        Tensor& q, Tensor& scales) const {
-    QUANT_CHECK(t.rank() == 2, "QUANT4 per-channel expects 2D tensor");
+    QUANT_CHECK(t.rank() == 2, "Q4 per-channel expects 2D tensor");
     int64_t d0 = t.dim(0), d1 = t.dim(1);
     int64_t channels = (channel_dim == 0) ? d0 : d1;
     int64_t other = (channel_dim == 0) ? d1 : d0;
@@ -295,7 +295,7 @@ void QUANT4Engine::quantize_per_channel(const Tensor& t, int channel_dim,
     }
 }
 
-void QUANT4Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
+void Q4Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
                                          int channel_dim, Tensor& out) const {
     int64_t total = scales.numel();
     int64_t d0 = total, d1 = 1;
@@ -318,11 +318,11 @@ void QUANT4Engine::dequantize_per_channel(const Tensor& q, const Tensor& scales,
     }
 }
 
-float QUANT4Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
+float Q4Engine::quant_error(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_mse(original, reconstructed);
 }
 
-float QUANT4Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
+float Q4Engine::quant_snr(const Tensor& original, const Tensor& reconstructed) const {
     return compute_quant_snr(original, reconstructed);
 }
 

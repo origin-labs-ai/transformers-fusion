@@ -671,7 +671,7 @@ Tensor AttentionResidual::forward(const Tensor& current_output, const Tensor& ea
 }
 
 // Retired dead code (owner purge 2026-09-07):
-// - LatentKVAttention / GatedDeltaAttention / TranscenderDeltaAttention:
+// - LatentKVAttention / GatedDeltaAttention / TransFormersFusionDeltaAttention:
 //   RETIRED — owner purge 2026-09-07, zero call sites outside their own tests.
 // - FP8_E4M3 / FP8_E5M2 / fp8_matmul (local scalar triple-loop copies):
 //   RETIRED — superseded by math::fp8_gemm (src/math) + engines::fp8_*

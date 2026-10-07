@@ -1,5 +1,5 @@
 // ============================================================================
-// PILLAR 3: VectorQuantizer — EMA-based VQ + QUANT8/QUANT4 Codebooks
+// PILLAR 3: VectorQuantizer — EMA-based VQ + Q8/Q4 Codebooks
 // ============================================================================
 
 #include "quant/vector_quantizer.h"
@@ -160,10 +160,10 @@ float VectorQuantizer::perplexity() const {
 }
 
 // ============================================================================
-// QUANT8VectorQuantizer — 256-entry FP32 codebook
+// Q8VectorQuantizer — 256-entry FP32 codebook
 // ============================================================================
 
-QUANT8VectorQuantizer::QUANT8VectorQuantizer() {
+Q8VectorQuantizer::Q8VectorQuantizer() {
     codebook_.resize(256);
     codebook_sum_.resize(256);
     codebook_counts_.resize(256, 0);
@@ -173,13 +173,13 @@ QUANT8VectorQuantizer::QUANT8VectorQuantizer() {
     }
 }
 
-QUANT8VectorQuantizer::QUANT8VectorQuantizer(const std::vector<float>& initial_codebook)
+Q8VectorQuantizer::Q8VectorQuantizer(const std::vector<float>& initial_codebook)
     : codebook_(initial_codebook) {
     codebook_sum_.resize(256);
     codebook_counts_.resize(256, 0);
 }
 
-int QUANT8VectorQuantizer::find_nearest(float value) const {
+int Q8VectorQuantizer::find_nearest(float value) const {
     float min_dist = 1e30f;
     int best = 0;
     for (int i = 0; i < 256; ++i) {
@@ -193,7 +193,7 @@ int QUANT8VectorQuantizer::find_nearest(float value) const {
     return best;
 }
 
-std::vector<uint8_t> QUANT8VectorQuantizer::quantize(const float* weights, int64_t n) {
+std::vector<uint8_t> Q8VectorQuantizer::quantize(const float* weights, int64_t n) {
     std::vector<uint8_t> indices(n);
     for (int64_t i = 0; i < n; ++i) {
         indices[i] = static_cast<uint8_t>(find_nearest(weights[i]));
@@ -201,13 +201,13 @@ std::vector<uint8_t> QUANT8VectorQuantizer::quantize(const float* weights, int64
     return indices;
 }
 
-void QUANT8VectorQuantizer::dequantize(const uint8_t* indices, float* output, int64_t n) const {
+void Q8VectorQuantizer::dequantize(const uint8_t* indices, float* output, int64_t n) const {
     for (int64_t i = 0; i < n; ++i) {
         output[i] = codebook_[indices[i]];
     }
 }
 
-void QUANT8VectorQuantizer::update_ema(const float* weights, const uint8_t* indices, int64_t n) {
+void Q8VectorQuantizer::update_ema(const float* weights, const uint8_t* indices, int64_t n) {
     std::fill(codebook_sum_.begin(), codebook_sum_.end(), 0.0f);
     std::fill(codebook_counts_.begin(), codebook_counts_.end(), 0);
     for (int64_t i = 0; i < n; ++i) {
@@ -223,10 +223,10 @@ void QUANT8VectorQuantizer::update_ema(const float* weights, const uint8_t* indi
 }
 
 // ============================================================================
-// QUANT4VectorQuantizer — 16-entry FP16 codebook
+// Q4VectorQuantizer — 16-entry FP16 codebook
 // ============================================================================
 
-QUANT4VectorQuantizer::QUANT4VectorQuantizer() {
+Q4VectorQuantizer::Q4VectorQuantizer() {
     codebook_.resize(16);
     codebook_sum_.resize(16);
     codebook_counts_.resize(16, 0);
@@ -235,13 +235,13 @@ QUANT4VectorQuantizer::QUANT4VectorQuantizer() {
     }
 }
 
-QUANT4VectorQuantizer::QUANT4VectorQuantizer(const std::vector<uint16_t>& initial_codebook)
+Q4VectorQuantizer::Q4VectorQuantizer(const std::vector<uint16_t>& initial_codebook)
     : codebook_(initial_codebook) {
     codebook_sum_.resize(16);
     codebook_counts_.resize(16, 0);
 }
 
-float QUANT4VectorQuantizer::fp16_to_float(uint16_t h) {
+float Q4VectorQuantizer::fp16_to_float(uint16_t h) {
     uint32_t sign = (h >> 15) & 1;
     uint32_t exp = (h >> 10) & 0x1F;
     uint32_t frac = h & 0x3FF;
@@ -258,7 +258,7 @@ float QUANT4VectorQuantizer::fp16_to_float(uint16_t h) {
     return result;
 }
 
-uint16_t QUANT4VectorQuantizer::float_to_fp16(float f) {
+uint16_t Q4VectorQuantizer::float_to_fp16(float f) {
     uint32_t bits;
     std::memcpy(&bits, &f, sizeof(uint32_t));
     uint32_t sign = (bits >> 31) & 1;
@@ -269,7 +269,7 @@ uint16_t QUANT4VectorQuantizer::float_to_fp16(float f) {
     return static_cast<uint16_t>((sign << 15) | (exp << 10) | frac);
 }
 
-int QUANT4VectorQuantizer::find_nearest(float value) const {
+int Q4VectorQuantizer::find_nearest(float value) const {
     float min_dist = 1e30f;
     int best = 0;
     for (int i = 0; i < 16; ++i) {
@@ -284,7 +284,7 @@ int QUANT4VectorQuantizer::find_nearest(float value) const {
     return best;
 }
 
-std::vector<uint8_t> QUANT4VectorQuantizer::quantize(const float* weights, int64_t n) {
+std::vector<uint8_t> Q4VectorQuantizer::quantize(const float* weights, int64_t n) {
     int64_t packed_size = (n + 1) / 2;
     std::vector<uint8_t> packed(packed_size, 0);
     for (int64_t i = 0; i < n; ++i) {
@@ -298,7 +298,7 @@ std::vector<uint8_t> QUANT4VectorQuantizer::quantize(const float* weights, int64
     return packed;
 }
 
-void QUANT4VectorQuantizer::dequantize(const uint8_t* packed_indices, float* output, int64_t n) const {
+void Q4VectorQuantizer::dequantize(const uint8_t* packed_indices, float* output, int64_t n) const {
     for (int64_t i = 0; i < n; ++i) {
         uint8_t byte = packed_indices[i / 2];
         int nibble = (i % 2 == 0) ? (byte & 0x0F) : ((byte >> 4) & 0x0F);
@@ -306,7 +306,7 @@ void QUANT4VectorQuantizer::dequantize(const uint8_t* packed_indices, float* out
     }
 }
 
-void QUANT4VectorQuantizer::update_ema(const float* weights, const uint8_t* packed_indices, int64_t n) {
+void Q4VectorQuantizer::update_ema(const float* weights, const uint8_t* packed_indices, int64_t n) {
     std::fill(codebook_sum_.begin(), codebook_sum_.end(), 0.0f);
     std::fill(codebook_counts_.begin(), codebook_counts_.end(), 0);
     for (int64_t i = 0; i < n; ++i) {

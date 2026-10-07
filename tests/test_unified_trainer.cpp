@@ -119,7 +119,7 @@ static void test_configure_ok() {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Transcender - Unified Trainer Entry (L073) Suite\n");
+    printf("TransFormers-Fusion - Unified Trainer Entry (L073) Suite\n");
     printf("================================================\n");
 
     test_kind_names();

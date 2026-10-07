@@ -86,7 +86,7 @@ private:
                                 const std::vector<int>& seq_lens) const;
 };
 
-// D4: KV cache compression — QUANT4/QUANT for K/V storage
+// D4: KV cache compression — Q4/QUANT for K/V storage
 class CompressedKVCache {
 public:
     CompressedKVCache(int64_t max_seq, int64_t n_layers, int64_t head_dim);

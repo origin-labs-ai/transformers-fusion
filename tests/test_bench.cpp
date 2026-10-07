@@ -9,7 +9,7 @@
 
 int main() {
     std::cout << "=========================================" << std::endl;
-    std::cout << "    Transcender Hardware Probe & Benchmark    " << std::endl;
+    std::cout << "    TransFormers-Fusion Hardware Probe & Benchmark    " << std::endl;
     std::cout << "=========================================" << std::endl;
 
     std::cout << "[Test 1] Probing system hardware profile..." << std::endl;

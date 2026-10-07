@@ -11,7 +11,7 @@
 
 #include "quant/types.h"
 #include "quant/kv_cache.h"
-#include "quant/sops_integration.h"
+#include "quant/inferno_integration.h"
 #include <vector>
 #include <cstdint>
 #include <cstddef>
@@ -161,7 +161,8 @@ struct VerificationResult {
     std::vector<bool> accepted;
     int first_rejection_pos = -1;
     int total_accepted = 0;
-    double verify_sops = 0.0;
+    double verify_flops = 0.0;
+    double verify_inferno = 0.0;
 };
 
 class SmallBatchVerifier {

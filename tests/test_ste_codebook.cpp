@@ -13,7 +13,7 @@ using namespace quant;
 
 int main() {
     // Regression test for static-codebook bug: two tensors with different distributions must produce different codebooks
-    // Before fix, static CodebookQUANT8 reused first tensor's codebook for second tensor (order dependent)
+    // Before fix, static CodebookQ8 reused first tensor's codebook for second tensor (order dependent)
     const int N = 1024;
     Tensor t1(Shape{N}, DType::F32);
     Tensor t2(Shape{N}, DType::F32);
@@ -61,16 +61,16 @@ int main() {
     assert(diff_order_r2 < 1e-3f && "Reverse-order independence failed (r2): static codebook bug still present");
 
     // Centroid-inequality: codebooks trained on different distributions must differ.
-    // Compare permutation-invariant means of two CodebookQUANT8 trained on t1 vs t2
+    // Compare permutation-invariant means of two CodebookQ8 trained on t1 vs t2
     // (t1 ~ [-1,1] mean ~0, t2 ~ [-5,15] mean ~5).
     double cb_mean_diff = 0;
     {
-        CodebookQUANT8 cb1, cb2;
+        CodebookQ8 cb1, cb2;
         cb1.train(d1, (size_t)N);
         cb2.train(d2, (size_t)N);
         double m1 = 0, m2 = 0;
-        for (int c = 0; c < CodebookQUANT8::SIZE; ++c) { m1 += cb1.centroids[c]; m2 += cb2.centroids[c]; }
-        m1 /= CodebookQUANT8::SIZE; m2 /= CodebookQUANT8::SIZE;
+        for (int c = 0; c < CodebookQ8::SIZE; ++c) { m1 += cb1.centroids[c]; m2 += cb2.centroids[c]; }
+        m1 /= CodebookQ8::SIZE; m2 /= CodebookQ8::SIZE;
         cb_mean_diff = std::fabs(m1 - m2);
         assert(cb_mean_diff > 0.5 && "Centroid inequality failed: distinct distributions must yield distinct codebooks");
     }

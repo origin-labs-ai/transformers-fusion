@@ -9,7 +9,7 @@
 //   1. Cache-Hit Logger: L1/L2 vs RAM fetches in SIMD kernels
 //   2. Memory Tracker: Live VRAM/RAM breakdown (Weights/Gradients/Optimizer)
 //   3. Routing Histogram: ASCII histogram of expert utilization
-//   4. KV-Cache Quantizer: Dynamic cast of old KV states to QUANT4/QUANT
+//   4. KV-Cache Quantizer: Dynamic cast of old KV states to Q4/QUANT
 // ============================================================================
 
 #include "quant/tensor.h"
@@ -163,7 +163,7 @@ private:
 // would show 1-2 dominant experts and6-7 starved experts.
 //
 // Example output:
-// [Transcender ROUTE] Expert Utilization (840B tokens, 8 experts):
+// [TransFormers-Fusion ROUTE] Expert Utilization (840B tokens, 8 experts):
 //   Expert 0 (TEXT):     ████████████████████ 25.2%
 //   Expert 1 (TEXT):     ████████████████████ 24.8%
 //   Expert 2 (TEXT):     ████████████████████ 25.1%
@@ -221,17 +221,17 @@ private:
 // For1M token context, KV cache is massive:
 //   1M tokens * 2048 hidden * 2 (K+V) * 4 bytes = ~16GB
 //
-// Strategy: Keep recent tokens in FP32, quantize older tokens to QUANT4/QUANT.
+// Strategy: Keep recent tokens in FP32, quantize older tokens to Q4/QUANT.
 // This is a sliding window approach:
 //   - Last N tokens: FP32 (full precision for attention)
-//   - Older tokens: QUANT4 (4-bit) or QUANT (2-bit)
+//   - Older tokens: Q4 (4-bit) or QUANT (2-bit)
 //
 // Result: 16GB KV cache → ~2-4GB with minimal quality loss.
 // ============================================================================
 
 struct KVQuantConfig {
     int64_t full_precision_window = 4096;   // Keep last 4K tokens in FP32
-    int64_t quant4_window = 32768;            // Next 32K in QUANT4
+    int64_t quant4_window = 32768;            // Next 32K in Q4
     // Beyond: QUANT
     bool enabled = true;
 };

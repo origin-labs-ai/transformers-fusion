@@ -1,5 +1,5 @@
 // ============================================================================
-// image.h — Image processing types for Transcender
+// image.h — Image processing types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

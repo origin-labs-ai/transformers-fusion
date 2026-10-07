@@ -1,4 +1,4 @@
-// test_all.cpp — Combined master test runner for the entire Transcender engine
+// test_all.cpp — Combined master test runner for the entire TransFormers-Fusion engine
 #include "quant/types.h"
 #include "quant/format_registry.h"
 #include "quant/backend.h"
@@ -24,7 +24,7 @@ int main() {
     std::cout << std::unitbuf; // PROD debug: unbuffered so hang point is visible
     std::cerr << std::unitbuf;
     std::cout << "=========================================================================\n";
-    std::cout << "             Transcender AI Engine — Master System Verification               \n";
+    std::cout << "             TransFormers-Fusion AI Engine — Master System Verification               \n";
     std::cout << "=========================================================================\n\n";
 
     // 1. Format Registry Verification

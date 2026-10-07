@@ -1,5 +1,5 @@
 // ============================================================================
-// text.h — Text processing types for Transcender
+// text.h — Text processing types for TransFormers-Fusion
 // ============================================================================
 #pragma once
 #include "quant/tensor.h"

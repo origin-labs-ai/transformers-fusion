@@ -250,9 +250,9 @@ void DenseModel::save_quantized(const std::string& quant_path, Format fmt) const
         uint32_t bs = block_start;
 
         if (codebook_size > 0) {
-            CodebookQUANT8 cb;
+            CodebookQ8 cb;
             if (codebook_size == 16) {
-                CodebookQUANT4 cb4;
+                CodebookQ4 cb4;
                 cb4.train(td, (size_t)numel);
                 std::vector<uint8_t> indices(numel);
                 for (int64_t i = 0; i < numel; i++)

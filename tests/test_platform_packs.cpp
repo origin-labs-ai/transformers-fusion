@@ -153,13 +153,13 @@ int main() {
 
     // P37: packaging manifest
     {
-        p18::PackManifest m{"transcender", Transcender_VERSION_STRING, "Apache-2.0",
+        p18::PackManifest m{"transformers-fusion", TRANSFORMERS_FUSION_VERSION_STRING, "Apache-2.0",
                              {{"bin/quant_infer", "sha256:abc12345"}, {"weights/model.quant", "sha256:def67890"}}};
         TEST_CHECK(p18::pack_manifest_valid(m), "P37: manifest with version+hashes valid");
         // One-truth lives in include/quant/version.h. It was bumped to R0001.01
         // (1.1.0) and this assertion still pinned the old 0.2.0, so it failed
         // against a perfectly consistent tree. Updated 2026-09-10.
-        TEST_CHECK(std::string(Transcender_VERSION_STRING) == "R0001.01", "P37: version one-truth R0001.01");
+        TEST_CHECK(std::string(TRANSFORMERS_FUSION_VERSION_STRING) == "R0001.01", "P37: version one-truth R0001.01");
         p18::PackManifest bad = m;
         bad.files.clear();
         TEST_CHECK(!p18::pack_manifest_valid(bad), "P37: file-less manifest rejected");
@@ -184,7 +184,7 @@ int main() {
     {
         // The real C API lives in the report snippet (orchestrator-owned header).
         // Here we assert the contract the C API must satisfy.
-        std::string c_version = Transcender_VERSION_STRING;
+        std::string c_version = TRANSFORMERS_FUSION_VERSION_STRING;
         // The old check required the first char to be '0', which encoded the
         // stale 0.x assumption. The contract that actually matters: the C API
         // exposes the same non-empty version string the rest of the tree uses.

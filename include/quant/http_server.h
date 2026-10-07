@@ -137,7 +137,7 @@ private:
     int thread_pool_size_ = 4;
     int timeout_seconds_ = 30;
     int64_t max_body_size_ = 4 * 1024 * 1024;
-    std::string model_name_ = "Transcender-default";
+    std::string model_name_ = "TransFormers-Fusion-default";
     std::atomic<int64_t> total_requests_{0};
     std::atomic<int64_t> total_errors_{0};
     // L074 hardening state. auth_token_/max_header_bytes_/max_concurrent_/

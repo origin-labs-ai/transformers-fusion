@@ -580,7 +580,7 @@ private:
             handle_detokenize(client_fd, req);
         } else if (req.path == "/health" || req.path == "/") {
             send_response(client_fd, 200, "application/json",
-                "{\"status\":\"ok\",\"model\":\"Transcender-QUANT\"}");
+                "{\"status\":\"ok\",\"model\":\"TransFormers-Fusion-QUANT\"}");
         } else {
             send_response(client_fd, 404, "application/json",
                 json_error("not found: " + req.path));

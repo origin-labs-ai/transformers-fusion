@@ -1,15 +1,15 @@
 #pragma once
 
 // ============================================================================
-// Transcender Fine-Tuning Engine — three native strategies.
+// TransFormers-Fusion Fine-Tuning Engine — three native strategies.
 //
 //   1. SelectiveFineTuner        — "where to overwrite": gradient-saliency +
 //                                   Fisher-prior driven block selection.
 //                                   Base weights are updated ONLY in blocks
 //                                   the gradients prove need changing.
 //
-//   2. RankAdapterEngine         — Transcender-native low-rank delta adapters
-//                                   (QUANT-Rank): per-layer LOW-RANK delta
+//   2. RankAdapterEngine         — TransFormers-Fusion-native low-rank delta adapters
+//                                   (Q-Rank): per-layer LOW-RANK delta
 //                                   ΔW ≈ B·A trained with autograd and
 //                                   stored quantized in QUANT/QUANT formats.
 //                                   100% native implementation — no external
@@ -56,8 +56,8 @@ struct SelectiveTunerConfig {
     float fisher_bias = 0.35f;       // Fisher prior weight inside saliency
     float fisher_decay = 0.95f;      // EMA decay when accumulating Fisher
     float min_select_fraction = 0.01f; // floor on the selected block fraction
-    // STE roundtrip target: QUANT16 (FP16-class) by default. Coarser lattice
-    // formats (e.g. QUANT8) quantize every selected block with ONE rms scale,
+    // STE roundtrip target: Q16 (FP16-class) by default. Coarser lattice
+    // formats (e.g. Q8) quantize every selected block with ONE rms scale,
     // which collapses blocks that mix an outlier with small values — far too
     // lossy for trained weights. FP16 keeps the fine-tuned weights exactly
     // representable while preserving training quality.
@@ -126,7 +126,7 @@ private:
 };
 
 // ============================================================================
-// METHOD 2 — Transcender-native low-rank delta adapters ("QUANT-Rank")
+// METHOD 2 — TransFormers-Fusion-native low-rank delta adapters ("Q-Rank")
 // ============================================================================
 struct RankAdapterConfig {
     int rank = 16;                     // adapter rank (width of the delta path)

@@ -158,7 +158,7 @@ static ProblemCategory classify_task(const std::string& task) {
 
 static std::string generate_from_template(const std::string& task) {
     ProblemCategory cat = classify_task(task);
-    std::string code = "// Transcender template-generated solution\n";
+    std::string code = "// TransFormers-Fusion template-generated solution\n";
     code += "// Task: " + task + "\n";
     code += "#include <vector>\n#include <algorithm>\n#include <queue>\n";
     code += "#include <stack>\n#include <string>\n#include <unordered_map>\n";
@@ -756,9 +756,9 @@ namespace fs = std::filesystem;
 static fs::path get_sandbox_path() {
 #ifdef _WIN32
     const char* tmp = std::getenv("TEMP");
-    return fs::path(tmp ? tmp : "C:\\Temp") / "Transcender_sandbox";
+    return fs::path(tmp ? tmp : "C:\\Temp") / "TransFormers-Fusion_sandbox";
 #else
-    return fs::path("/tmp") / "Transcender_sandbox";
+    return fs::path("/tmp") / "TransFormers-Fusion_sandbox";
 #endif
 }
 
