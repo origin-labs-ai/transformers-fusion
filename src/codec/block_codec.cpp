@@ -267,7 +267,7 @@ static double comp8_group_mse(const float* w, int cnt, double s) {
 // Closed-form optimal scale for 1-bit sign coding with slot-zeroed weights:
 // E(s) = S2 - 2*s*A + s^2*K is minimized exactly at s* = A/K (mean |w| over
 // kept weights); only the fp16 ladder snap needs a tiny local check.
-static float q1_fit_scale_fp16(const float* w, int n, int slots) {
+static float q1_fit_scale_fp16(const float* w, int n, int slots, int effort = 0) {
     double sum_abs = 0.0;
     int kept = 0;
     for (int i = 0; i < n; ++i)
@@ -286,7 +286,8 @@ static float q1_fit_scale_fp16(const float* w, int n, int slots) {
         return e;
     };
     double best_e = mse1(best);
-    for (int delta = -4; delta <= 4; ++delta) {
+    const int qrad = effort <= 0 ? 4 : (effort == 1 ? 10 : 24);
+    for (int delta = -qrad; delta <= qrad; ++delta) {
         if (delta == 0) continue;
         const int hc = (int)h0 + delta;
         if (hc < 0 || hc > 0xFFFF) continue;
@@ -367,13 +368,13 @@ static bool grp8_compound_fits(int n) {
                (size_t)std::ceil(8.5 * (double)n);
 }
 
-static void quant_grp8_compound(const float* w, int n, std::vector<uint8_t>& indices) {
+static void quant_grp8_compound(const float* w, int n, std::vector<uint8_t>& indices, float g8_smult = 1.0f) {
     const int ng = n / 32;
     indices.assign(((size_t)n * 8 + (size_t)ng * 16 + 7) / 8, 0);
     const Comp8Table& t = comp8_table();
     std::vector<float> scales((size_t)ng, 0.0f);
     for (int g = 0; g < ng; ++g)
-        scales[(size_t)g] = comp8_fit_scale_fp16(w + g * 32, 32);
+        scales[(size_t)g] = comp8_fit_scale_fp16(w + g * 32, 32) * g8_smult;
     BitWriter bw(indices);
     for (int g = 0; g < ng; ++g) {
         const float s = scales[(size_t)g];
@@ -440,7 +441,7 @@ static float lattice_claimed(int bits) {
 }
 
 void quant_lattice(Format fmt, const float* w, int n, int bits,
-                   std::vector<uint8_t>& indices) {
+                   std::vector<uint8_t>& indices, int lattice_iters = 2, float lattice_smult = 1.0f) {
     // NOTE (bug census): `fmt` intentionally unused here — bit-width dispatch
     // goes through `bits` (the format's wire width). Kept for signature
     // symmetry with dequant_lattice callers that pass both.
@@ -457,7 +458,7 @@ void quant_lattice(Format fmt, const float* w, int n, int bits,
     if (bits == 8) {
         // Companded grid + fp16-storable true-MSE-optimal scale; wire layout
         // (fp16 scale header funded by kScaleSlots 7-bit slots) unchanged.
-        const float s = comp8_fit_scale_fp16(w, n);
+        const float s = comp8_fit_scale_fp16(w, n) * lattice_smult;
         BitWriter bw(indices);
         bw.put(f32_to_f16(s), 16);
         for (int i = 0; i < n; ++i) {
@@ -472,9 +473,9 @@ void quant_lattice(Format fmt, const float* w, int n, int bits,
     for (int i = 0; i < n; ++i) {
         maxa = std::max(maxa, std::fabs(w[i]));
     }
-    float s = (maxa > 1e-30f) ? maxa / R : 0.0f;
+    float s = (maxa > 1e-30f) ? maxa / R * lattice_smult : 0.0f;
     if (s > 0.0f) {
-        for (int iter = 0; iter < 2; ++iter) {
+        for (int iter = 0; iter < lattice_iters; ++iter) {
             double num = 0.0, den = 0.0;
             for (int i = 0; i < n; ++i) {
                 const float l = level_value(bits, nearest_level(w[i] / s, bits));
@@ -619,7 +620,7 @@ static uint32_t nearest_fixed_level(int bits, float value) {
 }
 
 static void quant_fixed_codebook(int bits, const float* w, int n,
-                                 std::vector<uint8_t>& indices) {
+                                 std::vector<uint8_t>& indices, int fixed_iters = 3, float fixed_smult = 1.0f) {
     const float claimed = (bits == 3) ? 3.0f : (bits == 6) ? 6.0f : 12.0f;
     const size_t budget_bits = (size_t)std::ceil(claimed * (double)n);
     indices.assign((budget_bits + 7) / 8, 0);
@@ -632,9 +633,9 @@ static void quant_fixed_codebook(int bits, const float* w, int n,
     const float max_lvl = fixed_level_value(bits, (uint32_t)((1u << bits) - 1u));
     float maxa = 0.0f;
     for (int i = 0; i < n; ++i) maxa = std::max(maxa, std::fabs(w[i]));
-    float s = (maxa > 1e-30f) ? maxa / max_lvl : 0.0f;
+    float s = (maxa > 1e-30f) ? maxa / max_lvl * fixed_smult : 0.0f;
     if (s > 0.0f) {
-        for (int iter = 0; iter < 3; ++iter) {
+        for (int iter = 0; iter < fixed_iters; ++iter) {
             double num = 0.0, den = 0.0;
             for (int i = 0; i < n; ++i) {
                 const float l = fixed_level_value(bits, nearest_fixed_level(bits, w[i] / s));
@@ -965,7 +966,7 @@ static bool grp16_pad_fits(int n, float claimed) {
     const size_t claimed_bytes = (size_t)std::ceil(claimed * (double)n / 8.0);
     return n >= 32 && n % 32 == 0 && plain_bytes + 16 == claimed_bytes;
 }
-static void quant_grp12_compound(const float* w, int n, std::vector<uint8_t>& indices) {
+static void quant_grp12_compound(const float* w, int n, std::vector<uint8_t>& indices, int g12_iters = 3, float g12_smult = 1.0f) {
     const int ng = n / 32;
     indices.assign(((size_t)n * 12 + (size_t)ng * 16 + 7) / 8, 0);
     BitWriter bw(indices);
@@ -975,9 +976,9 @@ static void quant_grp12_compound(const float* w, int n, std::vector<uint8_t>& in
         float maxa = 0.0f;
         for (int i = 0; i < 32; ++i) maxa = std::max(maxa, std::fabs(blk[i]));
         const float max_lvl = fixed_level_value(12, 4095);
-        float s = (maxa > 1e-30f) ? maxa / max_lvl : 0.0f;
+        float s = (maxa > 1e-30f) ? maxa / max_lvl * g12_smult : 0.0f;
         if (s > 0.0f) {
-            for (int iter = 0; iter < 3; ++iter) {
+            for (int iter = 0; iter < g12_iters; ++iter) {
                 double num = 0.0, den = 0.0;
                 for (int i = 0; i < 32; ++i) {
                     const float l = fixed_level_value(12, nearest_fixed_level(12, blk[i] / s));
@@ -1066,7 +1067,7 @@ static int q6k_clamp_level(float ratio) {
     return std::max(-32, std::min(31, nearest_int_q6k(ratio)));
 }
 
-static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices) {
+static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices, int q6k_passes = 2, int q6k_giters = 4, int q6k_polish = 3, int q6k_joint = 3) {
     const bool has_d = (n >= 8);
     const int sc_count = (n >= 32) ? (n / 16) : 0;
     const size_t levels_bytes = ((size_t)n * 6 + 7) / 8;
@@ -1099,7 +1100,7 @@ static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices) {
         float maxa = 0.0f;
         for (int i = 0; i < n; ++i) maxa = std::max(maxa, std::fabs(w[i]));
         d = maxa / 32.0f;
-        for (int pass = 0; pass < 2; ++pass) {
+        for (int pass = 0; pass < q6k_passes; ++pass) {
             num = den = 0.0;
             for (int i = 0; i < n; ++i) {
                 const int l = q6k_clamp_level(w[i] / d);
@@ -1136,7 +1137,7 @@ static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices) {
         float sg = (maxa > eps) ? maxa / 32.0f : 0.0f;
         if (std::fabs(sg) <= eps) { s[(size_t)g] = 0.0f; continue; }
         int lidx[kQ6KGroup];
-        for (int iter = 0; iter < 4; ++iter) {
+        for (int iter = 0; iter < q6k_giters; ++iter) {
             for (int i = 0; i < kQ6KGroup; ++i) lidx[i] = q6k_clamp_level(w[st + i] / sg);
             double num = 0.0, den = 0.0;
             for (int i = 0; i < kQ6KGroup; ++i) {
@@ -1148,7 +1149,7 @@ static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices) {
         }
         float best_s = sg;
         double best_mse = 1e300;
-        for (int k = -3; k <= 3; ++k) {
+        for (int k = -q6k_polish; k <= q6k_polish; ++k) {
             if (k == 0) continue;
             const float cs = sg * (1.0f + 0.05f * (float)k);
             double e = 0.0;
@@ -1181,10 +1182,10 @@ static void quant_6k(const float* w, int n, std::vector<uint8_t>& indices) {
         for (int g = 0; g < ng; ++g)
             sc8[(size_t)g] = std::max(-127, std::min(127, nearest_int_q6k(iscale * s[(size_t)g])));
 
-        // 3) joint least-squares refinement (3 iterations): levels given
+        // 3) joint least-squares refinement (q6k_joint iterations): levels given
         //    (d, sc8) -> per-group optimal scale s_g (plain MSE LS) -> snap
         //    sc8 -> optimal d.
-        for (int iter = 0; iter < 3; ++iter) {
+        for (int iter = 0; iter < q6k_joint; ++iter) {
             for (int g = 0; g < ng; ++g) {
                 const int st = g * kQ6KGroup;
                 const float eff = d * (float)sc8[(size_t)g];
@@ -1403,7 +1404,7 @@ static bool affine_budget_ok(int bits, int n, int gsz, int scb, int mb,
 }
 
 static void quant_affine(int bits, const float* w, int n, int gsz, int scb, int mb,
-                         float claimed, std::vector<uint8_t>& indices) {
+                         float claimed, std::vector<uint8_t>& indices, int affine_iters = 5, float affine_dmult = 1.0f) {
     size_t sc_bytes = 0, min_bytes = 0;
     if (!affine_budget_ok(bits, n, gsz, scb, mb, claimed, &sc_bytes, &min_bytes)) {
         quant_grp16(bits, w, n, indices, claimed);
@@ -1439,7 +1440,7 @@ static void quant_affine(int bits, const float* w, int n, int gsz, int scb, int 
     if (max_s <= eps) {
         d = 0.0f;
     } else {
-        d = f16_to_f32(f32_to_f16(max_s / (float)scq));
+        d = f16_to_f32(f32_to_f16(max_s / (float)scq)) * affine_dmult;
         for (int g = 0; g < ng; ++g)
             sc[(size_t)g] = (s[(size_t)g] == 0.0f) ? 0 :
                 std::max(0, std::min(scq, (int)std::lround(s[(size_t)g] / d)));
@@ -1453,7 +1454,7 @@ static void quant_affine(int bits, const float* w, int n, int gsz, int scb, int 
         // 3) joint refinement (5 iterations): levels given (d*sc, -dm*mc) ->
         //    per-group LS refit (s, m) -> snap -> LS-optimal FP16 d, dm.
         //    Budget unchanged (same sc/mc bits + 2x FP16 d/dm overhead).
-        for (int iter = 0; iter < 5; ++iter) {
+        for (int iter = 0; iter < affine_iters; ++iter) {
             for (int g = 0; g < ng; ++g) {
                 const int st = g * gsz;
                 const float eff_s = d * (float)sc[(size_t)g];
@@ -2377,6 +2378,27 @@ static void dequant_quad_mix(Format fmt, const uint8_t* indices, size_t idx_byte
     }
 }
 
+// ---- K-tier effort search (genuine L<M<H, wire-identical) ----
+// k_tier() reads the L/M/H suffix (L=0, M=1, H=2; anything else 0).
+// k_mse() scores a candidate payload by true in-memory decode MSE.
+// Every tier body below builds the plain L payload FIRST, scores it, then
+// only keeps strictly-better M/H candidates. Hence MSE(H) <= MSE(M) <= MSE(L)
+// on EVERY input by construction, while payload layout and byte size never
+// change (all sizes are n-derived fixed budgets; decode untouched). Old
+// files stay readable and quality can only improve.
+static int k_tier(Format f) {
+    const char* nm = format_name(f);
+    const size_t L = std::strlen(nm);
+    if (L >= 2 && nm[L - 2] == '_' && (nm[L - 1] == 'L' || nm[L - 1] == 'M' || nm[L - 1] == 'H'))
+        return nm[L - 1] == 'L' ? 0 : (nm[L - 1] == 'M' ? 1 : 2);
+    return 0;
+}
+static double k_mse(const float* a, const float* b, int n) {
+    double e = 0.0;
+    for (int i = 0; i < n; ++i) { const double d = (double)a[i] - b[i]; e += d * d; }
+    return n > 0 ? e / (double)n : 0.0;
+}
+
 bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>& indices, std::vector<uint8_t>& codebook) {
     if (!w || n <= 0) return false;
     indices.clear();
@@ -2515,25 +2537,131 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
             }
             return true;
         }
-        // --- K variants: same BPW, same wire as plain, different encoder quality (L<M<H via search depth) ---
+        // --- K variants: same BPW, same wire as plain; L<M<H via tiered encoder
+        // search (k_tier: iters/seeds per family, min-MSE keep vs L baseline,
+        // so MSE(H)<=MSE(M)<=MSE(L) by construction; layout/bytes unchanged).
+        // Q_16/Q_24 (+G) K trios intentionally share one body: their mapping
+        // is per-value optimal already (wire ceiling), so tiers coincide. ---
         case Format::Q_1_K_L: case Format::Q_1_K_M: case Format::Q_1_K_H: {
             if (n < 32) { indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices); for(int i=0;i<n;++i) bw.put(w[i]>=0?1u:0u,1); return true; }
             indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
-            const float best_f = q1_fit_scale_fp16(w, n, 16);
+            const float best_f = q1_fit_scale_fp16(w, n, 16, k_tier(fmt));
             bw.put(f32_to_f16(best_f),16); for(int i=0;i<n;++i) if(!is_slot(i,n,16)) bw.put(w[i]>=0?1u:0u,1); return true;
         }
-        case Format::Q_2_K_L: case Format::Q_2_K_M: case Format::Q_2_K_H:
-            quant_lattice(Format::Q_2, w, n, 2, indices); return true;
-        case Format::Q_3_K_L: case Format::Q_3_K_M: case Format::Q_3_K_H:
-            quant_fixed_codebook(3, w, n, indices); return true;
-        case Format::Q_4_K_L: case Format::Q_4_K_M: case Format::Q_4_K_H:
-            quant_lattice(Format::Q_4, w, n, 4, indices); return true;
-        case Format::Q_6_K_L: case Format::Q_6_K_M: case Format::Q_6_K_H:
-            quant_fixed_codebook(6, w, n, indices); return true;
-        case Format::Q_8_K_L: case Format::Q_8_K_M: case Format::Q_8_K_H:
-            quant_lattice(Format::Q_8, w, n, 8, indices); return true;
-        case Format::Q_12_K_L: case Format::Q_12_K_M: case Format::Q_12_K_H:
-            quant_fixed_codebook(12, w, n, indices); return true;
+        case Format::Q_2_K_L: case Format::Q_2_K_M: case Format::Q_2_K_H: {
+            const int keff = k_tier(fmt);
+            quant_lattice(Format::Q_2, w, n, 2, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_lattice(indices.data(), indices.size(), n, 2, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {6, 14, 14, 14, 14, 14};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_lattice(Format::Q_2, w, n, 2, kcand, kits[ci], ksms[ci]);
+                dequant_lattice(kcand.data(), kcand.size(), n, 2, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_3_K_L: case Format::Q_3_K_M: case Format::Q_3_K_H: {
+            const int keff = k_tier(fmt);
+            quant_fixed_codebook(3, w, n, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_fixed_codebook(3, indices.data(), indices.size(), n, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {10, 24, 24, 24, 24, 24};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_fixed_codebook(3, w, n, kcand, kits[ci], ksms[ci]);
+                dequant_fixed_codebook(3, kcand.data(), kcand.size(), n, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_4_K_L: case Format::Q_4_K_M: case Format::Q_4_K_H: {
+            const int keff = k_tier(fmt);
+            quant_lattice(Format::Q_4, w, n, 4, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_lattice(indices.data(), indices.size(), n, 4, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {6, 14, 14, 14, 14, 14};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_lattice(Format::Q_4, w, n, 4, kcand, kits[ci], ksms[ci]);
+                dequant_lattice(kcand.data(), kcand.size(), n, 4, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_6_K_L: case Format::Q_6_K_M: case Format::Q_6_K_H: {
+            const int keff = k_tier(fmt);
+            quant_fixed_codebook(6, w, n, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_fixed_codebook(6, indices.data(), indices.size(), n, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {10, 24, 24, 24, 24, 24};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_fixed_codebook(6, w, n, kcand, kits[ci], ksms[ci]);
+                dequant_fixed_codebook(6, kcand.data(), kcand.size(), n, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_8_K_L: case Format::Q_8_K_M: case Format::Q_8_K_H: {
+            const int keff = k_tier(fmt);
+            quant_lattice(Format::Q_8, w, n, 8, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_lattice(indices.data(), indices.size(), n, 8, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {6, 14, 14, 14, 14, 14};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_lattice(Format::Q_8, w, n, 8, kcand, kits[ci], ksms[ci]);
+                dequant_lattice(kcand.data(), kcand.size(), n, 8, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_12_K_L: case Format::Q_12_K_M: case Format::Q_12_K_H: {
+            const int keff = k_tier(fmt);
+            quant_fixed_codebook(12, w, n, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_fixed_codebook(12, indices.data(), indices.size(), n, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {10, 24, 24, 24, 24, 24};
+            const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_fixed_codebook(12, w, n, kcand, kits[ci], ksms[ci]);
+                dequant_fixed_codebook(12, kcand.data(), kcand.size(), n, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
         case Format::Q_16_K_L: case Format::Q_16_K_M: case Format::Q_16_K_H:
             quant_q16_enhanced(w, n, indices); return true;
         case Format::Q_24_K_L: case Format::Q_24_K_M: case Format::Q_24_K_H:
@@ -2542,24 +2670,157 @@ bool quantize_block_all(Format fmt, const float* w, int n, std::vector<uint8_t>&
         case Format::Q_G_1_K_L: case Format::Q_G_1_K_M: case Format::Q_G_1_K_H: {
             if (n < 32) { indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices); for(int i=0;i<n;++i) bw.put(w[i]>=0?1u:0u,1); return true; }
             indices.assign((size_t)(n + 7) / 8, 0); BitWriter bw(indices);
-            const float best_f2 = q1_fit_scale_fp16(w, n, 16);
+            const float best_f2 = q1_fit_scale_fp16(w, n, 16, k_tier(fmt));
             bw.put(f32_to_f16(best_f2),16); for(int i=0;i<n;++i) if(!is_slot(i,n,16)) bw.put(w[i]>=0?1u:0u,1); return true;
         }
-        case Format::Q_G_2_K_L: case Format::Q_G_2_K_M: case Format::Q_G_2_K_H:
-            quant_affine(2, w, n, 16, 4, 4, 2.4375f, indices); return true;
-        case Format::Q_G_3_K_L: case Format::Q_G_3_K_M: case Format::Q_G_3_K_H:
-            quant_affine(3, w, n, 32, 6, 6, 3.4375f, indices); return true;
-        case Format::Q_G_4_K_L: case Format::Q_G_4_K_M: case Format::Q_G_4_K_H:
-            quant_affine(4, w, n, 32, 6, 6, 4.4375f, indices); return true;
+        case Format::Q_G_2_K_L: case Format::Q_G_2_K_M: case Format::Q_G_2_K_H: {
+            const int keff = k_tier(fmt);
+            quant_affine(2, w, n, 16, 4, 4, 2.4375f, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_affine(2, indices.data(), indices.size(), n, 16, 4, 4, 2.4375f, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {14, 30, 30, 30, 30, 30};
+            const float kdms[6] = {1.0f, 1.0f, 0.92f, 1.08f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_affine(2, w, n, 16, 4, 4, 2.4375f, kcand, kits[ci], kdms[ci]);
+                dequant_affine(2, kcand.data(), kcand.size(), n, 16, 4, 4, 2.4375f, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_G_3_K_L: case Format::Q_G_3_K_M: case Format::Q_G_3_K_H: {
+            const int keff = k_tier(fmt);
+            quant_affine(3, w, n, 32, 6, 6, 3.4375f, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_affine(3, indices.data(), indices.size(), n, 32, 6, 6, 3.4375f, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {14, 30, 30, 30, 30, 30};
+            const float kdms[6] = {1.0f, 1.0f, 0.92f, 1.08f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_affine(3, w, n, 32, 6, 6, 3.4375f, kcand, kits[ci], kdms[ci]);
+                dequant_affine(3, kcand.data(), kcand.size(), n, 32, 6, 6, 3.4375f, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_G_4_K_L: case Format::Q_G_4_K_M: case Format::Q_G_4_K_H: {
+            const int keff = k_tier(fmt);
+            quant_affine(4, w, n, 32, 6, 6, 4.4375f, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_affine(4, indices.data(), indices.size(), n, 32, 6, 6, 4.4375f, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kits[6] = {14, 30, 30, 30, 30, 30};
+            const float kdms[6] = {1.0f, 1.0f, 0.92f, 1.08f, 0.7f, 1.3f};
+            const int knc = keff >= 2 ? 6 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_affine(4, w, n, 32, 6, 6, 4.4375f, kcand, kits[ci], kdms[ci]);
+                dequant_affine(4, kcand.data(), kcand.size(), n, 32, 6, 6, 4.4375f, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
         case Format::Q_G_6_K_L: case Format::Q_G_6_K_M: case Format::Q_G_6_K_H:
             // Same wire as QG6: per-16 int8 scales + FP16 d inside the
             // 6.5625 BPW budget. Truncating to ceil(6.0*n/8) used to discard
             // the scales and decode as raw levels (d=1) — never resize here.
-            quant_6k(w, n, indices); return true;
-        case Format::Q_G_8_K_L: case Format::Q_G_8_K_M: case Format::Q_G_8_K_H:
-            if (grp8_compound_fits(n)) quant_grp8_compound(w, n, indices); else quant_affine(8, w, n, 32, 6, 6, 8.0f, indices); return true;
-        case Format::Q_G_12_K_L: case Format::Q_G_12_K_M: case Format::Q_G_12_K_H:
-            if (grp12_compound_fits(n)) quant_grp12_compound(w, n, indices); else { quant_fixed_codebook(12,w,n,indices); indices.resize((size_t)std::ceil(12.0*(double)n/8.0),0); } return true;
+        {
+            const int keff = k_tier(fmt);
+            quant_6k(w, n, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            dequant_6k(indices.data(), indices.size(), n, kbd.data());
+            double kbe = k_mse(w, kbd.data(), n);
+            const int kp[2][4] = {{5,8,5,6},{10,14,8,10}};
+            const int knc = keff >= 2 ? 2 : 1;
+            for (int ci = 0; ci < knc; ++ci) {
+                quant_6k(w, n, kcand, kp[ci][0], kp[ci][1], kp[ci][2], kp[ci][3]);
+                dequant_6k(kcand.data(), kcand.size(), n, kdd.data());
+                const double e = k_mse(w, kdd.data(), n);
+                if (e < kbe) { kbe = e; indices.swap(kcand); }
+            }
+            return true;
+        }
+        case Format::Q_G_8_K_L: case Format::Q_G_8_K_M: case Format::Q_G_8_K_H: {
+            const int keff = k_tier(fmt);
+            if (grp8_compound_fits(n)) quant_grp8_compound(w, n, indices);
+            else quant_affine(8, w, n, 32, 6, 6, 8.0f, indices);
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            if (grp8_compound_fits(n)) {
+                dequant_grp8_compound(indices.data(), indices.size(), n, kbd.data());
+                double kbe = k_mse(w, kbd.data(), n);
+                const float ks[6] = {0.7f, 0.9f, 0.95f, 1.05f, 1.1f, 1.3f};
+                const int knc = keff >= 2 ? 6 : 2;
+                for (int ci = 6 - knc; ci < 6; ++ci) {
+                    quant_grp8_compound(w, n, kcand, ks[ci]);
+                    dequant_grp8_compound(kcand.data(), kcand.size(), n, kdd.data());
+                    const double e = k_mse(w, kdd.data(), n);
+                    if (e < kbe) { kbe = e; indices.swap(kcand); }
+                }
+            } else {
+                dequant_affine(8, indices.data(), indices.size(), n, 32, 6, 6, 8.0f, kbd.data());
+                double kbe = k_mse(w, kbd.data(), n);
+                const int kits[6] = {14, 30, 30, 30, 30, 30};
+                const float kdms[6] = {1.0f, 1.0f, 0.92f, 1.08f, 0.7f, 1.3f};
+                const int knc = keff >= 2 ? 6 : 1;
+                for (int ci = 0; ci < knc; ++ci) {
+                    quant_affine(8, w, n, 32, 6, 6, 8.0f, kcand, kits[ci], kdms[ci]);
+                    dequant_affine(8, kcand.data(), kcand.size(), n, 32, 6, 6, 8.0f, kdd.data());
+                    const double e = k_mse(w, kdd.data(), n);
+                    if (e < kbe) { kbe = e; indices.swap(kcand); }
+                }
+            }
+            return true;
+        }
+        case Format::Q_G_12_K_L: case Format::Q_G_12_K_M: case Format::Q_G_12_K_H: {
+            const int keff = k_tier(fmt);
+            const size_t pad12 = (size_t)std::ceil(12.0 * (double)n / 8.0);
+            if (grp12_compound_fits(n)) quant_grp12_compound(w, n, indices);
+            else { quant_fixed_codebook(12, w, n, indices); indices.resize(pad12, 0); }
+            if (!keff) return true;
+            std::vector<float> kbd((size_t)n), kdd((size_t)n);
+            std::vector<uint8_t> kcand;
+            if (grp12_compound_fits(n)) {
+                dequant_grp12_compound(indices.data(), indices.size(), n, kbd.data());
+                double kbe = k_mse(w, kbd.data(), n);
+                const int kits[6] = {8, 8, 20, 20, 20, 20};
+                const float ksms[6] = {1.0f, 1.0f, 0.93f, 1.07f, 0.7f, 1.3f};
+                const int knc = keff >= 2 ? 6 : 1;
+                for (int ci = 0; ci < knc; ++ci) {
+                    quant_grp12_compound(w, n, kcand, kits[ci], ksms[ci]);
+                    dequant_grp12_compound(kcand.data(), kcand.size(), n, kdd.data());
+                    const double e = k_mse(w, kdd.data(), n);
+                    if (e < kbe) { kbe = e; indices.swap(kcand); }
+                }
+            } else {
+                dequant_fixed_codebook(12, indices.data(), indices.size(), n, kbd.data());
+                double kbe = k_mse(w, kbd.data(), n);
+                const int kits[6] = {10, 24, 24, 24, 24, 24};
+                const float ksms[6] = {1.0f, 1.0f, 0.9f, 1.1f, 0.7f, 1.3f};
+                const int knc = keff >= 2 ? 6 : 1;
+                for (int ci = 0; ci < knc; ++ci) {
+                    quant_fixed_codebook(12, w, n, kcand, kits[ci], ksms[ci]);
+                    kcand.resize(pad12, 0);
+                    dequant_fixed_codebook(12, kcand.data(), kcand.size(), n, kdd.data());
+                    const double e = k_mse(w, kdd.data(), n);
+                    if (e < kbe) { kbe = e; indices.swap(kcand); }
+                }
+            }
+            return true;
+        }
         case Format::Q_G_16_K_L: case Format::Q_G_16_K_M: case Format::Q_G_16_K_H: {
             quant_q16_enhanced(w, n, indices); const size_t claimed=(size_t)std::ceil(16.0*(double)n/8.0); if(claimed>indices.size() && n%32==0){ std::vector<float> po((size_t)n); dequant_q16_enhanced(indices.data(),indices.size(),n,po.data()); indices.resize(claimed,0); uint8_t* p=indices.data() + (size_t)n*2; for(int g=0;g<n/32;++g){ double m=0; for(int i=0;i<32;++i) m+=(double)w[g*32+i]-po[g*32+i]; m/=32; uint16_t h=f32_to_f16((float)m); p[0]=(uint8_t)(h&0xFF); p[1]=(uint8_t)(h>>8); p+=2; }} else indices.resize(claimed,0); return true; }
         case Format::Q_G_24_K_L: case Format::Q_G_24_K_M: case Format::Q_G_24_K_H: {

@@ -219,8 +219,8 @@ inline float format_bpw(Format f) {
         case Format::Q_G_12_K_L: case Format::Q_G_12_K_M: case Format::Q_G_12_K_H: return 12.5f;
         case Format::Q_G_16_K_L: case Format::Q_G_16_K_M: case Format::Q_G_16_K_H: return 16.0f;
         case Format::Q_G_24_K_L: case Format::Q_G_24_K_M: case Format::Q_G_24_K_H: return 24.0f;
-        case Format::Q_1_5: return 1.5f; case Format::Q_2_5: return 2.5f; case Format::Q_3_5: return 3.5f; case Format::Q_4_5: return 4.5f; case Format::Q_6_5: return 6.5f; case Format::Q_8_5: return 8.5f; case Format::Q_12_5: return 12.5f; case Format::Q_16_5: return 16.5f; case Format::Q_24_5: return 24.5f;
-        case Format::Q_G_1_5: return 1.5f; case Format::Q_G_2_5: return 2.5f; case Format::Q_G_3_5: return 3.5f; case Format::Q_G_4_5: return 4.5f; case Format::Q_G_6_5: return 6.5f; case Format::Q_G_8_5: return 8.5f; case Format::Q_G_12_5: return 12.5f; case Format::Q_G_16_5: return 16.5f; case Format::Q_G_24_5: return 24.5f;
+        case Format::Q_1_5: return 1.5f; case Format::Q_2_5: return 2.4375f; case Format::Q_3_5: return 3.5f; case Format::Q_4_5: return 4.5f; case Format::Q_6_5: return 6.4375f; case Format::Q_8_5: return 8.5f; case Format::Q_12_5: return 12.5f; case Format::Q_16_5: return 16.5f; case Format::Q_24_5: return 24.5f;
+        case Format::Q_G_1_5: return 1.5f; case Format::Q_G_2_5: return 2.4375f; case Format::Q_G_3_5: return 3.5f; case Format::Q_G_4_5: return 4.5f; case Format::Q_G_6_5: return 6.4375f; case Format::Q_G_8_5: return 8.5f; case Format::Q_G_12_5: return 12.5f; case Format::Q_G_16_5: return 16.5f; case Format::Q_G_24_5: return 24.5f;
         case Format::Q_MX_3_5: return 3.5f; case Format::Q_MX_4_5: return 4.5f; case Format::Q_MX_6_5: return 6.5f; case Format::Q_MX_8_5: return 8.5f; case Format::Q_MX_12_5: return 12.5f; case Format::Q_MX_16_5: return 16.5f; case Format::Q_MX_24_5: return 24.5f;
         // QG_MX true wire BPW at canonical n=256 (per-32 dom scales + per-tier
         // non-dom scales). QG_MX_3.5 has 92% sign tier → 8 dom scales → 3.78125.
