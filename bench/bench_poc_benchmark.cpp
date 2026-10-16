@@ -67,10 +67,10 @@ static void mix_quantize_dequantize(const float* data, int64_t n, float target_b
     auto find_fmt = [&](const std::string& nm) -> const FormatDescriptor* {
         for (auto& s : singles) if (s.name == nm) return &s; return nullptr;
     };
-    auto* f8 = find_fmt("Q8"); auto* f4 = find_fmt("Q4"); auto* f2 = find_fmt("Q2");
+    auto* f8 = find_fmt("Q_8"); auto* f4 = find_fmt("Q_4"); auto* f2 = find_fmt("Q_2");
     auto* fsp = find_fmt("QG1sparse");
-    if (!f8) f8 = find_fmt("QG8"); if (!f4) f4 = find_fmt("QG4");
-    if (!f2) f2 = find_fmt("QG2"); if (!fsp) fsp = f2;
+    if (!f8) f8 = find_fmt("Q_G_8"); if (!f4) f4 = find_fmt("Q_G_4");
+    if (!f2) f2 = find_fmt("Q_G_2"); if (!fsp) fsp = f2;
 
     std::vector<const FormatDescriptor*> assign(nb, f2);
     int idx = 0;

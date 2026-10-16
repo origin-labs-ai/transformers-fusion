@@ -221,7 +221,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "Q8";
+        r.format = "Q_8";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -248,7 +248,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "Q4";
+        r.format = "Q_4";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -296,7 +296,7 @@ int main() {
         double dq_us = (now_sec() - t0) * 1e6;
 
         QualityResult r;
-        r.format = "Q1";
+        r.format = "Q_1";
         r.param_count = N;
         r.mse = compute_mse(ref.data(), decoded.data(), N);
         r.cosine = cosine_sim(ref.data(), decoded.data(), N);
@@ -320,10 +320,10 @@ int main() {
     for (auto& r : results) {
         float bpw = 0.0f;
         if (r.format == "FP32")        bpw = 32.0f;
-        if (r.format == "Q8")        bpw = 8.0f;
-        if (r.format == "Q4")        bpw = 4.0f;
+        if (r.format == "Q_8")        bpw = 8.0f;
+        if (r.format == "Q_4")        bpw = 4.0f;
         if (r.format == "BITNET_158")  bpw = 1.585f;  // log2(3) for ternary
-        if (r.format == "Q1")        bpw = 1.0f;
+        if (r.format == "Q_1")        bpw = 1.0f;
 
         std::cout << std::left
                   << std::setw(12) << r.format
@@ -363,10 +363,10 @@ int main() {
     for (auto& r : results) {
         float bpw = 0.0f;
         if (r.format == "FP32")        bpw = 32.0f;
-        if (r.format == "Q8")        bpw = 8.0f;
-        if (r.format == "Q4")        bpw = 4.0f;
+        if (r.format == "Q_8")        bpw = 8.0f;
+        if (r.format == "Q_4")        bpw = 4.0f;
         if (r.format == "BITNET_158")  bpw = 1.585f;
-        if (r.format == "Q1")        bpw = 1.0f;
+        if (r.format == "Q_1")        bpw = 1.0f;
         double compression = 32.0 / bpw;
         std::cout << r.format << ","
                   << std::setprecision(2) << bpw << ","

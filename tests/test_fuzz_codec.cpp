@@ -117,9 +117,9 @@ struct CapRow { quant::Format fmt; double cap; bool exact; };
 
 const CapRow kCaps[] = {
     // Base lattice / codebook formats (block-wide fitted scale)
-    { quant::Format::Q1,              3.00, false },  // sign-only: NMSE ~0.4 dense, ~1.5 sparse
-    { quant::Format::Q2,              1.50, false },  // 4-level Lloyd, block max-normalized
-    { quant::Format::Q3,              1.00, false },  // 4-level Lloyd: outlier tensors (2% huge + 98% tiny)
+    { quant::Format::Q_1,              3.00, false },  // sign-only: NMSE ~0.4 dense, ~1.5 sparse
+    { quant::Format::Q_2,              1.50, false },  // 4-level Lloyd, block max-normalized
+    { quant::Format::Q_3,              1.00, false },  // 4-level Lloyd: outlier tensors (2% huge + 98% tiny)
                                                      // face a levels dilemma (span giants -> tinies crushed;
                                                      // fit tinies -> giants clip); LS-optimal NMSE ~= 0.95 ~=
 // zero predictor. Verified: 8-point discrete scale sweep around the LS
@@ -127,100 +127,100 @@ const CapRow kCaps[] = {
                                                      // #859/#8191: 0.9522/0.9503, deterministic corpus). Cap 1.0
                                                      // keeps ~5% headroom; broken codecs (2x scale -> 4+, NaN)
                                                      // still trip it by orders of magnitude.
-    { quant::Format::Q4,              0.60, false },
-    { quant::Format::Q6,              0.20, false },  // quantile table puts levels near 0
-    { quant::Format::Q8,              0.08, false },  // step^2/4 bound: (A/rms)^2/255^2 << cap
-    { quant::Format::Q12,             0.05, false },
-    { quant::Format::Q16,             1e-5, false },  // uniform grid over [vmin,vmax], 65535 levels
-    { quant::Format::Q24,             1e-7, false },  // mantissa truncation rel err <= 2^-15
-    { quant::Format::Q32,             0.0,  true  },  // FP32 identity: bit-exact required
+    { quant::Format::Q_4,              0.60, false },
+    { quant::Format::Q_6,              0.20, false },  // quantile table puts levels near 0
+    { quant::Format::Q_8,              0.08, false },  // step^2/4 bound: (A/rms)^2/255^2 << cap
+    { quant::Format::Q_12,             0.05, false },
+    { quant::Format::Q_16,             1e-5, false },  // uniform grid over [vmin,vmax], 65535 levels
+    { quant::Format::Q_24,             1e-7, false },  // mantissa truncation rel err <= 2^-15
+    { quant::Format::Q_32,             0.0,  true  },  // FP32 identity: bit-exact required
     // GRP variants
-    { quant::Format::QG1,          3.00, false },
-    { quant::Format::QG2,          1.60, false },  // per-16 affine (4b sc+min)
-    { quant::Format::QG3,          0.80, false },
-    { quant::Format::QG4,          0.60, false },
-    { quant::Format::QG6,          0.25, false },  // Q6_K scheme, per-16 int8 scales
-    { quant::Format::QG8,          0.10, false },
-    { quant::Format::QG12,         0.08, false },  // grp16 path, 3-bit group scales
-    { quant::Format::QG16,         0.08, false },
-    { quant::Format::QG24,         0.08, false },
+    { quant::Format::Q_G_1,          3.00, false },
+    { quant::Format::Q_G_2,          1.60, false },  // per-16 affine (4b sc+min)
+    { quant::Format::Q_G_3,          0.80, false },
+    { quant::Format::Q_G_4,          0.60, false },
+    { quant::Format::Q_G_6,          0.25, false },  // Q6_K scheme, per-16 int8 scales
+    { quant::Format::Q_G_8,          0.10, false },
+    { quant::Format::Q_G_12,         0.08, false },  // grp16 path, 3-bit group scales
+    { quant::Format::Q_G_16,         0.08, false },
+    { quant::Format::Q_G_24,         0.08, false },
     // K variants — identical wire + encoder as their plain twins (L/M/H are
     // search-depth knobs, not layout changes), so they inherit plain caps.
-    { quant::Format::Q1_K_L,          3.00, false },
-    { quant::Format::Q1_K_M,          3.00, false },
-    { quant::Format::Q1_K_H,          3.00, false },
-    { quant::Format::Q2_K_L,          1.50, false },
-    { quant::Format::Q2_K_M,          1.50, false },
-    { quant::Format::Q2_K_H,          1.50, false },
-    { quant::Format::Q3_K_L,          1.00, false },  // same encoder as Q3 (search-depth knobs only)
-    { quant::Format::Q3_K_M,          1.00, false },
-    { quant::Format::Q3_K_H,          1.00, false },
-    { quant::Format::Q4_K_L,          0.60, false },
-    { quant::Format::Q4_K_M,          0.60, false },
-    { quant::Format::Q4_K_H,          0.60, false },
-    { quant::Format::Q6_K_L,          0.20, false },
-    { quant::Format::Q6_K_M,          0.20, false },
-    { quant::Format::Q6_K_H,          0.20, false },
-    { quant::Format::Q8_K_L,          0.08, false },
-    { quant::Format::Q8_K_M,          0.08, false },
-    { quant::Format::Q8_K_H,          0.08, false },
-    { quant::Format::Q12_K_L,         0.05, false },
-    { quant::Format::Q12_K_M,         0.05, false },
-    { quant::Format::Q12_K_H,         0.05, false },
-    { quant::Format::Q16_K_L,         1e-5, false },
-    { quant::Format::Q16_K_M,         1e-5, false },
-    { quant::Format::Q16_K_H,         1e-5, false },
-    { quant::Format::Q24_K_L,         1e-7, false },
-    { quant::Format::Q24_K_M,         1e-7, false },
-    { quant::Format::Q24_K_H,         1e-7, false },
+    { quant::Format::Q_1_K_L,          3.00, false },
+    { quant::Format::Q_1_K_M,          3.00, false },
+    { quant::Format::Q_1_K_H,          3.00, false },
+    { quant::Format::Q_2_K_L,          1.50, false },
+    { quant::Format::Q_2_K_M,          1.50, false },
+    { quant::Format::Q_2_K_H,          1.50, false },
+    { quant::Format::Q_3_K_L,          1.00, false },  // same encoder as Q3 (search-depth knobs only)
+    { quant::Format::Q_3_K_M,          1.00, false },
+    { quant::Format::Q_3_K_H,          1.00, false },
+    { quant::Format::Q_4_K_L,          0.60, false },
+    { quant::Format::Q_4_K_M,          0.60, false },
+    { quant::Format::Q_4_K_H,          0.60, false },
+    { quant::Format::Q_6_K_L,          0.20, false },
+    { quant::Format::Q_6_K_M,          0.20, false },
+    { quant::Format::Q_6_K_H,          0.20, false },
+    { quant::Format::Q_8_K_L,          0.08, false },
+    { quant::Format::Q_8_K_M,          0.08, false },
+    { quant::Format::Q_8_K_H,          0.08, false },
+    { quant::Format::Q_12_K_L,         0.05, false },
+    { quant::Format::Q_12_K_M,         0.05, false },
+    { quant::Format::Q_12_K_H,         0.05, false },
+    { quant::Format::Q_16_K_L,         1e-5, false },
+    { quant::Format::Q_16_K_M,         1e-5, false },
+    { quant::Format::Q_16_K_H,         1e-5, false },
+    { quant::Format::Q_24_K_L,         1e-7, false },
+    { quant::Format::Q_24_K_M,         1e-7, false },
+    { quant::Format::Q_24_K_H,         1e-7, false },
     // K_G variants — same wire as the GRP twins (see block_codec dispatch)
-    { quant::Format::QG_1_K_L,      3.00, false },
-    { quant::Format::QG_1_K_M,      3.00, false },
-    { quant::Format::QG_1_K_H,      3.00, false },
-    { quant::Format::QG_2_K_L,      1.60, false },
-    { quant::Format::QG_2_K_M,      1.60, false },
-    { quant::Format::QG_2_K_H,      1.60, false },
-    { quant::Format::QG_3_K_L,      0.80, false },
-    { quant::Format::QG_3_K_M,      0.80, false },
-    { quant::Format::QG_3_K_H,      0.80, false },
-    { quant::Format::QG_4_K_L,      0.60, false },
-    { quant::Format::QG_4_K_M,      0.60, false },
-    { quant::Format::QG_4_K_H,      0.60, false },
-    { quant::Format::QG_6_K_L,      0.25, false },
-    { quant::Format::QG_6_K_M,      0.25, false },
-    { quant::Format::QG_6_K_H,      0.25, false },
-    { quant::Format::QG_8_K_L,      0.10, false },
-    { quant::Format::QG_8_K_M,      0.10, false },
-    { quant::Format::QG_8_K_H,      0.10, false },
-    { quant::Format::QG_12_K_L,     0.08, false },
-    { quant::Format::QG_12_K_M,     0.08, false },
-    { quant::Format::QG_12_K_H,     0.08, false },
-    { quant::Format::QG_16_K_L,     0.08, false },
-    { quant::Format::QG_16_K_M,     0.08, false },
-    { quant::Format::QG_16_K_H,     0.08, false },
-    { quant::Format::QG_24_K_L,     0.08, false },
-    { quant::Format::QG_24_K_M,     0.08, false },
-    { quant::Format::QG_24_K_H,     0.08, false },
+    { quant::Format::Q_G_1_K_L,      3.00, false },
+    { quant::Format::Q_G_1_K_M,      3.00, false },
+    { quant::Format::Q_G_1_K_H,      3.00, false },
+    { quant::Format::Q_G_2_K_L,      1.60, false },
+    { quant::Format::Q_G_2_K_M,      1.60, false },
+    { quant::Format::Q_G_2_K_H,      1.60, false },
+    { quant::Format::Q_G_3_K_L,      0.80, false },
+    { quant::Format::Q_G_3_K_M,      0.80, false },
+    { quant::Format::Q_G_3_K_H,      0.80, false },
+    { quant::Format::Q_G_4_K_L,      0.60, false },
+    { quant::Format::Q_G_4_K_M,      0.60, false },
+    { quant::Format::Q_G_4_K_H,      0.60, false },
+    { quant::Format::Q_G_6_K_L,      0.25, false },
+    { quant::Format::Q_G_6_K_M,      0.25, false },
+    { quant::Format::Q_G_6_K_H,      0.25, false },
+    { quant::Format::Q_G_8_K_L,      0.10, false },
+    { quant::Format::Q_G_8_K_M,      0.10, false },
+    { quant::Format::Q_G_8_K_H,      0.10, false },
+    { quant::Format::Q_G_12_K_L,     0.08, false },
+    { quant::Format::Q_G_12_K_M,     0.08, false },
+    { quant::Format::Q_G_12_K_H,     0.08, false },
+    { quant::Format::Q_G_16_K_L,     0.08, false },
+    { quant::Format::Q_G_16_K_M,     0.08, false },
+    { quant::Format::Q_G_16_K_H,     0.08, false },
+    { quant::Format::Q_G_24_K_L,     0.08, false },
+    { quant::Format::Q_G_24_K_M,     0.08, false },
+    { quant::Format::Q_G_24_K_H,     0.08, false },
     // Half-BPW plain (affine / compound paths per block_codec dispatch)
-    { quant::Format::Q1_5,            3.00, false },
-    { quant::Format::Q2_5,            1.60, false },
-    { quant::Format::Q3_5,            0.80, false },
-    { quant::Format::Q4_5,            0.60, false },
-    { quant::Format::Q6_5,            0.25, false },
-    { quant::Format::Q8_5,            0.10, false },
-    { quant::Format::Q12_5,           0.08, false },
-    { quant::Format::Q16_5,           1e-5, false },
-    { quant::Format::Q24_5,           1e-7, false },
+    { quant::Format::Q_1_5,            3.00, false },
+    { quant::Format::Q_2_5,            1.60, false },
+    { quant::Format::Q_3_5,            0.80, false },
+    { quant::Format::Q_4_5,            0.60, false },
+    { quant::Format::Q_6_5,            0.25, false },
+    { quant::Format::Q_8_5,            0.10, false },
+    { quant::Format::Q_12_5,           0.08, false },
+    { quant::Format::Q_16_5,           1e-5, false },
+    { quant::Format::Q_24_5,           1e-7, false },
     // Half-BPW GRP — identical wire to the half plain rows
-    { quant::Format::QG_1_5,       3.00, false },
-    { quant::Format::QG_2_5,       1.60, false },
-    { quant::Format::QG_3_5,       0.80, false },
-    { quant::Format::QG_4_5,       0.60, false },
-    { quant::Format::QG_6_5,       0.25, false },
-    { quant::Format::QG_8_5,       0.10, false },
-    { quant::Format::QG_12_5,      0.08, false },
-    { quant::Format::QG_16_5,      1e-5, false },
-    { quant::Format::QG_24_5,      1e-7, false },
+    { quant::Format::Q_G_1_5,       3.00, false },
+    { quant::Format::Q_G_2_5,       1.60, false },
+    { quant::Format::Q_G_3_5,       0.80, false },
+    { quant::Format::Q_G_4_5,       0.60, false },
+    { quant::Format::Q_G_6_5,       0.25, false },
+    { quant::Format::Q_G_8_5,       0.10, false },
+    { quant::Format::Q_G_12_5,      0.08, false },
+    { quant::Format::Q_G_16_5,      1e-5, false },
+    { quant::Format::Q_G_24_5,      1e-7, false },
     // QUAD_MIX plain — dominant tier governs; GRP caps are conservative here
     { quant::Format::Q_MX_3_5,          4.00, false },
     { quant::Format::Q_MX_4_5,          4.00, false },
@@ -230,13 +230,13 @@ const CapRow kCaps[] = {
     { quant::Format::Q_MX_16_5,         2.00, false },
     { quant::Format::Q_MX_24_5,         2.00, false },
     // QUAD_MIX GRP — dominant tier governs the cap
-    { quant::Format::QG_MX_3_5,      4.00, false },  // 92% sign tier
-    { quant::Format::QG_MX_4_5,      4.00, false },  // 58.5% sign tier
-    { quant::Format::QG_MX_6_5,      2.00, false },  // KNOWN: outlier tensors NMSE ~2.0-2.5, mix allocation Phase-3 scope (see test_quant_mix)
-    { quant::Format::QG_MX_8_5,      2.00, false },
-    { quant::Format::QG_MX_12_5,     2.00, false },
-    { quant::Format::QG_MX_16_5,     2.00, false },
-    { quant::Format::QG_MX_24_5,     2.00, false },
+    { quant::Format::Q_G_MX_3_5,      4.00, false },  // 92% sign tier
+    { quant::Format::Q_G_MX_4_5,      4.00, false },  // 58.5% sign tier
+    { quant::Format::Q_G_MX_6_5,      2.00, false },  // KNOWN: outlier tensors NMSE ~2.0-2.5, mix allocation Phase-3 scope (see test_quant_mix)
+    { quant::Format::Q_G_MX_8_5,      2.00, false },
+    { quant::Format::Q_G_MX_12_5,     2.00, false },
+    { quant::Format::Q_G_MX_16_5,     2.00, false },
+    { quant::Format::Q_G_MX_24_5,     2.00, false },
 };
 
 const CapRow& cap_for(quant::Format f) {
@@ -456,10 +456,10 @@ int main() {
             }
         die("format missing from registry");
     };
-    const double m_q2_grp = gauss_mean(quant::Format::QG2);
-    const double m_q3     = gauss_mean(quant::Format::Q3);
-    const double m_q3_grp = gauss_mean(quant::Format::QG3);
-    const double m_q4_grp = gauss_mean(quant::Format::QG4);
+    const double m_q2_grp = gauss_mean(quant::Format::Q_G_2);
+    const double m_q3     = gauss_mean(quant::Format::Q_3);
+    const double m_q3_grp = gauss_mean(quant::Format::Q_G_3);
+    const double m_q4_grp = gauss_mean(quant::Format::Q_G_4);
     require(m_q3_grp <= m_q3 * 1.13 + 1e-15,   // GRP@3.5 within +0.5 dB of Q3@3.0
             "QG3 mean NMSE regressed vs plain Q3 on gaussian slice");
     require(m_q4_grp < m_q3_grp,               // more bits -> better (strict)

@@ -28,7 +28,7 @@ int main() {
         d2[i] = (r - 0.5f) * 20.0f + 5.0f;  // range [-5,15] shifted
     }
 
-    STEQuantizer q8(Format::Q8);
+    STEQuantizer q8(Format::Q_8);
     Tensor r1 = q8.forward(t1);
     Tensor r2 = q8.forward(t2);
 
@@ -44,7 +44,7 @@ int main() {
 
     // Order independence: forward(t1) then forward(t2) vs forward(t2) then forward(t1).
     // Test via second quantizer with reversed order (per-tensor, order-independent).
-    STEQuantizer q8_b(Format::Q8);
+    STEQuantizer q8_b(Format::Q_8);
     Tensor r2_first = q8_b.forward(t2);
     Tensor r1_second = q8_b.forward(t1);
     float diff_order = 0;
@@ -76,7 +76,7 @@ int main() {
     }
 
     // Also test Q4
-    STEQuantizer q4(Format::Q4);
+    STEQuantizer q4(Format::Q_4);
     Tensor rq4_1 = q4.forward(t1);
     Tensor rq4_2 = q4.forward(t2);
     float d4_1 = 0, d4_2 = 0;
@@ -103,9 +103,9 @@ int main() {
     // Q1-vs-Q2 difference (D3 Sec.5/Sec.7): 1-bit sign vs 2-bit ternary must differ.
     float dq1q2 = 0;
     {
-        STEQuantizer q1(Format::Q1);
+        STEQuantizer q1(Format::Q_1);
         Tensor rq1 = q1.forward(t1);
-        std::vector<Format> one_q2 = {Format::Q2};
+        std::vector<Format> one_q2 = {Format::Q_2};
         Tensor rq2 = q1.forward_mixed(t1, one_q2, N);
         for (int i = 0; i < N; ++i) dq1q2 += std::fabs(rq1.data<float>()[i] - rq2.data<float>()[i]);
         assert(dq1q2 > 1e-3f && "Q1 vs Q2 outputs must differ (distinct levels)");

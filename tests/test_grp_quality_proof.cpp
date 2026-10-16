@@ -40,7 +40,7 @@ int main() {
 
     // v3 registry singles carry integer BPW only; request the GRP descriptor
     // by name instead of snapping a half-BPW target to the nearest plain.
-    auto q4_grp = quant::FormatRegistry::parse_format_name("QG4");
+    auto q4_grp = quant::FormatRegistry::parse_format_name("Q_G_4");
     assert(q4_grp.grouped);
     assert(q4_grp.group_size == 16.0f || q4_grp.group_size == 32.0f);
 
@@ -87,10 +87,10 @@ int main() {
             const double mse = se / N;
             return (mse <= 0.0) ? 100.0f : (float)(10.0 * std::log10(smax * smax / mse));
         };
-        const float p3_grp = psnr_of(quant::Format::QG3);
-        const float p3     = psnr_of(quant::Format::Q3);
-        const float p4_grp = psnr_of(quant::Format::QG4);
-        const float p2_grp = psnr_of(quant::Format::QG2);
+        const float p3_grp = psnr_of(quant::Format::Q_G_3);
+        const float p3     = psnr_of(quant::Format::Q_3);
+        const float p4_grp = psnr_of(quant::Format::Q_G_4);
+        const float p2_grp = psnr_of(quant::Format::Q_G_2);
         std::cout << "  -> QG3 PSNR: " << p3_grp << " dB (Q3 plain: "
                   << p3 << " dB)" << std::endl;
         assert(p3_grp >= 24.0f);                 // L012 hard floor (was ~12.6 pre-fix, 22.0 interim)
@@ -192,8 +192,8 @@ int main() {
             const double mse = se / (double)total;
             return (mse <= 0.0) ? 100.0f : (float)(10.0 * std::log10(smax * smax / mse));
         };
-        const float r3_grp = psnr_tensors(quant::Format::QG3);
-        const float r3     = psnr_tensors(quant::Format::Q3);
+        const float r3_grp = psnr_tensors(quant::Format::Q_G_3);
+        const float r3     = psnr_tensors(quant::Format::Q_3);
         std::cout << "  -> QG3 real-weights PSNR: " << r3_grp << " dB (Q3 plain: "
                   << r3 << " dB)" << std::endl;
         assert(r3_grp >= 25.0f);                 // L012 real floor (post-fix ref 30.46)

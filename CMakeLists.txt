@@ -189,30 +189,24 @@ target_link_libraries(quant_engine PUBLIC quant_inference quant_tokenizer)
 add_library(quant_dense
   engines/trainer/dense/trainer.cpp
   engines/trainer/dense/dataloader.cpp
-  engines/trainer/dense/checkpoint.cpp
+  engines/trainer/dense/optim.cpp
+  engines/trainer/dense/loss.cpp
+  engines/trainer/dense/parallel.cpp
+  engines/trainer/dense/unified.cpp
+  engines/trainer/dense/eval.cpp
+  engines/trainer/dense/qat.cpp
+  engines/trainer/dense/continual.cpp
+  engines/trainer/dense/finetune.cpp
 )
 target_include_directories(quant_dense PUBLIC include engines/trainer/dense)
 target_link_libraries(quant_dense PUBLIC quant_trainer quant_continual)
 
 add_library(quant_moe
   engines/trainer/moe/moe.cpp
-  engines/trainer/moe/vision/vision.cpp
-  engines/trainer/moe/audio/audio.cpp
-  engines/trainer/moe/embeddings/embeddings.cpp
-  engines/trainer/moe/image/vision.cpp
-  engines/trainer/moe/ocr/ocr.cpp
-  engines/trainer/moe/text/multimodal_text.cpp
-  engines/trainer/moe/video/video.cpp
+  engines/trainer/moe/dispatch.cpp
 )
 target_include_directories(quant_moe PUBLIC include
   engines/trainer/moe
-  engines/trainer/moe/vision
-  engines/trainer/moe/audio
-  engines/trainer/moe/embeddings
-  engines/trainer/moe/image
-  engines/trainer/moe/ocr
-  engines/trainer/moe/text
-  engines/trainer/moe/video
 )
 target_link_libraries(quant_moe PUBLIC quant_model)
 
@@ -299,23 +293,13 @@ add_library(quant_multimodal
   src/multimodal/multimodal.cpp
   src/multimodal/multimodal_cross_attn.cpp
   src/multimodal/multimodal_fusion.cpp
-  engines/trainer/multimodal/vision/vision.cpp
-  engines/trainer/multimodal/image/image.cpp
-  engines/trainer/multimodal/video/video.cpp
-  engines/trainer/multimodal/text/text.cpp
-  engines/trainer/multimodal/ocr/ocr.cpp
-  engines/trainer/multimodal/embeddings/embeddings.cpp
-  engines/trainer/multimodal/audio/audio.cpp
+  engines/trainer/multimodal/dense/modalities.cpp
+  engines/trainer/multimodal/dense/codecs.cpp
+  engines/trainer/multimodal/moe/modalities.cpp
 )
 target_include_directories(quant_multimodal PUBLIC include
-  engines/trainer/multimodal
-  engines/trainer/multimodal/vision
-  engines/trainer/multimodal/image
-  engines/trainer/multimodal/video
-  engines/trainer/multimodal/text
-  engines/trainer/multimodal/ocr
-  engines/trainer/multimodal/embeddings
-  engines/trainer/multimodal/audio
+  engines/trainer/multimodal/dense
+  engines/trainer/multimodal/moe
 )
 target_link_libraries(quant_multimodal PUBLIC quant_model)
 target_link_libraries(quant_multimodal PUBLIC quant_tokenizer quant_trainer)

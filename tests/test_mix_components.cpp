@@ -83,16 +83,16 @@ int main() {
     bool found_flagship = false;
     bool found_plain = false;
     for (const auto& m : quads) {
-        if (m.id == RegFormat::QG_MX_12_5) {
+        if (m.id == RegFormat::Q_G_MX_12_5) {
             found_flagship = true;
-            CHECK(m.tier1_fmt == RegFormat::QG6 && m.tier2_fmt == RegFormat::QG12 &&
-                  m.tier3_fmt == RegFormat::QG24 && m.tier4_fmt == RegFormat::Q32,
+            CHECK(m.tier1_fmt == RegFormat::Q_G_6 && m.tier2_fmt == RegFormat::Q_G_12 &&
+                  m.tier3_fmt == RegFormat::Q_G_24 && m.tier4_fmt == RegFormat::Q_32,
                   "flagship 12.5 mix members must be QG6/QG12/QG24/Q32 (grouped)");
         }
         if (m.id == RegFormat::Q_MX_12_5) {
             found_plain = true;
-            CHECK(m.tier1_fmt == RegFormat::Q6 && m.tier2_fmt == RegFormat::Q12 &&
-                  m.tier3_fmt == RegFormat::Q24 && m.tier4_fmt == RegFormat::Q32,
+            CHECK(m.tier1_fmt == RegFormat::Q_6 && m.tier2_fmt == RegFormat::Q_12 &&
+                  m.tier3_fmt == RegFormat::Q_24 && m.tier4_fmt == RegFormat::Q_32,
                   "plain 12.5 mix members must be Q6/Q12/Q24/Q32");
         }
     }

@@ -149,12 +149,12 @@ void FineTuner::apply_quant_update(const Tensor& fp32_grad, Tensor& quant_weight
         wd[i] -= cfg_.learning_rate * gd[i];
     }
 
-    if (fmt == Format::Q8) {
+    if (fmt == Format::Q_8) {
         CodebookQ8 cb;
         cb.train(wd, (size_t)n);
         Tensor quantized = ste.quantize_with_codebook(updated, cb);
         quantized.copy_to(quant_weight);
-    } else if (fmt == Format::Q4) {
+    } else if (fmt == Format::Q_4) {
         CodebookQ4 cb;
         cb.train(wd, (size_t)n);
         Tensor quantized = ste.quantize_with_codebook(updated, cb);
@@ -162,7 +162,7 @@ void FineTuner::apply_quant_update(const Tensor& fp32_grad, Tensor& quant_weight
         uint8_t* dst = (uint8_t*)quant_weight.data();
         float scale;
         ste.quantize_quant(wd, dst, &scale, n);
-    } else if (fmt == Format::Q1) {
+    } else if (fmt == Format::Q_1) {
         uint8_t* dst = (uint8_t*)quant_weight.data();
         float scale;
         ste.quantize_Q1(wd, dst, &scale, n);

@@ -32,10 +32,10 @@ int main() {
     auto q8 = quant::FormatRegistry::get_single_format(8.0f);
     auto q32 = quant::FormatRegistry::get_single_format(32.0f);
 
-    assert(q1.name == "Q1");
-    assert(q4.name == "Q4");
-    assert(q8.name == "Q8");
-    assert(q32.name == "Q32");
+    assert(q1.name == "Q_1");
+    assert(q4.name == "Q_4");
+    assert(q8.name == "Q_8");
+    assert(q32.name == "Q_32");
     std::cout << "  -> PASSED: Single format lookup by BPW verified!" << std::endl;
 
     std::cout << "[Test 4] Testing quantize and dequantize roundtrip on single block..." << std::endl;

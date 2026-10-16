@@ -67,10 +67,10 @@ static float mix_wire_bpw(const MixDescriptor& m) {
 static bool is_valid_mxq(const MixDescriptor& m) {
     if (m.num_tiers != 4) return false;
     if (!format_is_mx(regformat_to_format(m.id))) return false;
-    const bool plain = (m.tier1_fmt == RegFormat::Q1 && m.tier2_fmt == RegFormat::Q3 &&
-                        m.tier3_fmt == RegFormat::Q8 && m.tier4_fmt == RegFormat::Q32);
-    const bool grouped = (m.tier1_fmt == RegFormat::QG1 && m.tier2_fmt == RegFormat::QG3 &&
-                          m.tier3_fmt == RegFormat::QG8 && m.tier4_fmt == RegFormat::Q32);
+    const bool plain = (m.tier1_fmt == RegFormat::Q_1 && m.tier2_fmt == RegFormat::Q_3 &&
+                        m.tier3_fmt == RegFormat::Q_8 && m.tier4_fmt == RegFormat::Q_32);
+    const bool grouped = (m.tier1_fmt == RegFormat::Q_G_1 && m.tier2_fmt == RegFormat::Q_G_3 &&
+                          m.tier3_fmt == RegFormat::Q_G_8 && m.tier4_fmt == RegFormat::Q_32);
     return plain || grouped;
 }
 
@@ -123,7 +123,7 @@ int main() {
     // ---- Test 1: registry claims (MXQ pair) -------------------------------
     printf("--- Test 1: registry claims (MXQ pair) ---\n");
     const MixDescriptor* p0 = find_mix(RegFormat::Q_MX_3_5);
-    const MixDescriptor* p1 = find_mix(RegFormat::QG_MX_3_5);
+    const MixDescriptor* p1 = find_mix(RegFormat::Q_G_MX_3_5);
     TEST_CHECK(p0 != nullptr, "Q_MX_3.5 registered");
     TEST_CHECK(p1 != nullptr, "QG_MX_3.5 registered (q1 anchor)");
     const MixDescriptor q0 = p0 ? *p0 : MixDescriptor{};
@@ -132,11 +132,11 @@ int main() {
     TEST_CHECK(std::fabs(q1.effective_bpw - 3.78125f) < 1e-4f, "QG_MX_3.5 wire BPW == 3.78125");
     TEST_CHECK(q0.num_tiers == 4, "Q_MX_3.5 is a 4-tier MXQ");
     TEST_CHECK(q1.num_tiers == 4, "QG_MX_3.5 is a 4-tier MXQ (anchor)");
-    TEST_CHECK(q0.tier1_fmt == RegFormat::Q1 && q0.tier2_fmt == RegFormat::Q3 &&
-               q0.tier3_fmt == RegFormat::Q8 && q0.tier4_fmt == RegFormat::Q32,
+    TEST_CHECK(q0.tier1_fmt == RegFormat::Q_1 && q0.tier2_fmt == RegFormat::Q_3 &&
+               q0.tier3_fmt == RegFormat::Q_8 && q0.tier4_fmt == RegFormat::Q_32,
                "Q_MX_3.5 ladder = Q1/Q3/Q8/Q32");
-    TEST_CHECK(q1.tier1_fmt == RegFormat::QG1 && q1.tier2_fmt == RegFormat::QG3 &&
-               q1.tier3_fmt == RegFormat::QG8 && q1.tier4_fmt == RegFormat::Q32,
+    TEST_CHECK(q1.tier1_fmt == RegFormat::Q_G_1 && q1.tier2_fmt == RegFormat::Q_G_3 &&
+               q1.tier3_fmt == RegFormat::Q_G_8 && q1.tier4_fmt == RegFormat::Q_32,
                "QG_MX_3.5 ladder = QG1/QG3/QG8/Q32 (grouped)");
     TEST_CHECK(!q0.adaptive, "Q_MX_3.5 plain (non-adaptive flag)");
     TEST_CHECK(q1.adaptive, "QG_MX_3.5 grouped (adaptive)");
@@ -153,7 +153,7 @@ int main() {
         MixDescriptor best = FormatRegistry::select_best_mix(3.50f, nullptr, 0);
         TEST_CHECK(best.num_tiers == 4 && std::fabs(best.effective_bpw - 3.50f) < 1e-4f,
                    "select_best_mix(3.50) returns a 3.5 MXQ");
-        TEST_CHECK(best.id == RegFormat::Q_MX_3_5 || best.id == RegFormat::QG_MX_3_5,
+        TEST_CHECK(best.id == RegFormat::Q_MX_3_5 || best.id == RegFormat::Q_G_MX_3_5,
                    "select_best_mix(3.50) in {Q_MX_3.5, QG_MX_3.5}");
     }
 
@@ -245,10 +245,10 @@ int main() {
         }
         const double m_q0 = plan_mse(q0, data.data(), 16384, 256, nullptr);
         const double m_q1 = plan_mse(q1, data.data(), 16384, 256, nullptr);
-        const double m_q3 = plan_mse(single_mix(RegFormat::Q3, 3.0f), data.data(), 16384, 256, nullptr);
-        const double m_qg3 = plan_mse(single_mix(RegFormat::QG3, 3.5f), data.data(), 16384, 256, nullptr);
-        const double m_q4 = plan_mse(single_mix(RegFormat::Q4, 4.0f), data.data(), 16384, 256, nullptr);
-        const double m_qg4 = plan_mse(single_mix(RegFormat::QG4, 4.5f), data.data(), 16384, 256, nullptr);
+        const double m_q3 = plan_mse(single_mix(RegFormat::Q_3, 3.0f), data.data(), 16384, 256, nullptr);
+        const double m_qg3 = plan_mse(single_mix(RegFormat::Q_G_3, 3.5f), data.data(), 16384, 256, nullptr);
+        const double m_q4 = plan_mse(single_mix(RegFormat::Q_4, 4.0f), data.data(), 16384, 256, nullptr);
+        const double m_qg4 = plan_mse(single_mix(RegFormat::Q_G_4, 4.5f), data.data(), 16384, 256, nullptr);
         printf("  Q_MX_3.5=%.6f  QG_MX_3.5=%.6f\n", m_q0, m_q1);
         printf("  Q3(3.0)=%.6f  QG3(3.5)=%.6f  Q4(4.0)=%.6f  QG4(4.5)=%.6f\n",
                m_q3, m_qg3, m_q4, m_qg4);
@@ -270,15 +270,15 @@ int main() {
     // QG1/QG3/QG8/Q32 (grouped MXQ ladder, Test 1). Both checked.
     printf("\n--- Test 4: 4-tier adaptive vs magnitude-sorted ---\n");
     {
-        TEST_CHECK(q0.tier1_fmt == RegFormat::Q1 && q0.tier2_fmt == RegFormat::Q3 &&
-                   q0.tier3_fmt == RegFormat::Q8 && q0.tier4_fmt == RegFormat::Q32,
+        TEST_CHECK(q0.tier1_fmt == RegFormat::Q_1 && q0.tier2_fmt == RegFormat::Q_3 &&
+                   q0.tier3_fmt == RegFormat::Q_8 && q0.tier4_fmt == RegFormat::Q_32,
                    "plain ladder is 4-tier Q1/Q3/Q8/Q32");
-        TEST_CHECK(q1.tier1_fmt == RegFormat::QG1 && q1.tier2_fmt == RegFormat::QG3 &&
-                   q1.tier3_fmt == RegFormat::QG8 && q1.tier4_fmt == RegFormat::Q32,
+        TEST_CHECK(q1.tier1_fmt == RegFormat::Q_G_1 && q1.tier2_fmt == RegFormat::Q_G_3 &&
+                   q1.tier3_fmt == RegFormat::Q_G_8 && q1.tier4_fmt == RegFormat::Q_32,
                    "anchor ladder is 4-tier QG1/QG3/QG8/Q32 (grouped)");
-        TEST_CHECK(format_bpw(Format::Q1) < format_bpw(Format::Q3) &&
-                   format_bpw(Format::Q3) < format_bpw(Format::Q8) &&
-                   format_bpw(Format::Q8) < format_bpw(Format::Q32),
+        TEST_CHECK(format_bpw(Format::Q_1) < format_bpw(Format::Q_3) &&
+                   format_bpw(Format::Q_3) < format_bpw(Format::Q_8) &&
+                   format_bpw(Format::Q_8) < format_bpw(Format::Q_32),
                    "ladder BPW strictly ascends Q1 < Q3 < Q8 < Q32");
         // 64 blocks of 256. The first 32 are smooth (single low-frequency
         // sine: Q1 already reconstructs them well, so Q3/Q8 buys little
@@ -321,10 +321,10 @@ int main() {
         std::vector<float> dec(64 * 256, 0.0f);
         for (int r = 0; r < 64; r++) {
             Format f;
-            if (r < 1) f = Format::Q32;
-            else if (r < 6) f = Format::Q8;
-            else if (r < 19) f = Format::Q3;
-            else f = Format::Q1;
+            if (r < 1) f = Format::Q_32;
+            else if (r < 6) f = Format::Q_8;
+            else if (r < 19) f = Format::Q_3;
+            else f = Format::Q_1;
             idx.clear(); cb.clear();
             quantize_block_all(f, data.data() + (size_t)scores[(size_t)r].i * 256, 256, idx, cb);
             dequantize_block_all(f, idx.data(), idx.size(), cb.data(), cb.size(), 256,
@@ -350,7 +350,7 @@ int main() {
             FormatRegistry::allocate_mix_blocks(q1, data.data(), 64 * 256, 256, nullptr);
         bool members_ok = !plan.formats.empty();
         for (Format f : plan.formats)
-            if (f != Format::QG1 && f != Format::QG3 && f != Format::QG8 && f != Format::Q32)
+            if (f != Format::Q_G_1 && f != Format::Q_G_3 && f != Format::Q_G_8 && f != Format::Q_32)
                 members_ok = false;
         TEST_CHECK(members_ok, "plan uses only QG1/QG3/QG8/Q32 grouped members");
         std::vector<double> benefit(64, 0.0);
@@ -366,11 +366,11 @@ int main() {
             return e / 256.0;
         };
         for (int b = 0; b < 64; b++)
-            benefit[(size_t)b] = block_mse(Format::Q1, b) - block_mse(Format::Q8, b);
+            benefit[(size_t)b] = block_mse(Format::Q_1, b) - block_mse(Format::Q_8, b);
         double up = 0.0, dn = 0.0;
         int upc = 0, dnc = 0;
         for (int b = 0; b < 64; b++) {
-            if (plan.formats[(size_t)b] != Format::Q1) { up += benefit[(size_t)b]; upc++; }
+            if (plan.formats[(size_t)b] != Format::Q_1) { up += benefit[(size_t)b]; upc++; }
             else { dn += benefit[(size_t)b]; dnc++; }
         }
         printf("  upgraded: %d blocks (mean Q1->Q8 benefit %.5f)  base-tier: %d blocks (mean %.5f)\n",
@@ -517,8 +517,8 @@ int main() {
             bool has_member = !fmts.empty();
             // QG_MX_3.5 grouped member formats: QG1/QG3/QG8/Q32.
             for (Format f : fmts)
-                if (f != Format::Q32 && f != Format::QG8 &&
-                    f != Format::QG3 && f != Format::QG1)
+                if (f != Format::Q_32 && f != Format::Q_G_8 &&
+                    f != Format::Q_G_3 && f != Format::Q_G_1)
                     has_member = false;
             TEST_CHECK(has_member, "file blocks carry only grouped-MXQ member formats");
         }
@@ -537,7 +537,7 @@ int main() {
     for (int pass = 0; pass < 2; pass++) {
         const MixDescriptor& mix = (pass == 0) ? q0 : q1;
         TEST_CHECK(is_valid_mxq(mix), "training mix is a valid 4-tier MXQ");
-        TEST_CHECK(mix.id == RegFormat::Q_MX_3_5 || mix.id == RegFormat::QG_MX_3_5,
+        TEST_CHECK(mix.id == RegFormat::Q_MX_3_5 || mix.id == RegFormat::Q_G_MX_3_5,
                    "training mix id is a valid MXQ (Q_MX_3.5 / QG_MX_3.5)");
         printf("  [%s] initializing model at MXQ quality (wire %.5f)\n",
                mix.name.c_str(), (double)mix_wire_bpw(mix));
@@ -710,13 +710,13 @@ int main() {
         // concentrates precision where each column needs it (GPT-Q style).
         const double m_q0c = plan_mse(q0, data.data(), 16384, 32, nullptr);
         const double m_q1c = plan_mse(q1, data.data(), 16384, 32, nullptr);
-        const double m_q3 = plan_mse(single_mix(RegFormat::Q3, 3.0f), data.data(), 16384, 256, nullptr);
-        const double m_qg3 = plan_mse(single_mix(RegFormat::QG3, 3.5f), data.data(), 16384, 256, nullptr);
-        const double m_q4 = plan_mse(single_mix(RegFormat::Q4, 4.0f), data.data(), 16384, 256, nullptr);
-        const double m_qg4 = plan_mse(single_mix(RegFormat::QG4, 4.5f), data.data(), 16384, 256, nullptr);
-        const double m_qg8 = plan_mse(single_mix(RegFormat::QG8, 8.5f), data.data(), 16384, 256, nullptr);
-        const double m_q16 = plan_mse(single_mix(RegFormat::Q16, 16.0f), data.data(), 16384, 256, nullptr);
-        const double m_q32 = plan_mse(single_mix(RegFormat::Q32, 32.0f), data.data(), 16384, 256, nullptr);
+        const double m_q3 = plan_mse(single_mix(RegFormat::Q_3, 3.0f), data.data(), 16384, 256, nullptr);
+        const double m_qg3 = plan_mse(single_mix(RegFormat::Q_G_3, 3.5f), data.data(), 16384, 256, nullptr);
+        const double m_q4 = plan_mse(single_mix(RegFormat::Q_4, 4.0f), data.data(), 16384, 256, nullptr);
+        const double m_qg4 = plan_mse(single_mix(RegFormat::Q_G_4, 4.5f), data.data(), 16384, 256, nullptr);
+        const double m_qg8 = plan_mse(single_mix(RegFormat::Q_G_8, 8.5f), data.data(), 16384, 256, nullptr);
+        const double m_q16 = plan_mse(single_mix(RegFormat::Q_16, 16.0f), data.data(), 16384, 256, nullptr);
+        const double m_q32 = plan_mse(single_mix(RegFormat::Q_32, 32.0f), data.data(), 16384, 256, nullptr);
         printf("  FP32(32.0)=0  Q32(32.0)=%.3e  Q16(16.0)=%.3e\n", m_q32, m_q16);
         printf("  QG8(8.5)=%.3e  QG4(4.5)=%.3e  Q4(4.0)=%.3e\n", m_qg8, m_qg4, m_q4);
         printf("  Q3(3.0)=%.3e  QG3(3.5)=%.3e\n", m_q3, m_qg3);

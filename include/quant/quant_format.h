@@ -90,7 +90,7 @@ public:
     //                        block_ptr() already returns nullptr there).
     //   format_entry()  -> static invalid entry (format byte 0xFF) on OOB;
     //                        every consumer maps out-of-range wire formats to
-    //                        Format::Q32, and dequantize_block_all's default
+    //                        Format::Q_32, and dequantize_block_all's default
     //                        arm is a no-op, so a corrupt id decodes zeros.
     // tensor_blocks() additionally validates start/count against the table
     // (start + count <= num_blocks, overflow-safe), so engine bid math
@@ -105,7 +105,7 @@ public:
         return cached_ft_[block_id];
     }
     // Fail-closed sentinel for out-of-range format_entry(). Wire byte 0xFF
-    // is outside the valid v3 set, so every consumer maps it to Format::Q32
+    // is outside the valid v3 set, so every consumer maps it to Format::Q_32
     // and dequantize_block_all's default arm decodes zeros (no-op).
     static const FormatBlockEntry& invalid_entry() {
         static const FormatBlockEntry kInvalid{0xFFFFFFFFu, 0xFF, 0};

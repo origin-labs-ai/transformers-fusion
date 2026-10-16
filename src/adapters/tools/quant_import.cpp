@@ -44,13 +44,13 @@ static std::string to_upper(std::string s) {
 
 // Nearest single format for a requested --bpw.
 static quant::Format nearest_format_for_bpw(float bpw) {
-    if (bpw <= 1.25f) return quant::Format::Q1;
-    if (bpw <= 1.75f) return quant::Format::Q1_5;
-    if (bpw <= 3.0f)  return quant::Format::Q2;
-    if (bpw <= 6.0f)  return quant::Format::QG4;
-    if (bpw <= 12.0f) return quant::Format::QG8;
-    if (bpw <= 24.0f) return quant::Format::QG16;
-    return quant::Format::Q32;
+    if (bpw <= 1.25f) return quant::Format::Q_1;
+    if (bpw <= 1.75f) return quant::Format::Q_1_5;
+    if (bpw <= 3.0f)  return quant::Format::Q_2;
+    if (bpw <= 6.0f)  return quant::Format::Q_G_4;
+    if (bpw <= 12.0f) return quant::Format::Q_G_8;
+    if (bpw <= 24.0f) return quant::Format::Q_G_16;
+    return quant::Format::Q_32;
 }
 
 // Parse every Q-series single format plus the Q_MX/QG_MX compound formats.
@@ -60,28 +60,28 @@ static bool parse_format_name(const char* name, quant::Format& out, quant::RegFo
     std::string s = to_upper(name);
     bool is_compound = false;
 
-    // ---- Q-series singles (Q2 covers the two Q1 aliases) ----
-    if (s == "Q1")              { out = quant::Format::Q1; }
-    else if (s == "Q2")         { out = quant::Format::Q2; }
-    else if (s == "Q4")         { out = quant::Format::Q4; }
-    else if (s == "Q8")         { out = quant::Format::Q8; }
-    else if (s == "Q16")        { out = quant::Format::Q16; }
-    else if (s == "Q32")        { out = quant::Format::Q32; }
-    else if (s == "QG1")     { out = quant::Format::QG1; }
-    else if (s == "QG2")     { out = quant::Format::QG2; }
-    else if (s == "QG4")     { out = quant::Format::QG4; }
-    else if (s == "QG8")     { out = quant::Format::QG8; }
-    else if (s == "QG16")    { out = quant::Format::QG16; }
-    else if (s == "Q1_5")     { out = quant::Format::Q1_5; }
-    else if (s == "QG_1_5") { out = quant::Format::QG_1_5; }
-    // ---- QG_MX compounds (adaptive, four-tier) ----
-    else if (s == "QG_MX_3_5" || s == "QG_MX_3.5")   { out = quant::Format::QG_MX_3_5;   out_compound = quant::RegFormat::QG_MX_3_5;   is_compound = true; }
-    else if (s == "QG_MX_4_5" || s == "QG_MX_4.5")   { out = quant::Format::QG_MX_4_5;   out_compound = quant::RegFormat::QG_MX_4_5;   is_compound = true; }
-    else if (s == "QG_MX_6_5" || s == "QG_MX_6.5")   { out = quant::Format::QG_MX_6_5;   out_compound = quant::RegFormat::QG_MX_6_5;   is_compound = true; }
-    else if (s == "QG_MX_8_5" || s == "QG_MX_8.5")   { out = quant::Format::QG_MX_8_5;   out_compound = quant::RegFormat::QG_MX_8_5;   is_compound = true; }
-    else if (s == "QG_MX_12_5" || s == "QG_MX_12.5") { out = quant::Format::QG_MX_12_5;  out_compound = quant::RegFormat::QG_MX_12_5;  is_compound = true; }
-    else if (s == "QG_MX_16_5" || s == "QG_MX_16.5") { out = quant::Format::QG_MX_16_5;  out_compound = quant::RegFormat::QG_MX_16_5;  is_compound = true; }
-    else if (s == "QG_MX_24_5" || s == "QG_MX_24.5") { out = quant::Format::QG_MX_24_5;  out_compound = quant::RegFormat::QG_MX_24_5;  is_compound = true; }
+    // ---- Q-series singles (Q_2 covers the two Q_1 aliases) ----
+    if (s == "Q_1" || s == "Q1")              { out = quant::Format::Q_1; }
+    else if (s == "Q_2" || s == "Q2")         { out = quant::Format::Q_2; }
+    else if (s == "Q_4" || s == "Q4")         { out = quant::Format::Q_4; }
+    else if (s == "Q_8" || s == "Q8")         { out = quant::Format::Q_8; }
+    else if (s == "Q_16" || s == "Q16")        { out = quant::Format::Q_16; }
+    else if (s == "Q_32" || s == "Q32")        { out = quant::Format::Q_32; }
+    else if (s == "Q_G_1" || s == "QG1")     { out = quant::Format::Q_G_1; }
+    else if (s == "Q_G_2" || s == "QG2")     { out = quant::Format::Q_G_2; }
+    else if (s == "Q_G_4" || s == "QG4")     { out = quant::Format::Q_G_4; }
+    else if (s == "Q_G_8" || s == "QG8")     { out = quant::Format::Q_G_8; }
+    else if (s == "Q_G_16" || s == "QG16")    { out = quant::Format::Q_G_16; }
+    else if (s == "Q_1_5" || s == "Q1_5" || s == "Q_1_5")     { out = quant::Format::Q_1_5; }
+    else if (s == "Q_G_1_5" || s == "QG_1_5" || s == "Q_G_1_5") { out = quant::Format::Q_G_1_5; }
+    // ---- Q_G_MX compounds (adaptive, four-tier) ----
+    else if (s == "Q_G_MX_3_5" || s == "QG_MX_3_5" || s == "QG_MX_3.5")   { out = quant::Format::Q_G_MX_3_5;   out_compound = quant::RegFormat::Q_G_MX_3_5;   is_compound = true; }
+    else if (s == "Q_G_MX_4_5" || s == "QG_MX_4_5" || s == "QG_MX_4.5")   { out = quant::Format::Q_G_MX_4_5;   out_compound = quant::RegFormat::Q_G_MX_4_5;   is_compound = true; }
+    else if (s == "Q_G_MX_6_5" || s == "QG_MX_6_5" || s == "QG_MX_6.5")   { out = quant::Format::Q_G_MX_6_5;   out_compound = quant::RegFormat::Q_G_MX_6_5;   is_compound = true; }
+    else if (s == "Q_G_MX_8_5" || s == "QG_MX_8_5" || s == "QG_MX_8.5")   { out = quant::Format::Q_G_MX_8_5;   out_compound = quant::RegFormat::Q_G_MX_8_5;   is_compound = true; }
+    else if (s == "Q_G_MX_12_5" || s == "QG_MX_12_5" || s == "QG_MX_12.5") { out = quant::Format::Q_G_MX_12_5;  out_compound = quant::RegFormat::Q_G_MX_12_5;  is_compound = true; }
+    else if (s == "Q_G_MX_16_5" || s == "QG_MX_16_5" || s == "QG_MX_16.5") { out = quant::Format::Q_G_MX_16_5;  out_compound = quant::RegFormat::Q_G_MX_16_5;  is_compound = true; }
+    else if (s == "Q_G_MX_24_5" || s == "QG_MX_24_5" || s == "QG_MX_24.5") { out = quant::Format::Q_G_MX_24_5;  out_compound = quant::RegFormat::Q_G_MX_24_5;  is_compound = true; }
     else return false;
 
     if (!is_compound) out_compound = quant::format_to_regformat(out);
@@ -350,8 +350,8 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "[A] cfg constructed\n");
     // Default format: QG_MX_4_5 — adaptive QG_MX.
     // --bpw 1.75 selects QG_MX_3_5 (adaptive QG_MX).
-    cfg.format = quant::Format::Q4;
-    cfg.compound = quant::RegFormat::QG_MX_4_5;
+    cfg.format = quant::Format::Q_4;
+    cfg.compound = quant::RegFormat::Q_G_MX_4_5;
     cfg.target_bpw = 2.0f;
     cfg.block_size = 256;
     std::string input_path;
@@ -370,7 +370,7 @@ int main(int argc, char** argv) {
         }
         else if (strcmp(argv[i], "--format") == 0 && i + 1 < argc) {
             quant::Format f;
-            quant::RegFormat comp = quant::format_to_regformat(quant::Format::Q2);
+            quant::RegFormat comp = quant::format_to_regformat(quant::Format::Q_2);
             if (!parse_format_name(argv[++i], f, comp)) {
                 std::fprintf(stderr, "Error: unknown format '%s'\n", argv[i]);
                 return 1;
@@ -393,13 +393,13 @@ int main(int argc, char** argv) {
 
     if (bpw_given) {
         if (std::fabs(cfg.target_bpw - 1.75f) < 0.01f) {
-            cfg.format = quant::Format::Q2;
-            cfg.compound = quant::RegFormat::QG_MX_3_5;   // QG_MX_3_5 via --bpw 1.75
-            cfg.target_bpw = quant::format_bpw(quant::Format::QG_MX_3_5);  // wire 3.78125
+            cfg.format = quant::Format::Q_2;
+            cfg.compound = quant::RegFormat::Q_G_MX_3_5;   // QG_MX_3_5 via --bpw 1.75
+            cfg.target_bpw = quant::format_bpw(quant::Format::Q_G_MX_3_5);  // wire 3.78125
         } else if (std::fabs(cfg.target_bpw - 2.0f) < 0.01f) {
-            cfg.format = quant::Format::Q4;
-            cfg.compound = quant::RegFormat::QG_MX_4_5;  // QG_MX_4_5 via --bpw 2.0
-            cfg.target_bpw = quant::format_bpw(quant::Format::QG_MX_4_5);  // wire 4.5
+            cfg.format = quant::Format::Q_4;
+            cfg.compound = quant::RegFormat::Q_G_MX_4_5;  // QG_MX_4_5 via --bpw 2.0
+            cfg.target_bpw = quant::format_bpw(quant::Format::Q_G_MX_4_5);  // wire 4.5
         } else {
             cfg.format = nearest_format_for_bpw(cfg.target_bpw);
             cfg.compound = quant::format_to_regformat(cfg.format);

@@ -649,12 +649,12 @@ int main(int argc, char** argv) {
         const auto& rows = ds == 0 ? g_rows : r_rows;
         std::cout << "\n-- " << (ds == 0 ? "GAUSSIAN" : "REAL WEIGHTS") << " --\n";
         float max_abs = ds == 0 ? 0.5f : 1.0f;
-        verdict("Q16", find(rows, "Q16"), "IEEE FP16", find(rows, "[ref] IEEE FP16"), max_abs);
+        verdict("Q_16", find(rows, "Q_16"), "IEEE FP16", find(rows, "[ref] IEEE FP16"), max_abs);
         struct Rule { const char* grp; const char* plain; };
         Rule rules[] = {
-            {"QG1", "Q2"}, {"QG2", "Q4"}, {"QG3", "Q6"},
-            {"QG4", "Q8"}, {"QG6", "Q12"}, {"QG8", "Q16"},
-            {"QG12", "Q24"}, {"QG16", "Q32"}, {"QG24", "Q32"},
+            {"Q_G_1", "Q_2"}, {"Q_G_2", "Q_4"}, {"Q_G_3", "Q_6"},
+            {"Q_G_4", "Q_8"}, {"Q_G_6", "Q_12"}, {"Q_G_8", "Q_16"},
+            {"Q_G_12", "Q_24"}, {"Q_G_16", "Q_32"}, {"Q_G_24", "Q_32"},
         };
         for (auto& rule : rules) {
             verdict(rule.grp, find(rows, rule.grp), rule.plain, find(rows, rule.plain), max_abs);
@@ -662,14 +662,14 @@ int main(int argc, char** argv) {
         std::cout << "  [note] Raw GRP vs SINGLE 2x is infeasible for honest codecs; see industrial baseline section below.\n";
         struct IndRule { const char* grp; const char* ind; const char* note; };
         IndRule ind_rules[] = {
-            {"QG1", "[ref] Binary 1-bit", "Q1 vs Binary"},
-            {"QG1", "[ref] BitNet b1.58", "QG1 vs b1.58"},
-            {"QG2", "[ref] GGUF Q6_K", "QG2 vs Q6_K @ ~2.6x IND BPW"},
-            {"QG4", "Q8", "QG4 vs Q8 (HONEST SINGLE, not IND)"},
-            {"QG6", "[ref] GGUF Q6_K", "QG6 vs Q6_K (same IND)"},
-            {"QG6", "Q12", "QG6 vs honest Q12"},
-            {"QG8", "[ref] GGUF Q8_0", "QG8 vs Q8_0 (same IND)"},
-            {"QG8", "Q16", "QG8 vs honest Q16"},
+            {"Q_G_1", "[ref] Binary 1-bit", "Q1 vs Binary"},
+            {"Q_G_1", "[ref] BitNet b1.58", "QG1 vs b1.58"},
+            {"Q_G_2", "[ref] GGUF Q6_K", "QG2 vs Q6_K @ ~2.6x IND BPW"},
+            {"Q_G_4", "Q_8", "QG4 vs Q8 (HONEST SINGLE, not IND)"},
+            {"Q_G_6", "[ref] GGUF Q6_K", "QG6 vs Q6_K (same IND)"},
+            {"Q_G_6", "Q_12", "QG6 vs honest Q12"},
+            {"Q_G_8", "[ref] GGUF Q8_0", "QG8 vs Q8_0 (same IND)"},
+            {"Q_G_8", "Q_16", "QG8 vs honest Q16"},
         };
         for (auto& r : ind_rules) {
             // Only print where the industrial baseline exists in the table.
@@ -679,7 +679,7 @@ int main(int argc, char** argv) {
             std::cout << "  [industrial] " << r.note << ": ";
             verdict(r.grp, find(rows, r.grp), r.ind, find(rows, r.ind), max_abs);
         }
-        verdict("Q_QUAD_MIX@24.5_G", find_fmt(rows, Format::QG_MX_24_5),
+        verdict("Q_QUAD_MIX@24.5_G", find_fmt(rows, Format::Q_G_MX_24_5),
                 "IEEE FP16", find(rows, "[ref] IEEE FP16"), max_abs);
         (void)max_abs;
     }

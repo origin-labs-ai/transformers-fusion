@@ -769,27 +769,27 @@ int main(int argc, char** argv) {
     add_industry("INDUSTRY F16", 16.0);
 
     const char* quant_singles[] = {
-        "Q1_5", "QG_1_5", "Q2", "QG2",
-        "Q4", "QG4", "Q6_K_M", "Q8", "QG8", "Q16"
+        "Q_1_5", "Q_G_1_5", "Q_2", "Q_G_2",
+        "Q_4", "Q_G_4", "Q_6_K_M", "Q_8", "Q_G_8", "Q_16"
     };
     for (const char* nm : quant_singles) {
         FormatDescriptor fd = FormatRegistry::parse_format_name(nm);
-        if (fd.id == RegFormat::Q32 && std::string(nm) != "Q32") continue;
+        if (fd.id == RegFormat::Q_32 && std::string(nm) != "Q_32") continue;
         Runner r; r.name = std::string("QUANT  ") + nm; r.is_quant = true; r.fmt = fd;
         r.rf_id = (int)fd.id;
         rs.push_back(r);
     }
     RegFormat mix_ids[] = {
-        RegFormat::QG_MX_3_5, RegFormat::QG_MX_4_5,
-        RegFormat::QG_MX_6_5, RegFormat::QG_MX_8_5,
-        RegFormat::QG_MX_12_5, RegFormat::QG_MX_16_5,
-        RegFormat::QG_MX_24_5
+        RegFormat::Q_G_MX_3_5, RegFormat::Q_G_MX_4_5,
+        RegFormat::Q_G_MX_6_5, RegFormat::Q_G_MX_8_5,
+        RegFormat::Q_G_MX_12_5, RegFormat::Q_G_MX_16_5,
+        RegFormat::Q_G_MX_24_5
     };
     for (RegFormat rf : mix_ids) {
         const MixDescriptor* md = find_mix_descriptor(rf);
         if (!md) continue;
         Runner r; r.name = std::string("QUANT  ") + md->name; r.is_quant = true;
-        r.mix = md; r.rf_id = (int)rf; r.fmt.id = RegFormat::Q32; // mark as mix via mix pointer
+        r.mix = md; r.rf_id = (int)rf; r.fmt.id = RegFormat::Q_32; // mark as mix via mix pointer
         rs.push_back(r);
     }
 
@@ -895,9 +895,9 @@ int main(int argc, char** argv) {
 
     { // 1.9-2.7 BPW
         const int q_ids[] = { (int)RegFormat::Q1_5, (int)RegFormat::QG_1_5,
-                              (int)RegFormat::QG_MX_3_5, (int)RegFormat::QG_MX_4_5,
-                              (int)RegFormat::Q2,
-                              (int)RegFormat::QG_MX_6_5, (int)RegFormat::QG2 };
+                              (int)RegFormat::Q_G_MX_3_5, (int)RegFormat::Q_G_MX_4_5,
+                              (int)RegFormat::Q_2,
+                              (int)RegFormat::Q_G_MX_6_5, (int)RegFormat::Q_G_2 };
         const char* ind[] = { "Q2_K" };
         printf("\n[1.5-2.7 BPW band]\n");
         double qb = 0, ib = 0;
@@ -907,9 +907,9 @@ int main(int argc, char** argv) {
                                      qb, ib, (1.0 - qb/ib) * 100.0);
     }
     { // 4-4.5 BPW
-        const int q_ids[] = { (int)RegFormat::Q4, (int)RegFormat::QG4,
-                              (int)RegFormat::QG_MX_8_5,
-                              (int)RegFormat::QG_MX_12_5 };
+        const int q_ids[] = { (int)RegFormat::Q_4, (int)RegFormat::Q_G_4,
+                              (int)RegFormat::Q_G_MX_8_5,
+                              (int)RegFormat::Q_G_MX_12_5 };
         const char* ind[] = { "Q4_0", "Q4_K" };
         printf("\n[4.0-4.5 BPW band]\n");
         double qb = 0, ib = 0;
@@ -920,7 +920,7 @@ int main(int argc, char** argv) {
     }
     { // 5-6.6 BPW
         const int q_ids[] = { (int)RegFormat::Q6_K_M,
-                              (int)RegFormat::QG_MX_24_5 };
+                              (int)RegFormat::Q_G_MX_24_5 };
         const char* ind[] = { "Q5_0", "Q5_1", "Q6_K" };
         printf("\n[5.5-6.6 BPW band]\n");
         double qb = 0, ib = 0;
@@ -930,8 +930,8 @@ int main(int argc, char** argv) {
                                      qb, ib, (1.0 - qb/ib) * 100.0);
     }
     { // 8-9.1 BPW
-        const int q_ids[] = { (int)RegFormat::Q8, (int)RegFormat::QG8,
-                              (int)RegFormat::QG_MX_16_5 };
+        const int q_ids[] = { (int)RegFormat::Q_8, (int)RegFormat::Q_G_8,
+                              (int)RegFormat::Q_G_MX_16_5 };
         const char* ind[] = { "Q8_0", "Q8_K" };
         printf("\n[8.0-9.1 BPW band]\n");
         double qb = 0, ib = 0;
@@ -941,7 +941,7 @@ int main(int argc, char** argv) {
                                      qb, ib, (1.0 - qb/ib) * 100.0);
     }
     { // 16 BPW
-        const int q_ids[] = { (int)RegFormat::Q16 };
+        const int q_ids[] = { (int)RegFormat::Q_16 };
         const char* ind[] = { "F16" };
         printf("\n[16.0 BPW band]\n");
         double qb = 0, ib = 0;
@@ -968,9 +968,9 @@ int main(int argc, char** argv) {
         }
         struct GrpTwin { Format plain, grp; const char* name; };
         const GrpTwin twins[] = {
-            { Format::Q2, Format::QG2, "Q2" },
-            { Format::Q4, Format::QG4, "Q4" },
-            { Format::Q8, Format::QG8, "Q8" },
+            { Format::Q_2, Format::Q_G_2, "Q_2" },
+            { Format::Q_4, Format::Q_G_4, "Q_4" },
+            { Format::Q_8, Format::Q_G_8, "Q_8" },
         };
         for (const auto& tw : twins) {
             std::vector<uint8_t> ip, ig, cb;
@@ -993,9 +993,9 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < 32; ++i) wg[(size_t)g * 32 + i] = s * 20.0f;
             }
             std::vector<uint8_t> i4, cb;
-            quantize_block_all(Format::QG4, wg.data(), 256, i4, cb);
+            quantize_block_all(Format::Q_G_4, wg.data(), 256, i4, cb);
             std::vector<float> d4(256);
-            dequantize_block_all(Format::QG4, i4.data(), i4.size(), cb.data(), cb.size(), 256, d4.data());
+            dequantize_block_all(Format::Q_G_4, i4.data(), i4.size(), cb.data(), cb.size(), 256, d4.data());
             int ok4 = 1;
             for (int g = 0; g < 8; ++g) {
                 const float exp = 0.1f * (float)(g + 1) * 20.0f;
@@ -1014,9 +1014,9 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < 16; ++i) wg[(size_t)g * 16 + i] = s * 20.0f;
             }
             std::vector<uint8_t> i2, cb;
-            quantize_block_all(Format::QG2, wg.data(), 256, i2, cb);
+            quantize_block_all(Format::Q_G_2, wg.data(), 256, i2, cb);
             std::vector<float> d2(256);
-            dequantize_block_all(Format::QG2, i2.data(), i2.size(), cb.data(), cb.size(), 256, d2.data());
+            dequantize_block_all(Format::Q_G_2, i2.data(), i2.size(), cb.data(), cb.size(), 256, d2.data());
             int ok2 = 1;
             for (int g = 0; g < 16; ++g) {
                 const float exp = 0.1f * (float)(g + 1) * 20.0f;

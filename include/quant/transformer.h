@@ -55,7 +55,7 @@ class Linear {
 public:
     Tensor weight;
     Tensor bias;
-    Format weight_format = Format::Q32;
+    Format weight_format = Format::Q_32;
     Linear() = default;
     Linear(int64_t in_features, int64_t out_features);
     Tensor forward(const Tensor& input) const;

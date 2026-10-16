@@ -27,29 +27,29 @@ static Format parse_format(const std::string& s) {
     auto lower = s;
     std::transform(lower.begin(), lower.end(), lower.begin(),
                    [](unsigned char c) { return (char)std::tolower(c); });
-    if (lower == "q1") return Format::Q1;
-    if (lower == "q2") return Format::Q2;
-    if (lower == "q3") return Format::Q3;
-    if (lower == "q4") return Format::Q4;
-    if (lower == "q6") return Format::Q6;
-    if (lower == "q8" || lower == "quant8") return Format::Q8;
-    if (lower == "q12") return Format::Q12;
-    if (lower == "q16" || lower == "fp16") return Format::Q16;
-    if (lower == "q24") return Format::Q24;
-    if (lower == "q32" || lower == "fp32") return Format::Q32;
-    if (lower == "qg1" || lower == "q1_g" || lower == "q1_grp") return Format::QG1;
-    if (lower == "qg2" || lower == "q2_g" || lower == "q2_grp") return Format::QG2;
-    if (lower == "qg3" || lower == "q3_g" || lower == "q3_grp") return Format::QG3;
-    if (lower == "qg4" || lower == "q4_g" || lower == "q4_grp") return Format::QG4;
-    if (lower == "qg6" || lower == "q6_g" || lower == "q6_grp") return Format::QG6;
-    if (lower == "qg8" || lower == "q8_g" || lower == "q8_grp") return Format::QG8;
-    if (lower == "qg12" || lower == "q12_g" || lower == "q12_grp") return Format::QG12;
-    if (lower == "qg16" || lower == "q16_g" || lower == "q16_grp") return Format::QG16;
-    if (lower == "qg24" || lower == "q24_g" || lower == "q24_grp") return Format::QG24;
+    if (lower == "q1" || lower == "q_1") return Format::Q_1;
+    if (lower == "q2" || lower == "q_2") return Format::Q_2;
+    if (lower == "q3" || lower == "q_3") return Format::Q_3;
+    if (lower == "q4" || lower == "q_4") return Format::Q_4;
+    if (lower == "q6" || lower == "q_6") return Format::Q_6;
+    if (lower == "q8" || lower == "q_8" || lower == "quant8") return Format::Q_8;
+    if (lower == "q12" || lower == "q_12") return Format::Q_12;
+    if (lower == "q16" || lower == "q_16" || lower == "fp16") return Format::Q_16;
+    if (lower == "q24" || lower == "q_24") return Format::Q_24;
+    if (lower == "q32" || lower == "q_32" || lower == "fp32") return Format::Q_32;
+    if (lower == "qg1" || lower == "q_g_1" || lower == "q1_g" || lower == "q1_grp") return Format::Q_G_1;
+    if (lower == "qg2" || lower == "q_g_2" || lower == "q2_g" || lower == "q2_grp") return Format::Q_G_2;
+    if (lower == "qg3" || lower == "q_g_3" || lower == "q3_g" || lower == "q3_grp") return Format::Q_G_3;
+    if (lower == "qg4" || lower == "q_g_4" || lower == "q4_g" || lower == "q4_grp") return Format::Q_G_4;
+    if (lower == "qg6" || lower == "q_g_6" || lower == "q6_g" || lower == "q6_grp") return Format::Q_G_6;
+    if (lower == "qg8" || lower == "q_g_8" || lower == "q8_g" || lower == "q8_grp") return Format::Q_G_8;
+    if (lower == "qg12" || lower == "q_g_12" || lower == "q12_g" || lower == "q12_grp") return Format::Q_G_12;
+    if (lower == "qg16" || lower == "q_g_16" || lower == "q16_g" || lower == "q16_grp") return Format::Q_G_16;
+    if (lower == "qg24" || lower == "q_g_24" || lower == "q24_g" || lower == "q24_grp") return Format::Q_G_24;
     throw std::runtime_error("unknown format '" + s + "'");
 }
 
-static Format s_default_format = Format::Q8;
+static Format s_default_format = Format::Q_8;
 
 struct QuantArgs {
     std::string input_path;
@@ -197,8 +197,8 @@ int main(int argc, char** argv) {
                 std::cerr << "Warning: " << name << " block " << b
                           << ": format unsupported by canonical codec, "
                              "writing raw Q32\n";
-                block.format = Format::Q32;
-                if (!quantize_block_all(Format::Q32, data + block_start,
+                block.format = Format::Q_32;
+                if (!quantize_block_all(Format::Q_32, data + block_start,
                                         (int)block_size, block.indices, block.codebook)) {
                     std::cerr << "Error: " << name << " block " << b
                               << ": Q32 fallback encode failed — aborting\n";

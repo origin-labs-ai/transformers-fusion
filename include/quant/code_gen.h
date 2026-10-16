@@ -50,7 +50,7 @@ struct KernelSpec {
     int block_size = 32;
     SIMDTarget simd = SIMDTarget::SCALAR;
     UnrollLevel unroll = UnrollLevel::NONE;
-    Format format = Format::Q32;
+    Format format = Format::Q_32;
     bool fused = false;
     int num_threads = 1;
     std::string name;

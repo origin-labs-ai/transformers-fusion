@@ -188,7 +188,7 @@ void DenseModel::save(const std::string& quant_path) const {
         for (int64_t offset = 0; offset < numel; ) {
             uint32_t blk_size = (uint32_t)std::min((int64_t)32768, numel - offset);
             BlockData bd;
-            bd.format = Format::Q32;
+            bd.format = Format::Q_32;
             bd.num_weights = blk_size;
             bd.indices.resize(blk_size * 4);
             std::memcpy(bd.indices.data(), td + offset, blk_size * 4);
@@ -236,9 +236,9 @@ void DenseModel::save_quantized(const std::string& quant_path, Format fmt) const
 
     int codebook_size = 0;
     Format quant_fmt = fmt;
-    if (fmt == Format::Q8) codebook_size = 256;
-    else if (fmt == Format::Q4) codebook_size = 16;
-    else if (fmt == Format::Q2) codebook_size = 4;
+    if (fmt == Format::Q_8) codebook_size = 256;
+    else if (fmt == Format::Q_4) codebook_size = 16;
+    else if (fmt == Format::Q_2) codebook_size = 4;
 
     for (auto& [name, t] : named) {
         int64_t numel = t.numel();
@@ -295,7 +295,7 @@ void DenseModel::save_quantized(const std::string& quant_path, Format fmt) const
             for (int64_t offset = 0; offset < numel; ) {
                 uint32_t blk_size = (uint32_t)std::min((int64_t)32768, numel - offset);
                 BlockData bd;
-                bd.format = Format::Q32;
+                bd.format = Format::Q_32;
                 bd.num_weights = blk_size;
                 bd.indices.resize(blk_size * 4);
                 std::memcpy(bd.indices.data(), td + offset, blk_size * 4);

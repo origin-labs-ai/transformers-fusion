@@ -40,19 +40,19 @@ int main() {
     printf("block type : QG_1_5  QG2  benefit   Q2    Q1_5\n");
     for (int b = 0; b < 8; b++) {
         const float* blk = data.data() + (size_t)b * 256;
-        const double q1 = block_mse_fmt(Format::QG_1_5, blk, 256);
-        const double q2g = block_mse_fmt(Format::QG2, blk, 256);
-        const double q2 = block_mse_fmt(Format::Q2, blk, 256);
-        const double q0 = block_mse_fmt(Format::Q1_5, blk, 256);
+        const double q1 = block_mse_fmt(Format::Q_G_1_5, blk, 256);
+        const double q2g = block_mse_fmt(Format::Q_G_2, blk, 256);
+        const double q2 = block_mse_fmt(Format::Q_2, blk, 256);
+        const double q0 = block_mse_fmt(Format::Q_1_5, blk, 256);
         printf("smooth %2d  : %.6f  %.6f  %+.6f  %.6f  %.6f\n",
                b, q1, q2g, q1 - q2g, q2, q0);
     }
     for (int b = 32; b < 40; b++) {
         const float* blk = data.data() + (size_t)b * 256;
-        const double q1 = block_mse_fmt(Format::QG_1_5, blk, 256);
-        const double q2g = block_mse_fmt(Format::QG2, blk, 256);
-        const double q2 = block_mse_fmt(Format::Q2, blk, 256);
-        const double q0 = block_mse_fmt(Format::Q1_5, blk, 256);
+        const double q1 = block_mse_fmt(Format::Q_G_1_5, blk, 256);
+        const double q2g = block_mse_fmt(Format::Q_G_2, blk, 256);
+        const double q2 = block_mse_fmt(Format::Q_2, blk, 256);
+        const double q0 = block_mse_fmt(Format::Q_1_5, blk, 256);
         printf("spikey %2d  : %.6f  %.6f  %+.6f  %.6f  %.6f\n",
                b, q1, q2g, q1 - q2g, q2, q0);
     }

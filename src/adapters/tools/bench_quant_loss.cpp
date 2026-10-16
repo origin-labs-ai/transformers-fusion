@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    FormatDescriptor quant_fmt = FormatRegistry::parse_format_name("Q2");
+    FormatDescriptor quant_fmt = FormatRegistry::parse_format_name("Q_2");
     if (quant_fmt.name.empty()) {
         std::fprintf(stderr, "Error: Q2 not found in registry\n");
         return 1;

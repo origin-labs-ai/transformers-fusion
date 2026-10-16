@@ -32,7 +32,7 @@ int main() {
         for (auto& v : w2) v = s01(r2);
         double s2 = 0.0;
         for (float v : w2) s2 += double(v) * v;
-        for (Format f : {Format::Q8, Format::QG8, Format::QG_8_5}) {
+        for (Format f : {Format::Q_8, Format::Q_G_8, Format::Q_G_8_5}) {
             std::vector<uint8_t> idx, cb;
             if (!quantize_block_all(f, w2.data(), N, idx, cb)) continue;
             std::vector<float> out(N, 0.0f);

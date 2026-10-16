@@ -216,7 +216,7 @@ bool read_quant_tensor(std::ifstream& f, std::vector<float>& out, int64_t* n_out
         if (qr.format.name.empty()) return false;
     } else {
         // v1 stores carried no format identity; default to the saved fp32 copy.
-        qr.format = FormatRegistry::parse_format_name("Q32");
+        qr.format = FormatRegistry::parse_format_name("Q_32");
     }
     out.resize((size_t)n);
     FormatRegistry::dequantize(qr, out.data(), (int64_t)n);
@@ -282,7 +282,7 @@ float SelectiveFineTuner::lr_at(int step) const {
 }
 
 void SelectiveFineTuner::ste_roundtrip_block(float* data, int64_t n, Format fmt) {
-    if (n <= 0 || fmt == Format::Q32) return;
+    if (n <= 0 || fmt == Format::Q_32) return;
     // Fresh codebook per block: FormatRegistry trains and stores the codec for
     // this exact block, then dequantize returns the straight-through values.
     // (STEQuantizer::forward trains a fresh per-tensor codebook per call —

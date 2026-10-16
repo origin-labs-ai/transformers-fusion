@@ -124,16 +124,16 @@ void FormatPlanner::compute_format_mix(int num_blocks, float target_bpw,
 }
 
 static RegFormat bpw_to_reg_format(float bpw) {
-    if (bpw >= 31.99f) return RegFormat::Q32;
-    if (bpw >= 23.99f) return RegFormat::Q32; // Q24 → maps to Q32 in reg
-    if (bpw >= 15.99f) return RegFormat::Q16;
-    if (bpw >= 11.99f) return RegFormat::Q16; // Q12 → maps to Q16 in reg
-    if (bpw >= 7.99f)  return RegFormat::Q8;
-    if (bpw >= 5.99f)  return RegFormat::Q8;  // Q6 → maps to Q8 in reg
-    if (bpw >= 3.99f)  return RegFormat::Q4;
-    if (bpw >= 2.99f)  return RegFormat::Q4;  // Q3 → maps to Q4 in reg
-    if (bpw >= 1.99f)  return RegFormat::Q2;
-    return RegFormat::Q1;
+    if (bpw >= 31.99f) return RegFormat::Q_32;
+    if (bpw >= 23.99f) return RegFormat::Q_32; // Q24 → maps to Q32 in reg
+    if (bpw >= 15.99f) return RegFormat::Q_16;
+    if (bpw >= 11.99f) return RegFormat::Q_16; // Q12 → maps to Q16 in reg
+    if (bpw >= 7.99f)  return RegFormat::Q_8;
+    if (bpw >= 5.99f)  return RegFormat::Q_8;  // Q6 → maps to Q8 in reg
+    if (bpw >= 3.99f)  return RegFormat::Q_4;
+    if (bpw >= 2.99f)  return RegFormat::Q_4;  // Q3 → maps to Q4 in reg
+    if (bpw >= 1.99f)  return RegFormat::Q_2;
+    return RegFormat::Q_1;
 }
 
 FormatPlan FormatPlanner::allocate(int num_weight_blocks, int weights_per_block) {
@@ -285,8 +285,8 @@ FormatPlan FormatPlanner::allocate(int num_weight_blocks, int weights_per_block)
         auto mix = compute_format_mix_extended(num_weight_blocks, target_bpw_);
         // Format mapping array: Q1, Q2, Q3, Q4, Q6, Q8, Q12, Q16, Q24, Q32
         constexpr Format fmt_map[10] = {
-            Format::Q1, Format::Q2, Format::Q3, Format::Q4, Format::Q6,
-            Format::Q8, Format::Q12, Format::Q16, Format::Q24, Format::Q32
+            Format::Q_1, Format::Q_2, Format::Q_3, Format::Q_4, Format::Q_6,
+            Format::Q_8, Format::Q_12, Format::Q_16, Format::Q_24, Format::Q_32
         };
 
         int cursor = 0;
@@ -302,8 +302,8 @@ FormatPlan FormatPlanner::allocate(int num_weight_blocks, int weights_per_block)
         // Fill any remaining (shouldn't happen, but safety)
         while (cursor < num_weight_blocks) {
             int idx = indices[cursor];
-            plan.blocks[idx].assigned_format = Format::Q1;
-            plan.blocks[idx].registry_format = RegFormat::Q1;
+            plan.blocks[idx].assigned_format = Format::Q_1;
+            plan.blocks[idx].registry_format = RegFormat::Q_1;
             plan.blocks[idx].importance_score =
                 (idx < (int)importance_scores_.size()) ? importance_scores_[idx] : 0.0f;
             cursor++;

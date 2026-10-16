@@ -376,7 +376,7 @@ static bool quantize_tensor_blocks(const float* data, int64_t numel, float targe
         const int64_t blen = std::min<int64_t>(256, numel - start);
         quant::Format fmt = (b < (int64_t)plan.blocks.size())
                               ? plan.blocks[(size_t)b].assigned_format
-                              : quant::Format::Q8;
+                              : quant::Format::Q_8;
         TensorBlockData blk;
         blk.format = fmt;
         if (!quant::quantize_block_all(fmt, data + start, (int)blen, blk.indices, blk.codebook))
@@ -420,7 +420,7 @@ static bool convert_raw_fp32(const std::string& in_path, const std::string& out_
 
     quant::FormatBlockEntry ft_entry;
     ft_entry.block_id = 0;
-    ft_entry.format = (uint8_t)quant::Format::Q32;
+    ft_entry.format = (uint8_t)quant::Format::Q_32;
     ft_entry.cb_bytes = 0;
     writer.write_format_table({ft_entry});
 
@@ -431,7 +431,7 @@ static bool convert_raw_fp32(const std::string& in_path, const std::string& out_
     writer.write_tensor_table({t_entry}, {"weights"});
 
     quant::BlockData block;
-    block.format = quant::Format::Q32;
+    block.format = quant::Format::Q_32;
     block.num_weights = (uint32_t)num_floats;
     block.indices.resize(file_size);
     memcpy(block.indices.data(), data.data(), file_size);
@@ -463,7 +463,7 @@ static bool convert_gguf(const std::string& in_path, const std::string& out_path
     std::vector<quant::TensorEntry> t_entries;
     std::vector<std::string> t_names;
     std::vector<quant::BlockData> block_data;
-    quant::Format primary_format = quant::Format::Q32;
+    quant::Format primary_format = quant::Format::Q_32;
 
     // Real stored bytes / weights across all written blocks — used to print
     // the ACTUAL achieved BPW (not the requested target) after conversion.
@@ -513,18 +513,18 @@ static bool convert_gguf(const std::string& in_path, const std::string& out_path
                 block_data.push_back(std::move(block));
                 te.num_blocks++;
             }
-            if (primary_format == quant::Format::Q32 && !formats.empty())
+            if (primary_format == quant::Format::Q_32 && !formats.empty())
                 primary_format = formats[0];
         } else {
             // FP32: one raw block per tensor.
             quant::FormatBlockEntry fe;
             fe.block_id = (uint32_t)fmt_entries.size();
-            fe.format = (uint8_t)quant::Format::Q32;
+            fe.format = (uint8_t)quant::Format::Q_32;
             fe.cb_bytes = 0;
             fmt_entries.push_back(fe);
 
             quant::BlockData block;
-            block.format = quant::Format::Q32;
+            block.format = quant::Format::Q_32;
             block.num_weights = (uint32_t)numel;
             const size_t byte_size = (size_t)numel * sizeof(float);
             block.indices.resize(byte_size);

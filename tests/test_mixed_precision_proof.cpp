@@ -32,15 +32,15 @@ int main() {
     // first), so request the GRP descriptor directly from the mix table.
     const quant::MixDescriptor* mix24_5 = nullptr;
     for (const auto& m : quant::FormatRegistry::get_all_four_mixes()) {
-        if (m.id == quant::RegFormat::QG_MX_24_5) { mix24_5 = &m; break; }
+        if (m.id == quant::RegFormat::Q_G_MX_24_5) { mix24_5 = &m; break; }
     }
     assert(mix24_5 != nullptr);
     // QG_MX_* is the GROUPED ladder: tiers are grouped variants (registry
     // format_registry.cpp). Plain ladder Q_MX_24_5 uses Q12/Q16/Q24/Q32.
-    assert(mix24_5->tier1_fmt == quant::RegFormat::QG12);
-    assert(mix24_5->tier2_fmt == quant::RegFormat::QG16);
-    assert(mix24_5->tier3_fmt == quant::RegFormat::QG24);
-    assert(mix24_5->tier4_fmt == quant::RegFormat::Q32);
+    assert(mix24_5->tier1_fmt == quant::RegFormat::Q_G_12);
+    assert(mix24_5->tier2_fmt == quant::RegFormat::Q_G_16);
+    assert(mix24_5->tier3_fmt == quant::RegFormat::Q_G_24);
+    assert(mix24_5->tier4_fmt == quant::RegFormat::Q_32);
 
     std::cout << "  -> QG_MX_24_5 composition verified: QG12(25%) + QG16(30%) + QG24(35%) + Q32(10%) = 24.5 BPW!" << std::endl;
 

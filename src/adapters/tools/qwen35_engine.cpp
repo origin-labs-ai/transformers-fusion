@@ -30,7 +30,7 @@ void Qwen35Engine::decode_block(const QUANTReader& rd, uint32_t block_id, uint32
     // (hole at 19); anything else (incl. the 0xFF OOB sentinel) is Q32.
     const uint8_t wire_fmt = rd.format_entry(block_id).format;
     const Format fmt = (wire_fmt < FORMAT_COUNT && wire_fmt != 19)
-                           ? (Format)wire_fmt : Format::Q32;
+                           ? (Format)wire_fmt : Format::Q_32;
     dequantize_block_all(fmt, idx, idx_bytes, raw + 8, cb, nw, out);
 }
 
@@ -143,7 +143,7 @@ bool Qwen35Engine::resolve(const std::string& name, uint32_t rows, uint32_t cols
     // remaining corrupt-wire-byte case for the cached display format.
     const uint8_t wire_fmt = reader_->format_entry(start).format;
     t.fmt = (wire_fmt < FORMAT_COUNT && wire_fmt != 19)
-                ? (Format)wire_fmt : Format::Q32;
+                ? (Format)wire_fmt : Format::Q_32;
     t.rows = rows;
     t.cols = cols;
     th_[name] = t;

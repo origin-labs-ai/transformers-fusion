@@ -107,10 +107,10 @@ static void bench_model_size(const quant::TransformerConfig& cfg) {
 
     struct { const char* name; float bpw; } formats[] = {
         {"FP32",   32.0f},
-        {"Q8",    8.0f},
-        {"Q4",    4.0f},
+        {"Q_8",    8.0f},
+        {"Q_4",    4.0f},
         {"QUANT",  1.50f},
-        {"Q1",   1.0f},
+        {"Q_1",   1.0f},
     };
 
     std::cout << std::left

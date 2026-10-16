@@ -41,13 +41,13 @@ struct BridgeConfig {
     // Single on-disk format for ALL blocks (default: QG2 at
     // 2.625 BPW, highly recommended).
     // Note: this is ignored if compound != QG2
-    Format format = Format::QG2;
+    Format format = Format::Q_G_2;
 
     // Compound format (Q_MX / QG_MX): when set to a Q_MX_*/QG_MX_* RegFormat,
     // blocks are routed to the member formats by importance with the exact
     // registry ratios, so the file's average BPW equals the claimed
     // effective_bpw. Defaults to the single format above.
-    RegFormat compound = RegFormat::QG2;
+    RegFormat compound = RegFormat::Q_G_2;
 
     // Kept for CLI/API compatibility; write_quant_mixed ignores it in favor of
     // `format`. The nearest matching format is chosen when set.

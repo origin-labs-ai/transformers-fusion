@@ -112,12 +112,12 @@ static void test_qg_mx_budget_at_scale() {
 
     const MixDescriptor* mix = nullptr;
     for (const auto& m : FormatRegistry::get_all_four_mixes())
-        if (m.name == "QG_MX_3.5") mix = &m;
+        if (m.name == "Q_G_MX_3_5") mix = &m;
     check(mix != nullptr, "QG_MX_3.5 registered");
     if (!mix) return;
 
     const std::vector<Format> fmts =
-        allocate_tensor_formats("layer0.weight", N, data.data(), 256, Format::Q2, mix);
+        allocate_tensor_formats("layer0.weight", N, data.data(), 256, Format::Q_2, mix);
 
     size_t total_bytes = 0;
     bool budget_ok = true;

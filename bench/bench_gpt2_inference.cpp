@@ -489,7 +489,7 @@ int main(int argc, char** argv) {
     };
 
     std::vector<QuantMode> modes = {QuantMode::FP32, QuantMode::Q8, QuantMode::Q4, QuantMode::BITNET_158};
-    std::vector<std::string> mode_names = {"FP32", "Q8", "Q4", "BITNET_158"};
+    std::vector<std::string> mode_names = {"FP32", "Q_8", "Q_4", "BITNET_158"};
 
     std::vector<QuantizedGPT2Weights> precomputed;
     for (auto mode : modes) {

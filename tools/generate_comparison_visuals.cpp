@@ -103,16 +103,16 @@ int main() {
         f << "| TransFormers-Fusion | BPW | PSNR dB | Competitor | BPW | PSNR dB | Delta | Verdict |\n|---|---|---|---|---|---|---|---|\n";
         struct PairDef { const char* a; const char* b; };
         PairDef pairs[] = {
-            {"Q16", "[ref] IEEE FP16"},
-            {"QG_MX_16.5", "[ref] IEEE FP16"},
-            {"QG_8.5", "[ref] GGUF Q8_0"},
-            {"Q_MX_8.5", "[ref] GGUF Q8_0"},
-            {"QG_6.5", "[ref] GGUF Q6_K"},
-            {"QG_4.5", "[ref] GGUF Q4_K"},
-            {"QG_MX_4.5", "[ref] GGUF Q4_K"},
-            {"QG1", "[ref] BitNet b1.58"},
-            {"QG1", "[ref] Binary 1-bit"},
-            {"Q8_K_M", "[ref] INT8 uniform"},
+            {"Q_16", "[ref] IEEE FP16"},
+            {"Q_G_MX_16_5", "[ref] IEEE FP16"},
+            {"Q_G_8_5", "[ref] GGUF Q8_0"},
+            {"Q_MX_8_5", "[ref] GGUF Q8_0"},
+            {"Q_G_6_5", "[ref] GGUF Q6_K"},
+            {"Q_G_4_5", "[ref] GGUF Q4_K"},
+            {"Q_G_MX_4_5", "[ref] GGUF Q4_K"},
+            {"Q_G_1", "[ref] BitNet b1.58"},
+            {"Q_G_1", "[ref] Binary 1-bit"},
+            {"Q_8_K_M", "[ref] INT8 uniform"},
         };
         auto find_row = [&](const std::string& n) -> const Row* {
             for (auto& r : rs) if (r.format == n) return &r;

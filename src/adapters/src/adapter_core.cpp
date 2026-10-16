@@ -177,19 +177,19 @@ Format select_tensor_format(const std::string& name, int64_t numel, Format base)
         name.find("in_proj_a") != std::string::npos ||
         name.find("in_proj_b") != std::string::npos ||
         (name.size() >= 5 && name.compare(name.size() - 5, 5, ".bias") == 0);
-    if (critical && numel <= 262144) return Format::Q32;
+    if (critical && numel <= 262144) return Format::Q_32;
     const bool embedding =
         name.find("embed_tokens") != std::string::npos ||
         name.find("lm_head") != std::string::npos;
-    if (critical && numel <= 262144) return Format::Q32;
+    if (critical && numel <= 262144) return Format::Q_32;
 
     const float b = format_bpw(base);
-    if (b <= 1.0f)  return Format::QG1;
-    if (b <= 2.0f)  return Format::QG2;
-    if (b <= 4.0f)  return Format::QG4;
-    if (b <= 8.0f)  return Format::QG8;
-    if (b <= 16.0f) return Format::QG16;
-    return Format::Q32;
+    if (b <= 1.0f)  return Format::Q_G_1;
+    if (b <= 2.0f)  return Format::Q_G_2;
+    if (b <= 4.0f)  return Format::Q_G_4;
+    if (b <= 8.0f)  return Format::Q_G_8;
+    if (b <= 16.0f) return Format::Q_G_16;
+    return Format::Q_32;
 }
 
 // Quantize one block to `fmt`, filling codebook + indices. Every QUANT/QUANT
@@ -241,8 +241,8 @@ std::vector<Format> allocate_tensor_formats(const std::string& name, int64_t num
         if (plan_out) fill_flat_plan(*plan_out, numel, bs, out);
         return out;
     }
-    if (guard == Format::Q32) {
-        for (auto& f : out) f = Format::Q32;
+    if (guard == Format::Q_32) {
+        for (auto& f : out) f = Format::Q_32;
         if (plan_out) fill_flat_plan(*plan_out, numel, bs, out);
         return out;
     }

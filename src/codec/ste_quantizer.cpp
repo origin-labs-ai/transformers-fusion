@@ -27,7 +27,7 @@ Tensor STEQuantizer::forward(const Tensor& fp32_weight) {
     float* rd = (float*)result.data();
 
     switch (target_format_) {
-        case Format::Q1: {
+        case Format::Q_1: {
             std::vector<uint8_t> packed((n + 7) / 8);
             float scale;
             quantize_Q1(src, packed.data(), &scale, n);
@@ -37,7 +37,7 @@ Tensor STEQuantizer::forward(const Tensor& fp32_weight) {
             }
             break;
         }
-        case Format::Q2: {
+        case Format::Q_2: {
             std::vector<uint8_t> packed((n + 3) / 4);
             float scale;
             quantize_quant(src, packed.data(), &scale, n);
@@ -47,52 +47,52 @@ Tensor STEQuantizer::forward(const Tensor& fp32_weight) {
             }
             break;
         }
-        case Format::Q3: {
+        case Format::Q_3: {
             CodebookQ3 cb3;
             cb3.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb3.dequantize(cb3.quantize(src[i]));
             break;
         }
-        case Format::Q8: {
+        case Format::Q_8: {
             CodebookQ8 cb8;
             cb8.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb8.dequantize(cb8.quantize(src[i]));
             break;
         }
-        case Format::Q4: {
+        case Format::Q_4: {
             CodebookQ4 cb4;
             cb4.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb4.dequantize(cb4.quantize(src[i]));
             break;
         }
-        case Format::Q6: {
+        case Format::Q_6: {
             CodebookQ6 cb6;
             cb6.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb6.dequantize(cb6.quantize(src[i]));
             break;
         }
-        case Format::Q12: {
+        case Format::Q_12: {
             CodebookQ12 cb12;
             cb12.train(src, (size_t)n);
             for (int64_t i = 0; i < n; i++)
                 rd[i] = cb12.dequantize(cb12.quantize(src[i]));
             break;
         }
-        case Format::Q16: {
+        case Format::Q_16: {
             // Explicit high-precision passthrough (never falls to default).
             std::memcpy(rd, src, (size_t)n * sizeof(float));
             break;
         }
-        case Format::Q24: {
+        case Format::Q_24: {
             // Undecided high-BPW passthrough (explicit, not silent default).
             std::memcpy(rd, src, (size_t)n * sizeof(float));
             break;
         }
-        case Format::Q32: {
+        case Format::Q_32: {
             std::memcpy(rd, src, (size_t)n * sizeof(float));
             break;
         }
@@ -195,7 +195,7 @@ Tensor STEQuantizer::forward_mixed(const Tensor& weights, const std::vector<Form
         Format fmt = per_block_formats[(size_t)b];
 
         switch (fmt) {
-        case Format::Q2: {
+        case Format::Q_2: {
                 std::vector<uint8_t> packed((block_n + 3) / 4);
                 float scale;
                 quantize_quant(src + block_start, packed.data(), &scale, block_n);
@@ -205,7 +205,7 @@ Tensor STEQuantizer::forward_mixed(const Tensor& weights, const std::vector<Form
                 }
                 break;
             }
-            case Format::Q1: {
+            case Format::Q_1: {
                 std::vector<uint8_t> packed((block_n + 7) / 8);
                 float scale;
                 quantize_Q1(src + block_start, packed.data(), &scale, block_n);
@@ -215,52 +215,52 @@ Tensor STEQuantizer::forward_mixed(const Tensor& weights, const std::vector<Form
                 }
                 break;
             }
-            case Format::Q3: {
+            case Format::Q_3: {
                 CodebookQ3 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
-            case Format::Q8: {
+            case Format::Q_8: {
                 CodebookQ8 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
-            case Format::Q4: {
+            case Format::Q_4: {
                 CodebookQ4 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
-            case Format::Q6: {
+            case Format::Q_6: {
                 CodebookQ6 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
-            case Format::Q12: {
+            case Format::Q_12: {
                 CodebookQ12 cb;
                 cb.train(src + block_start, (size_t)block_n);
                 for (int64_t i = 0; i < block_n; i++)
                     rd[block_start + i] = cb.dequantize(cb.quantize(src[block_start + i]));
                 break;
             }
-            case Format::Q16: {
+            case Format::Q_16: {
                 // Explicit high-precision passthrough (never falls to default).
                 std::memcpy(rd + block_start, src + block_start, (size_t)block_n * sizeof(float));
                 break;
             }
-            case Format::Q24: {
+            case Format::Q_24: {
                 // Undecided high-BPW passthrough (explicit, not silent default).
                 std::memcpy(rd + block_start, src + block_start, (size_t)block_n * sizeof(float));
                 break;
             }
-            case Format::Q32: {
+            case Format::Q_32: {
                 std::memcpy(rd + block_start, src + block_start, (size_t)block_n * sizeof(float));
                 break;
             }
@@ -318,74 +318,74 @@ void STEQuantizer::quantize_Q1(const float* src, uint8_t* dst, float* scale, int
 
 int STEQuantizer::bits_for_format(Format f) const {
     switch (f) {
-        case Format::Q1: return 1;
-        case Format::Q2: return 2;
-        case Format::Q3: return 3;
-        case Format::Q4: return 4;
-        case Format::Q6: return 6;
-        case Format::Q8: return 8;
-        case Format::Q12: return 12;
-        case Format::Q16: return 16;
-        case Format::Q24: return 24;
-        case Format::Q32: return 32;
+        case Format::Q_1: return 1;
+        case Format::Q_2: return 2;
+        case Format::Q_3: return 3;
+        case Format::Q_4: return 4;
+        case Format::Q_6: return 6;
+        case Format::Q_8: return 8;
+        case Format::Q_12: return 12;
+        case Format::Q_16: return 16;
+        case Format::Q_24: return 24;
+        case Format::Q_32: return 32;
         // K variants -> base BPW
-        case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: return 1;
-        case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: return 2;
-        case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: return 3;
-        case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: return 4;
-        case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: return 6;
-        case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: return 8;
-        case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: return 12;
-        case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: return 16;
-        case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: return 24;
+        case Format::Q_1_K_L: case Format::Q_1_K_M: case Format::Q_1_K_H: return 1;
+        case Format::Q_2_K_L: case Format::Q_2_K_M: case Format::Q_2_K_H: return 2;
+        case Format::Q_3_K_L: case Format::Q_3_K_M: case Format::Q_3_K_H: return 3;
+        case Format::Q_4_K_L: case Format::Q_4_K_M: case Format::Q_4_K_H: return 4;
+        case Format::Q_6_K_L: case Format::Q_6_K_M: case Format::Q_6_K_H: return 6;
+        case Format::Q_8_K_L: case Format::Q_8_K_M: case Format::Q_8_K_H: return 8;
+        case Format::Q_12_K_L: case Format::Q_12_K_M: case Format::Q_12_K_H: return 12;
+        case Format::Q_16_K_L: case Format::Q_16_K_M: case Format::Q_16_K_H: return 16;
+        case Format::Q_24_K_L: case Format::Q_24_K_M: case Format::Q_24_K_H: return 24;
         // GRP exact -> base BPW
-        case Format::QG1: return 1;
-        case Format::QG2: return 2;
-        case Format::QG3: return 3;
-        case Format::QG4: return 4;
-        case Format::QG6: return 6;
-        case Format::QG8: return 8;
-        case Format::QG12: return 12;
-        case Format::QG16: return 16;
-        case Format::QG24: return 24;
+        case Format::Q_G_1: return 1;
+        case Format::Q_G_2: return 2;
+        case Format::Q_G_3: return 3;
+        case Format::Q_G_4: return 4;
+        case Format::Q_G_6: return 6;
+        case Format::Q_G_8: return 8;
+        case Format::Q_G_12: return 12;
+        case Format::Q_G_16: return 16;
+        case Format::Q_G_24: return 24;
         // K_G variants -> base BPW
-        case Format::QG_1_K_L: case Format::QG_1_K_M: case Format::QG_1_K_H: return 1;
-        case Format::QG_2_K_L: case Format::QG_2_K_M: case Format::QG_2_K_H: return 2;
-        case Format::QG_3_K_L: case Format::QG_3_K_M: case Format::QG_3_K_H: return 3;
-        case Format::QG_4_K_L: case Format::QG_4_K_M: case Format::QG_4_K_H: return 4;
-        case Format::QG_6_K_L: case Format::QG_6_K_M: case Format::QG_6_K_H: return 6;
-        case Format::QG_8_K_L: case Format::QG_8_K_M: case Format::QG_8_K_H: return 8;
-        case Format::QG_12_K_L: case Format::QG_12_K_M: case Format::QG_12_K_H: return 12;
-        case Format::QG_16_K_L: case Format::QG_16_K_M: case Format::QG_16_K_H: return 16;
-        case Format::QG_24_K_L: case Format::QG_24_K_M: case Format::QG_24_K_H: return 24;
+        case Format::Q_G_1_K_L: case Format::Q_G_1_K_M: case Format::Q_G_1_K_H: return 1;
+        case Format::Q_G_2_K_L: case Format::Q_G_2_K_M: case Format::Q_G_2_K_H: return 2;
+        case Format::Q_G_3_K_L: case Format::Q_G_3_K_M: case Format::Q_G_3_K_H: return 3;
+        case Format::Q_G_4_K_L: case Format::Q_G_4_K_M: case Format::Q_G_4_K_H: return 4;
+        case Format::Q_G_6_K_L: case Format::Q_G_6_K_M: case Format::Q_G_6_K_H: return 6;
+        case Format::Q_G_8_K_L: case Format::Q_G_8_K_M: case Format::Q_G_8_K_H: return 8;
+        case Format::Q_G_12_K_L: case Format::Q_G_12_K_M: case Format::Q_G_12_K_H: return 12;
+        case Format::Q_G_16_K_L: case Format::Q_G_16_K_M: case Format::Q_G_16_K_H: return 16;
+        case Format::Q_G_24_K_L: case Format::Q_G_24_K_M: case Format::Q_G_24_K_H: return 24;
         // half-BPW plain -> base BPW
-        case Format::Q1_5: return 1;
-        case Format::Q2_5: return 2;
-        case Format::Q3_5: return 3;
-        case Format::Q4_5: return 4;
-        case Format::Q6_5: return 6;
-        case Format::Q8_5: return 8;
-        case Format::Q12_5: return 12;
-        case Format::Q16_5: return 16;
-        case Format::Q24_5: return 24;
+        case Format::Q_1_5: return 1;
+        case Format::Q_2_5: return 2;
+        case Format::Q_3_5: return 3;
+        case Format::Q_4_5: return 4;
+        case Format::Q_6_5: return 6;
+        case Format::Q_8_5: return 8;
+        case Format::Q_12_5: return 12;
+        case Format::Q_16_5: return 16;
+        case Format::Q_24_5: return 24;
         // half-BPW GRP -> base BPW
-        case Format::QG_1_5: return 1;
-        case Format::QG_2_5: return 2;
-        case Format::QG_3_5: return 3;
-        case Format::QG_4_5: return 4;
-        case Format::QG_6_5: return 6;
-        case Format::QG_8_5: return 8;
-        case Format::QG_12_5: return 12;
-        case Format::QG_16_5: return 16;
-        case Format::QG_24_5: return 24;
+        case Format::Q_G_1_5: return 1;
+        case Format::Q_G_2_5: return 2;
+        case Format::Q_G_3_5: return 3;
+        case Format::Q_G_4_5: return 4;
+        case Format::Q_G_6_5: return 6;
+        case Format::Q_G_8_5: return 8;
+        case Format::Q_G_12_5: return 12;
+        case Format::Q_G_16_5: return 16;
+        case Format::Q_G_24_5: return 24;
         // MX plain / grouped -> base BPW
-        case Format::Q_MX_3_5: case Format::QG_MX_3_5: return 3;
-        case Format::Q_MX_4_5: case Format::QG_MX_4_5: return 4;
-        case Format::Q_MX_6_5: case Format::QG_MX_6_5: return 6;
-        case Format::Q_MX_8_5: case Format::QG_MX_8_5: return 8;
-        case Format::Q_MX_12_5: case Format::QG_MX_12_5: return 12;
-        case Format::Q_MX_16_5: case Format::QG_MX_16_5: return 16;
-        case Format::Q_MX_24_5: case Format::QG_MX_24_5: return 24;
+        case Format::Q_MX_3_5: case Format::Q_G_MX_3_5: return 3;
+        case Format::Q_MX_4_5: case Format::Q_G_MX_4_5: return 4;
+        case Format::Q_MX_6_5: case Format::Q_G_MX_6_5: return 6;
+        case Format::Q_MX_8_5: case Format::Q_G_MX_8_5: return 8;
+        case Format::Q_MX_12_5: case Format::Q_G_MX_12_5: return 12;
+        case Format::Q_MX_16_5: case Format::Q_G_MX_16_5: return 16;
+        case Format::Q_MX_24_5: case Format::Q_G_MX_24_5: return 24;
         default: return 8;
     }
 }

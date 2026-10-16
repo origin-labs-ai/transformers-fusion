@@ -254,7 +254,7 @@ void test_quant_format_roundtrip() {
         std::vector<quant::FormatBlockEntry> format_table;
         quant::FormatBlockEntry ft;
         ft.block_id = 0;
-        ft.format = 9; // Format::Q32
+        ft.format = 9; // Format::Q_32
         ft.cb_bytes = 0;
         format_table.push_back(ft);
         writer.write_format_table(format_table);
@@ -274,7 +274,7 @@ void test_quant_format_roundtrip() {
 
         // Write a block
         quant::BlockData bd;
-        bd.format = quant::Format::Q1;
+        bd.format = quant::Format::Q_1;
         bd.num_weights = (uint32_t)t.numel();
         bd.indices.resize(t.size_bytes());
         std::memcpy(bd.indices.data(), t.data<float>(), t.size_bytes());
@@ -588,7 +588,7 @@ static void write_p6b_valid(const std::string& path) {
     writer.write_header(hdr, nullptr);
     std::vector<quant::FormatBlockEntry> ft(1);
     ft[0].block_id = 0;
-    ft[0].format = 9; // Format::Q32
+    ft[0].format = 9; // Format::Q_32
     ft[0].cb_bytes = 0;
     writer.write_format_table(ft);
     std::vector<quant::TensorEntry> te(1);
@@ -597,7 +597,7 @@ static void write_p6b_valid(const std::string& path) {
     te[0].num_blocks = 1;
     writer.write_tensor_table(te, {"w"});
     quant::BlockData bd;
-    bd.format = quant::Format::Q32;
+    bd.format = quant::Format::Q_32;
     bd.num_weights = 8;
     bd.indices.resize(8 * 4);
     float vals[8] = {1,2,3,4,5,6,7,8};

@@ -256,7 +256,7 @@ int main() {
 
         for (int q = 0; q < 2; q++) {
             quant::QuantResult qr;
-            const char* tag = (q == 0) ? "Q8" : "Q4";
+            const char* tag = (q == 0) ? "Q_8" : "Q_4";
             // Row-wise quantize/dequantize each GEMV row (decode-path shape).
             std::vector<float> y_q(M, 0.0f);
             bool ok = true;

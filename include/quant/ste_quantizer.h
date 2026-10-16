@@ -45,7 +45,7 @@ public:
     Tensor fake_quantize_with_observer(const Tensor& fp32_weight, qat::Observer& obs, int bits = 0);
     
 private:
-    Format target_format_ = Format::Q1;
+    Format target_format_ = Format::Q_1;
     
     // Find scale factor (max abs)
     float find_scale(const float* data, int64_t n);

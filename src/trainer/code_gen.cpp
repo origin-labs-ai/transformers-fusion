@@ -78,11 +78,11 @@ std::string CodeGenerator::make_function_name(const KernelSpec& spec) const {
 
 std::string CodeGenerator::format_type_string(Format fmt) const {
     switch (fmt) {
-        case Format::Q1:            return "int8_t";
-        case Format::Q4:            return "uint8_t";
-        case Format::Q8:            return "uint8_t";
-        case Format::Q16:           return "float";
-        case Format::Q32:           return "float";
+        case Format::Q_1:            return "int8_t";
+        case Format::Q_4:            return "uint8_t";
+        case Format::Q_8:            return "uint8_t";
+        case Format::Q_16:           return "float";
+        case Format::Q_32:           return "float";
         default:                    return "float";
     }
 }
@@ -553,14 +553,14 @@ std::string CodeGenerator::generate_quantize_dequantize(int64_t n, Format src_fo
     code << "\nextern \"C\" void quant_quantize_dequantize(const float* __restrict__ input,\n";
     code << "    float* __restrict__ output, int64_t n) {\n\n";
 
-    if (src_format == Format::Q32 && dst_format == Format::Q8) {
+    if (src_format == Format::Q_32 && dst_format == Format::Q_8) {
         code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
         code << indent(2) << "float v = input[i];\n";
         code << indent(2) << "int q = (int)(v * 127.0f + 128.0f);\n";
         code << indent(2) << "q = q < 0 ? 0 : (q > 255 ? 255 : q);\n";
         code << indent(2) << "output[i] = ((float)q - 128.0f) / 127.0f;\n";
         code << indent(1) << "}\n";
-    } else if (src_format == Format::Q32 && dst_format == Format::Q4) {
+    } else if (src_format == Format::Q_32 && dst_format == Format::Q_4) {
         code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
         code << indent(2) << "float v = input[i];\n";
         code << indent(2) << "int q = (int)(v * 7.5f + 7.5f);\n";
@@ -571,7 +571,7 @@ std::string CodeGenerator::generate_quantize_dequantize(int64_t n, Format src_fo
         code << indent(2) << "float v = input[i];\n";
         code << indent(2) << "output[i] = v > 0.33f ? 1.0f : (v < -0.33f ? -1.0f : 0.0f);\n";
         code << indent(1) << "}\n";
-    } else if (src_format == Format::Q32 && dst_format == Format::Q1) {
+    } else if (src_format == Format::Q_32 && dst_format == Format::Q_1) {
         code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
         code << indent(2) << "output[i] = input[i] >= 0.0f ? 1.0f : -1.0f;\n";
         code << indent(1) << "}\n";
@@ -608,7 +608,7 @@ std::string CodeGenerator::generate_format_branch(const std::string& op_name, Fo
     code << "// " << op_name << " branch for " << format_name(format) << " dim=" << dim << "\n";
 
     switch (format) {
-        case Format::Q1:
+        case Format::Q_1:
             code << "void " << op_name << "_quant1(const int8_t* in, int8_t* out, int64_t n) {\n";
             code << indent(1) << "for (int64_t i = 0; i < n; i++) out[i] = in[i] ^ 1;\n";
             code << "}\n";
@@ -617,7 +617,7 @@ std::string CodeGenerator::generate_format_branch(const std::string& op_name, Fo
             code << indent(1) << "for (int64_t i = 0; i < n; i++) out[i] = -in[i];\n";
             code << "}\n";
             break;
-        case Format::Q4:
+        case Format::Q_4:
             code << "void " << op_name << "_quant4(const uint8_t* in, float* out, int64_t n) {\n";
             code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
             code << indent(2) << "float v = ((float)(in[i] & 0xF) - 7.5f) / 7.5f;\n";
@@ -625,7 +625,7 @@ std::string CodeGenerator::generate_format_branch(const std::string& op_name, Fo
             code << indent(1) << "}\n";
             code << "}\n";
             break;
-        case Format::Q8:
+        case Format::Q_8:
             code << "void " << op_name << "_quant8(const uint8_t* in, float* out, int64_t n) {\n";
             code << indent(1) << "for (int64_t i = 0; i < n; i++) {\n";
             code << indent(2) << "float v = ((float)in[i] - 128.0f) / 127.0f;\n";
@@ -855,7 +855,7 @@ std::string CodeGenerator::generate_kernel_for_shape(const KernelSpec& spec) {
             code = generate_embedding_lookup(spec.M, spec.N, spec.simd);
             break;
         case KernelType::QUANTIZE_DEQUANTIZE:
-            code = generate_quantize_dequantize(spec.N, Format::Q32, spec.format);
+            code = generate_quantize_dequantize(spec.N, Format::Q_32, spec.format);
             break;
         default:
             code = "// Unsupported kernel type\n";

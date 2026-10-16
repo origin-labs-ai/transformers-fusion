@@ -7,25 +7,25 @@
 namespace quant {
 
 enum class RegFormat : uint32_t {
-    Q1 = 0,
-    Q2,
-    Q3,
-    Q4,
-    Q6,
-    Q8,
-    Q12,
-    Q16,
-    Q24,
-    Q32,
-    QG1,
-    QG2,
-    QG3,
-    QG4,
-    QG6,
-    QG8,
-    QG12,
-    QG16,
-    QG24,
+    Q_1 = 0,
+    Q_2,
+    Q_3,
+    Q_4,
+    Q_6,
+    Q_8,
+    Q_12,
+    Q_16,
+    Q_24,
+    Q_32,
+    Q_G_1,
+    Q_G_2,
+    Q_G_3,
+    Q_G_4,
+    Q_G_6,
+    Q_G_8,
+    Q_G_12,
+    Q_G_16,
+    Q_G_24,
     Q_MX_3_5,
     Q_MX_4_5,
     Q_MX_6_5,
@@ -33,13 +33,41 @@ enum class RegFormat : uint32_t {
     Q_MX_12_5,
     Q_MX_16_5,
     Q_MX_24_5,
-    QG_MX_3_5,
-    QG_MX_4_5,
-    QG_MX_6_5,
-    QG_MX_8_5,
-    QG_MX_12_5,
-    QG_MX_16_5,
-    QG_MX_24_5
+    Q_G_MX_3_5,
+    Q_G_MX_4_5,
+    Q_G_MX_6_5,
+    Q_G_MX_8_5,
+    Q_G_MX_12_5,
+    Q_G_MX_16_5,
+    Q_G_MX_24_5,
+
+    // --- Legacy pre-Fusion aliases (deprecated, same IDs) ---
+    Q1 = 0,  // legacy alias for Q_1
+    Q2 = 1,  // legacy alias for Q_2
+    Q3 = 2,  // legacy alias for Q_3
+    Q4 = 3,  // legacy alias for Q_4
+    Q6 = 4,  // legacy alias for Q_6
+    Q8 = 5,  // legacy alias for Q_8
+    Q12 = 6,  // legacy alias for Q_12
+    Q16 = 7,  // legacy alias for Q_16
+    Q24 = 8,  // legacy alias for Q_24
+    Q32 = 9,  // legacy alias for Q_32
+    QG1 = 10,  // legacy alias for Q_G_1
+    QG2 = 11,  // legacy alias for Q_G_2
+    QG3 = 12,  // legacy alias for Q_G_3
+    QG4 = 13,  // legacy alias for Q_G_4
+    QG6 = 14,  // legacy alias for Q_G_6
+    QG8 = 15,  // legacy alias for Q_G_8
+    QG12 = 16,  // legacy alias for Q_G_12
+    QG16 = 17,  // legacy alias for Q_G_16
+    QG24 = 18,  // legacy alias for Q_G_24
+    QG_MX_3_5 = 26,  // legacy alias for Q_G_MX_3_5
+    QG_MX_4_5 = 27,  // legacy alias for Q_G_MX_4_5
+    QG_MX_6_5 = 28,  // legacy alias for Q_G_MX_6_5
+    QG_MX_8_5 = 29,  // legacy alias for Q_G_MX_8_5
+    QG_MX_12_5 = 30,  // legacy alias for Q_G_MX_12_5
+    QG_MX_16_5 = 31,  // legacy alias for Q_G_MX_16_5
+    QG_MX_24_5 = 32,  // legacy alias for Q_G_MX_24_5
 };
 
 struct FormatDescriptor {
@@ -174,48 +202,48 @@ private:
 
 inline RegFormat format_to_regformat(Format f) {
     switch(f) {
-        case Format::Q1: case Format::Q1_K_L: case Format::Q1_K_M: case Format::Q1_K_H: case Format::QG1: case Format::QG_1_K_L: case Format::QG_1_K_M: case Format::QG_1_K_H: return RegFormat::Q1;
-        case Format::Q2: case Format::Q2_K_L: case Format::Q2_K_M: case Format::Q2_K_H: case Format::QG2: case Format::QG_2_K_L: case Format::QG_2_K_M: case Format::QG_2_K_H: return RegFormat::Q2;
-        case Format::Q3: case Format::Q3_K_L: case Format::Q3_K_M: case Format::Q3_K_H: case Format::QG3: case Format::QG_3_K_L: case Format::QG_3_K_M: case Format::QG_3_K_H: return RegFormat::Q3;
-        case Format::Q4: case Format::Q4_K_L: case Format::Q4_K_M: case Format::Q4_K_H: case Format::QG4: case Format::QG_4_K_L: case Format::QG_4_K_M: case Format::QG_4_K_H: return RegFormat::Q4;
-        case Format::Q6: case Format::Q6_K_L: case Format::Q6_K_M: case Format::Q6_K_H: case Format::QG6: case Format::QG_6_K_L: case Format::QG_6_K_M: case Format::QG_6_K_H: return RegFormat::Q6;
-        case Format::Q8: case Format::Q8_K_L: case Format::Q8_K_M: case Format::Q8_K_H: case Format::QG8: case Format::QG_8_K_L: case Format::QG_8_K_M: case Format::QG_8_K_H: return RegFormat::Q8;
-        case Format::Q12: case Format::Q12_K_L: case Format::Q12_K_M: case Format::Q12_K_H: case Format::QG12: case Format::QG_12_K_L: case Format::QG_12_K_M: case Format::QG_12_K_H: return RegFormat::Q12;
-        case Format::Q16: case Format::Q16_K_L: case Format::Q16_K_M: case Format::Q16_K_H: case Format::QG16: case Format::QG_16_K_L: case Format::QG_16_K_M: case Format::QG_16_K_H: return RegFormat::Q16;
-        case Format::Q24: case Format::Q24_K_L: case Format::Q24_K_M: case Format::Q24_K_H: case Format::QG24: case Format::QG_24_K_L: case Format::QG_24_K_M: case Format::QG_24_K_H: return RegFormat::Q24;
-        case Format::Q32: return RegFormat::Q32;
-        case Format::QG_1_5: case Format::QG_2_5: case Format::QG_3_5: case Format::QG_4_5: case Format::QG_6_5: case Format::QG_8_5: case Format::QG_12_5: case Format::QG_16_5: case Format::QG_24_5: return RegFormat::Q1;
-        case Format::Q_MX_3_5: case Format::QG_MX_3_5: return RegFormat::QG_MX_3_5;
-        case Format::Q_MX_4_5: case Format::QG_MX_4_5: return RegFormat::QG_MX_4_5;
-        case Format::Q_MX_6_5: case Format::QG_MX_6_5: return RegFormat::QG_MX_6_5;
-        case Format::Q_MX_8_5: case Format::QG_MX_8_5: return RegFormat::QG_MX_8_5;
-        case Format::Q_MX_12_5: case Format::QG_MX_12_5: return RegFormat::QG_MX_12_5;
-        case Format::Q_MX_16_5: case Format::QG_MX_16_5: return RegFormat::QG_MX_16_5;
-        case Format::Q_MX_24_5: case Format::QG_MX_24_5: return RegFormat::QG_MX_24_5;
-        default: return RegFormat::Q32;
+        case Format::Q_1: case Format::Q_1_K_L: case Format::Q_1_K_M: case Format::Q_1_K_H: case Format::Q_G_1: case Format::Q_G_1_K_L: case Format::Q_G_1_K_M: case Format::Q_G_1_K_H: return RegFormat::Q_1;
+        case Format::Q_2: case Format::Q_2_K_L: case Format::Q_2_K_M: case Format::Q_2_K_H: case Format::Q_G_2: case Format::Q_G_2_K_L: case Format::Q_G_2_K_M: case Format::Q_G_2_K_H: return RegFormat::Q_2;
+        case Format::Q_3: case Format::Q_3_K_L: case Format::Q_3_K_M: case Format::Q_3_K_H: case Format::Q_G_3: case Format::Q_G_3_K_L: case Format::Q_G_3_K_M: case Format::Q_G_3_K_H: return RegFormat::Q_3;
+        case Format::Q_4: case Format::Q_4_K_L: case Format::Q_4_K_M: case Format::Q_4_K_H: case Format::Q_G_4: case Format::Q_G_4_K_L: case Format::Q_G_4_K_M: case Format::Q_G_4_K_H: return RegFormat::Q_4;
+        case Format::Q_6: case Format::Q_6_K_L: case Format::Q_6_K_M: case Format::Q_6_K_H: case Format::Q_G_6: case Format::Q_G_6_K_L: case Format::Q_G_6_K_M: case Format::Q_G_6_K_H: return RegFormat::Q_6;
+        case Format::Q_8: case Format::Q_8_K_L: case Format::Q_8_K_M: case Format::Q_8_K_H: case Format::Q_G_8: case Format::Q_G_8_K_L: case Format::Q_G_8_K_M: case Format::Q_G_8_K_H: return RegFormat::Q_8;
+        case Format::Q_12: case Format::Q_12_K_L: case Format::Q_12_K_M: case Format::Q_12_K_H: case Format::Q_G_12: case Format::Q_G_12_K_L: case Format::Q_G_12_K_M: case Format::Q_G_12_K_H: return RegFormat::Q_12;
+        case Format::Q_16: case Format::Q_16_K_L: case Format::Q_16_K_M: case Format::Q_16_K_H: case Format::Q_G_16: case Format::Q_G_16_K_L: case Format::Q_G_16_K_M: case Format::Q_G_16_K_H: return RegFormat::Q_16;
+        case Format::Q_24: case Format::Q_24_K_L: case Format::Q_24_K_M: case Format::Q_24_K_H: case Format::Q_G_24: case Format::Q_G_24_K_L: case Format::Q_G_24_K_M: case Format::Q_G_24_K_H: return RegFormat::Q_24;
+        case Format::Q_32: return RegFormat::Q_32;
+        case Format::Q_G_1_5: case Format::Q_G_2_5: case Format::Q_G_3_5: case Format::Q_G_4_5: case Format::Q_G_6_5: case Format::Q_G_8_5: case Format::Q_G_12_5: case Format::Q_G_16_5: case Format::Q_G_24_5: return RegFormat::Q_1;
+        case Format::Q_MX_3_5: case Format::Q_G_MX_3_5: return RegFormat::Q_G_MX_3_5;
+        case Format::Q_MX_4_5: case Format::Q_G_MX_4_5: return RegFormat::Q_G_MX_4_5;
+        case Format::Q_MX_6_5: case Format::Q_G_MX_6_5: return RegFormat::Q_G_MX_6_5;
+        case Format::Q_MX_8_5: case Format::Q_G_MX_8_5: return RegFormat::Q_G_MX_8_5;
+        case Format::Q_MX_12_5: case Format::Q_G_MX_12_5: return RegFormat::Q_G_MX_12_5;
+        case Format::Q_MX_16_5: case Format::Q_G_MX_16_5: return RegFormat::Q_G_MX_16_5;
+        case Format::Q_MX_24_5: case Format::Q_G_MX_24_5: return RegFormat::Q_G_MX_24_5;
+        default: return RegFormat::Q_32;
     }
 }
 inline Format regformat_to_format(RegFormat rf) {
     switch(rf) {
-        case RegFormat::Q1: return Format::Q1;
-        case RegFormat::Q2: return Format::Q2;
-        case RegFormat::Q3: return Format::Q3;
-        case RegFormat::Q4: return Format::Q4;
-        case RegFormat::Q6: return Format::Q6;
-        case RegFormat::Q8: return Format::Q8;
-        case RegFormat::Q12: return Format::Q12;
-        case RegFormat::Q16: return Format::Q16;
-        case RegFormat::Q24: return Format::Q24;
-        case RegFormat::Q32: return Format::Q32;
-        case RegFormat::QG1: return Format::QG1;
-        case RegFormat::QG2: return Format::QG2;
-        case RegFormat::QG3: return Format::QG3;
-        case RegFormat::QG4: return Format::QG4;
-        case RegFormat::QG6: return Format::QG6;
-        case RegFormat::QG8: return Format::QG8;
-        case RegFormat::QG12: return Format::QG12;
-        case RegFormat::QG16: return Format::QG16;
-        case RegFormat::QG24: return Format::QG24;
+        case RegFormat::Q_1: return Format::Q_1;
+        case RegFormat::Q_2: return Format::Q_2;
+        case RegFormat::Q_3: return Format::Q_3;
+        case RegFormat::Q_4: return Format::Q_4;
+        case RegFormat::Q_6: return Format::Q_6;
+        case RegFormat::Q_8: return Format::Q_8;
+        case RegFormat::Q_12: return Format::Q_12;
+        case RegFormat::Q_16: return Format::Q_16;
+        case RegFormat::Q_24: return Format::Q_24;
+        case RegFormat::Q_32: return Format::Q_32;
+        case RegFormat::Q_G_1: return Format::Q_G_1;
+        case RegFormat::Q_G_2: return Format::Q_G_2;
+        case RegFormat::Q_G_3: return Format::Q_G_3;
+        case RegFormat::Q_G_4: return Format::Q_G_4;
+        case RegFormat::Q_G_6: return Format::Q_G_6;
+        case RegFormat::Q_G_8: return Format::Q_G_8;
+        case RegFormat::Q_G_12: return Format::Q_G_12;
+        case RegFormat::Q_G_16: return Format::Q_G_16;
+        case RegFormat::Q_G_24: return Format::Q_G_24;
         case RegFormat::Q_MX_3_5: return Format::Q_MX_3_5;
         case RegFormat::Q_MX_4_5: return Format::Q_MX_4_5;
         case RegFormat::Q_MX_6_5: return Format::Q_MX_6_5;
@@ -223,14 +251,14 @@ inline Format regformat_to_format(RegFormat rf) {
         case RegFormat::Q_MX_12_5: return Format::Q_MX_12_5;
         case RegFormat::Q_MX_16_5: return Format::Q_MX_16_5;
         case RegFormat::Q_MX_24_5: return Format::Q_MX_24_5;
-        case RegFormat::QG_MX_3_5: return Format::QG_MX_3_5;
-        case RegFormat::QG_MX_4_5: return Format::QG_MX_4_5;
-        case RegFormat::QG_MX_6_5: return Format::QG_MX_6_5;
-        case RegFormat::QG_MX_8_5: return Format::QG_MX_8_5;
-        case RegFormat::QG_MX_12_5: return Format::QG_MX_12_5;
-        case RegFormat::QG_MX_16_5: return Format::QG_MX_16_5;
-        case RegFormat::QG_MX_24_5: return Format::QG_MX_24_5;
-        default: return Format::Q32;
+        case RegFormat::Q_G_MX_3_5: return Format::Q_G_MX_3_5;
+        case RegFormat::Q_G_MX_4_5: return Format::Q_G_MX_4_5;
+        case RegFormat::Q_G_MX_6_5: return Format::Q_G_MX_6_5;
+        case RegFormat::Q_G_MX_8_5: return Format::Q_G_MX_8_5;
+        case RegFormat::Q_G_MX_12_5: return Format::Q_G_MX_12_5;
+        case RegFormat::Q_G_MX_16_5: return Format::Q_G_MX_16_5;
+        case RegFormat::Q_G_MX_24_5: return Format::Q_G_MX_24_5;
+        default: return Format::Q_32;
     }
 }
 

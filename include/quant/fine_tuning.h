@@ -61,7 +61,7 @@ struct SelectiveTunerConfig {
     // which collapses blocks that mix an outlier with small values — far too
     // lossy for trained weights. FP16 keeps the fine-tuned weights exactly
     // representable while preserving training quality.
-    Format target_format = Format::Q16;
+    Format target_format = Format::Q_16;
     bool ste_roundtrip = true;       // quantize selected blocks each step (STE)
     std::string output_path = "finetuned_selective.quant";
 };
@@ -134,7 +134,7 @@ struct RankAdapterConfig {
     float learning_rate = 3e-4f;
     float weight_decay = 0.0f;
     int warmup_steps = 10;
-    Format factor_format = Format::Q8; // deployment quantization of A and B
+    Format factor_format = Format::Q_8; // deployment quantization of A and B
     std::string output_path = "adapters.nrad";
     // DoRA (weight-decomposed low-rank adaptation): keep a trainable per-output
     // magnitude vector m and renormalise the adapted weight to it —

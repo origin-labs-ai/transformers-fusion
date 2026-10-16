@@ -19,27 +19,27 @@ static constexpr int WIRE_BLOCK = 256;  // canonical wire block size (block_code
 static std::vector<FormatDescriptor> build_singles() {
     std::vector<FormatDescriptor> v;
     // Base formats
-    v.push_back({"Q1",      RegFormat::Q1,      1.0f,  1,    false, false, 1,    1.0f,  0.0f,  "FP32 block mean + 1-bit quantization"});
-    v.push_back({"Q2",      RegFormat::Q2,      2.0f,  4,    false, false, 1,    4.0f,  0.0f,  "2-bit lattice + 4 FP32 centroids"});
-    v.push_back({"Q3",      RegFormat::Q3,      3.0f,  8,    false, false, 1,    8.0f,  0.0f,  "3-bit lattice + 8 FP32 centroids"});
-    v.push_back({"Q4",      RegFormat::Q4,      4.0f,  16,   false, false, 1,    16.0f, 0.0f,  "4-bit lattice + 16 FP32 centroids"});
-    v.push_back({"Q6",      RegFormat::Q6,      6.0f,  64,   false, false, 1,    64.0f, 0.0f,  "6-bit lattice + 64 FP32 centroids"});
-    v.push_back({"Q8",      RegFormat::Q8,      8.0f,  256,  false, false, 1,    256.0f,0.0f,  "8-bit lattice + 256 FP32 centroids"});
-    v.push_back({"Q12",     RegFormat::Q12,     12.0f, 4096, false, false, 1,    4096.0f,0.0f, "12-bit lattice + 4096 FP16 centroids"});
-    v.push_back({"Q16",     RegFormat::Q16,     16.0f, 0,    false, false, 1,    0.0f,  0.0f,  "Per-block adaptive 16-bit"});
-    v.push_back({"Q24",     RegFormat::Q24,     24.0f, 0,    false, false, 1,    0.0f,  0.0f,  "Per-block FP24 (16b mantissa + 8b exp)"});
-    v.push_back({"Q32",     RegFormat::Q32,     32.0f, 0,    true,  false, 1,    0.0f,  0.0f,  "FP32 identity (lossless)"});
+    v.push_back({"Q_1",      RegFormat::Q_1,      1.0f,  1,    false, false, 1,    1.0f,  0.0f,  "FP32 block mean + 1-bit quantization"});
+    v.push_back({"Q_2",      RegFormat::Q_2,      2.0f,  4,    false, false, 1,    4.0f,  0.0f,  "2-bit lattice + 4 FP32 centroids"});
+    v.push_back({"Q_3",      RegFormat::Q_3,      3.0f,  8,    false, false, 1,    8.0f,  0.0f,  "3-bit lattice + 8 FP32 centroids"});
+    v.push_back({"Q_4",      RegFormat::Q_4,      4.0f,  16,   false, false, 1,    16.0f, 0.0f,  "4-bit lattice + 16 FP32 centroids"});
+    v.push_back({"Q_6",      RegFormat::Q_6,      6.0f,  64,   false, false, 1,    64.0f, 0.0f,  "6-bit lattice + 64 FP32 centroids"});
+    v.push_back({"Q_8",      RegFormat::Q_8,      8.0f,  256,  false, false, 1,    256.0f,0.0f,  "8-bit lattice + 256 FP32 centroids"});
+    v.push_back({"Q_12",     RegFormat::Q_12,     12.0f, 4096, false, false, 1,    4096.0f,0.0f, "12-bit lattice + 4096 FP16 centroids"});
+    v.push_back({"Q_16",     RegFormat::Q_16,     16.0f, 0,    false, false, 1,    0.0f,  0.0f,  "Per-block adaptive 16-bit"});
+    v.push_back({"Q_24",     RegFormat::Q_24,     24.0f, 0,    false, false, 1,    0.0f,  0.0f,  "Per-block FP24 (16b mantissa + 8b exp)"});
+    v.push_back({"Q_32",     RegFormat::Q_32,     32.0f, 0,    true,  false, 1,    0.0f,  0.0f,  "FP32 identity (lossless)"});
 
     // G variants — TRUE wire BPW (matches types.h format_bpw, audit option-c)
-    v.push_back({"QG1",  RegFormat::QG1,  1.0f,   1,    false, true,  256,  0.0f,  0.0f,  "1-bit + block FP16 scale"});
-    v.push_back({"QG2",  RegFormat::QG2,  2.625f, 4,    false, true,  16,   16.0f, 0.0f,  "2-bit affine per-16 (4b scale+min)"});
-    v.push_back({"QG3",  RegFormat::QG3,  3.5f,   8,    false, true,  32,   16.0f, 0.0f,  "3-bit affine per-32 (6b scale+min)"});
-    v.push_back({"QG4",  RegFormat::QG4,  4.5f,   16,   false, true,  32,   16.0f, 0.0f,  "4-bit affine per-32 (6b scale+min)"});
-    v.push_back({"QG6",  RegFormat::QG6,  6.5625f,64,   false, true,  16,   16.0f, 0.0f,  "6-bit Q6_K scheme, per-16 int8 scales"});
-    v.push_back({"QG8",  RegFormat::QG8,  8.5f,   256,  false, true,  32,   16.0f, 0.0f,  "8-bit compound: fp16 scale per-32"});
-    v.push_back({"QG12", RegFormat::QG12, 12.5f,  4096, false, true,  32,   16.0f, 0.0f,  "12-bit compound: fp16 scale per-32"});
-    v.push_back({"QG16", RegFormat::QG16, 16.5f,  0,    false, true,  32,   16.0f, 0.0f,  "16-bit adaptive + mean-residual tail"});
-    v.push_back({"QG24", RegFormat::QG24, 24.5f,  0,    false, true,  32,   8.0f,  0.0f,  "FP24 + mean-residual tail"});
+    v.push_back({"Q_G_1",  RegFormat::Q_G_1,  1.0f,   1,    false, true,  256,  0.0f,  0.0f,  "1-bit + block FP16 scale"});
+    v.push_back({"Q_G_2",  RegFormat::Q_G_2,  2.625f, 4,    false, true,  16,   16.0f, 0.0f,  "2-bit affine per-16 (4b scale+min)"});
+    v.push_back({"Q_G_3",  RegFormat::Q_G_3,  3.5f,   8,    false, true,  32,   16.0f, 0.0f,  "3-bit affine per-32 (6b scale+min)"});
+    v.push_back({"Q_G_4",  RegFormat::Q_G_4,  4.5f,   16,   false, true,  32,   16.0f, 0.0f,  "4-bit affine per-32 (6b scale+min)"});
+    v.push_back({"Q_G_6",  RegFormat::Q_G_6,  6.5625f,64,   false, true,  16,   16.0f, 0.0f,  "6-bit Q6_K scheme, per-16 int8 scales"});
+    v.push_back({"Q_G_8",  RegFormat::Q_G_8,  8.5f,   256,  false, true,  32,   16.0f, 0.0f,  "8-bit compound: fp16 scale per-32"});
+    v.push_back({"Q_G_12", RegFormat::Q_G_12, 12.5f,  4096, false, true,  32,   16.0f, 0.0f,  "12-bit compound: fp16 scale per-32"});
+    v.push_back({"Q_G_16", RegFormat::Q_G_16, 16.5f,  0,    false, true,  32,   16.0f, 0.0f,  "16-bit adaptive + mean-residual tail"});
+    v.push_back({"Q_G_24", RegFormat::Q_G_24, 24.5f,  0,    false, true,  32,   8.0f,  0.0f,  "FP24 + mean-residual tail"});
 
     const int64_t n_mse = 16384;
     std::vector<float> g_data((size_t)n_mse), u_data((size_t)n_mse), l_data((size_t)n_mse);
@@ -82,13 +82,13 @@ static std::vector<MixDescriptor> build_four_mixes() {
     // format_bpw for Q_MX_*). Ratios are block-share priors kept for the
     // non-adaptive path (allocate_mix_blocks itself spends the hard budget by
     // benefit-per-byte, so ratios are documentation of the design point).
-    v.push_back({"Q_MX_3.5",          RegFormat::Q_MX_3_5,          4, RegFormat::Q1,      0.70f, RegFormat::Q3,      0.20f, RegFormat::Q8,      0.08f, RegFormat::Q32,     0.02f, 3.50f,  false});
-    v.push_back({"Q_MX_4.5",          RegFormat::Q_MX_4_5,          4, RegFormat::Q2,      0.60f, RegFormat::Q4,      0.25f, RegFormat::Q12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  false});
-    v.push_back({"Q_MX_6.5",          RegFormat::Q_MX_6_5,          4, RegFormat::Q3,      0.50f, RegFormat::Q6,      0.30f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  false});
-    v.push_back({"Q_MX_8.5",          RegFormat::Q_MX_8_5,          4, RegFormat::Q4,      0.45f, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  false});
-    v.push_back({"Q_MX_12.5",         RegFormat::Q_MX_12_5,         4, RegFormat::Q6,      0.40f, RegFormat::Q12,     0.35f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, false});
-    v.push_back({"Q_MX_16.5",         RegFormat::Q_MX_16_5,         4, RegFormat::Q8,      0.35f, RegFormat::Q16,     0.40f, RegFormat::Q24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, false});
-    v.push_back({"Q_MX_24.5",         RegFormat::Q_MX_24_5,         4, RegFormat::Q12,     0.25f, RegFormat::Q16,     0.30f, RegFormat::Q24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, false});
+    v.push_back({"Q_MX_3_5",          RegFormat::Q_MX_3_5,          4, RegFormat::Q_1,      0.70f, RegFormat::Q_3,      0.20f, RegFormat::Q_8,      0.08f, RegFormat::Q_32,     0.02f, 3.50f,  false});
+    v.push_back({"Q_MX_4_5",          RegFormat::Q_MX_4_5,          4, RegFormat::Q_2,      0.60f, RegFormat::Q_4,      0.25f, RegFormat::Q_12,     0.12f, RegFormat::Q_32,     0.03f, 4.50f,  false});
+    v.push_back({"Q_MX_6_5",          RegFormat::Q_MX_6_5,          4, RegFormat::Q_3,      0.50f, RegFormat::Q_6,      0.30f, RegFormat::Q_16,     0.15f, RegFormat::Q_32,     0.05f, 6.50f,  false});
+    v.push_back({"Q_MX_8_5",          RegFormat::Q_MX_8_5,          4, RegFormat::Q_4,      0.45f, RegFormat::Q_8,      0.35f, RegFormat::Q_16,     0.15f, RegFormat::Q_32,     0.05f, 8.50f,  false});
+    v.push_back({"Q_MX_12_5",         RegFormat::Q_MX_12_5,         4, RegFormat::Q_6,      0.40f, RegFormat::Q_12,     0.35f, RegFormat::Q_24,     0.20f, RegFormat::Q_32,     0.05f, 12.50f, false});
+    v.push_back({"Q_MX_16_5",         RegFormat::Q_MX_16_5,         4, RegFormat::Q_8,      0.35f, RegFormat::Q_16,     0.40f, RegFormat::Q_24,     0.20f, RegFormat::Q_32,     0.05f, 16.50f, false});
+    v.push_back({"Q_MX_24_5",         RegFormat::Q_MX_24_5,         4, RegFormat::Q_12,     0.25f, RegFormat::Q_16,     0.30f, RegFormat::Q_24,     0.35f, RegFormat::Q_32,     0.10f, 24.50f, false});
     // QG_MX_* — GROUPED ladder (adaptive, adaptive=true). Tiers are the
     // grouped QG* counterparts of the plain ladder above (QG1/QG3/QG8/Q32 for
     // the 3.5 anchor, etc.); each maps via the existing regformat_to_format()
@@ -100,13 +100,13 @@ static std::vector<MixDescriptor> build_four_mixes() {
     // ceil(effective_bpw * n / 8) is therefore the true on-disk cap.
     // Tier ratios mirror the plain control shares (70/20/8/2 for the 3.5
     // anchor, etc.) as the design-point prior.
-    v.push_back({"QG_MX_3.5",      RegFormat::QG_MX_3_5,      4, RegFormat::QG1,      0.70f, RegFormat::QG3,      0.20f, RegFormat::QG8,      0.08f, RegFormat::Q32,     0.02f, 3.78125f,  true});
-    v.push_back({"QG_MX_4.5",      RegFormat::QG_MX_4_5,      4, RegFormat::QG2,      0.60f, RegFormat::QG4,      0.25f, RegFormat::QG12,     0.12f, RegFormat::Q32,     0.03f, 4.50f,  true});
-    v.push_back({"QG_MX_6.5",      RegFormat::QG_MX_6_5,      4, RegFormat::QG3,      0.50f, RegFormat::QG6,      0.30f, RegFormat::QG16,     0.15f, RegFormat::Q32,     0.05f, 6.50f,  true});
-    v.push_back({"QG_MX_8.5",      RegFormat::QG_MX_8_5,      4, RegFormat::QG4,      0.45f, RegFormat::QG8,      0.35f, RegFormat::QG16,     0.15f, RegFormat::Q32,     0.05f, 8.50f,  true});
-    v.push_back({"QG_MX_12.5",     RegFormat::QG_MX_12_5,     4, RegFormat::QG6,      0.40f, RegFormat::QG12,     0.35f, RegFormat::QG24,     0.20f, RegFormat::Q32,     0.05f, 12.50f, true});
-    v.push_back({"QG_MX_16.5",     RegFormat::QG_MX_16_5,     4, RegFormat::QG8,      0.35f, RegFormat::QG16,     0.40f, RegFormat::QG24,     0.20f, RegFormat::Q32,     0.05f, 16.50f, true});
-    v.push_back({"QG_MX_24.5",     RegFormat::QG_MX_24_5,     4, RegFormat::QG12,     0.25f, RegFormat::QG16,     0.30f, RegFormat::QG24,     0.35f, RegFormat::Q32,     0.10f, 24.50f, true});
+    v.push_back({"Q_G_MX_3_5",      RegFormat::Q_G_MX_3_5,      4, RegFormat::Q_G_1,      0.70f, RegFormat::Q_G_3,      0.20f, RegFormat::Q_G_8,      0.08f, RegFormat::Q_32,     0.02f, 3.78125f,  true});
+    v.push_back({"Q_G_MX_4_5",      RegFormat::Q_G_MX_4_5,      4, RegFormat::Q_G_2,      0.60f, RegFormat::Q_G_4,      0.25f, RegFormat::Q_G_12,     0.12f, RegFormat::Q_32,     0.03f, 4.50f,  true});
+    v.push_back({"Q_G_MX_6_5",      RegFormat::Q_G_MX_6_5,      4, RegFormat::Q_G_3,      0.50f, RegFormat::Q_G_6,      0.30f, RegFormat::Q_G_16,     0.15f, RegFormat::Q_32,     0.05f, 6.50f,  true});
+    v.push_back({"Q_G_MX_8_5",      RegFormat::Q_G_MX_8_5,      4, RegFormat::Q_G_4,      0.45f, RegFormat::Q_G_8,      0.35f, RegFormat::Q_G_16,     0.15f, RegFormat::Q_32,     0.05f, 8.50f,  true});
+    v.push_back({"Q_G_MX_12_5",     RegFormat::Q_G_MX_12_5,     4, RegFormat::Q_G_6,      0.40f, RegFormat::Q_G_12,     0.35f, RegFormat::Q_G_24,     0.20f, RegFormat::Q_32,     0.05f, 12.50f, true});
+    v.push_back({"Q_G_MX_16_5",     RegFormat::Q_G_MX_16_5,     4, RegFormat::Q_G_8,      0.35f, RegFormat::Q_G_16,     0.40f, RegFormat::Q_G_24,     0.20f, RegFormat::Q_32,     0.05f, 16.50f, true});
+    v.push_back({"Q_G_MX_24_5",     RegFormat::Q_G_MX_24_5,     4, RegFormat::Q_G_12,     0.25f, RegFormat::Q_G_16,     0.30f, RegFormat::Q_G_24,     0.35f, RegFormat::Q_32,     0.10f, 24.50f, true});
     return v;
 }
 
@@ -184,7 +184,7 @@ QuantResult FormatRegistry::quantize(const float* data, int64_t n,
     const int64_t nb = (n + WIRE_BLOCK - 1) / WIRE_BLOCK;
 
     // Q32: keep the legacy in-memory FP32 copy for callers that read it.
-    if (fmt.id == RegFormat::Q32) {
+    if (fmt.id == RegFormat::Q_32) {
         qr.codebook_fp32.resize(static_cast<size_t>(n));
         std::memcpy(qr.codebook_fp32.data(), data, static_cast<size_t>(n) * sizeof(float));
     }
@@ -215,27 +215,27 @@ QuantResult FormatRegistry::quantize_block(const float* block, size_t block_size
 // guaranteeing byte-identical results to the .quant writer — a single encoding
 // per format ID (registry path == on-disk path).
 QuantResult FormatRegistry::quantize_q1(const float* data, int64_t n) {
-    return quantize(data, n, parse_format_name("Q1"));
+    return quantize(data, n, parse_format_name("Q_1"));
 }
 
 QuantResult FormatRegistry::quantize_q2(const float* data, int64_t n) {
-    return quantize(data, n, parse_format_name("Q2"));
+    return quantize(data, n, parse_format_name("Q_2"));
 }
 
 QuantResult FormatRegistry::quantize_q4(const float* data, int64_t n) {
-    return quantize(data, n, parse_format_name("Q4"));
+    return quantize(data, n, parse_format_name("Q_4"));
 }
 
 QuantResult FormatRegistry::quantize_q8(const float* data, int64_t n) {
-    return quantize(data, n, parse_format_name("Q8"));
+    return quantize(data, n, parse_format_name("Q_8"));
 }
 
 QuantResult FormatRegistry::quantize_q_twi_mix_1_5(const float* data, int64_t n, int) {
-    return quantize(data, n, parse_format_name("QG_1_5"));
+    return quantize(data, n, parse_format_name("Q_G_1_5"));
 }
 
 QuantResult FormatRegistry::quantize_q_sparse(const float* data, int64_t n) {
-    return quantize(data, n, parse_format_name("Q2")); // Map legacy Q1 to Q2
+    return quantize(data, n, parse_format_name("Q_2")); // Map legacy Q1 to Q2
 }
 
 void FormatRegistry::dequantize(const QuantResult& qr, float* output, int64_t n) {
@@ -244,7 +244,7 @@ void FormatRegistry::dequantize(const QuantResult& qr, float* output, int64_t n)
     // Legacy Q32 in-memory copy (saved by older STE adapter stores) takes
     // precedence; otherwise the wire payload (raw FP32 bytes in indices) is
     // decoded, matching the canonical .quant layout.
-    if (qr.format.id == RegFormat::Q32) {
+    if (qr.format.id == RegFormat::Q_32) {
         if (qr.codebook_fp32.size() >= static_cast<size_t>(n)) {
             std::memcpy(output, qr.codebook_fp32.data(), static_cast<size_t>(n) * sizeof(float));
             return;
@@ -461,8 +461,23 @@ std::string FormatRegistry::get_format_table() {
 
 FormatDescriptor FormatRegistry::parse_format_name(const std::string& name) {
     const auto& singles = get_all_singles();
+    // Fusion canonical + backward compat: accept new canonical (Q_1, Q_G_4,
+    // Q_G_MX_3_5...), legacy underscore (Q1, QG4, QG_MX_3_5...) and legacy
+    // dotted (Q1.5, Q_MX_3.5, QG_MX_3.5...). Normalization removes '_' and '.'
+    // and uppercases, collapsing all three spellings to one key.
+    auto norm = [](const std::string& s) {
+        std::string o;
+        o.reserve(s.size());
+        for (char c : s) {
+            if (c == '_' || c == '.') continue;
+            o.push_back((char)std::toupper((unsigned char)c));
+        }
+        return o;
+    };
+    const std::string want = norm(name);
     for (const auto& s : singles) {
         if (s.name == name) return s;
+        if (norm(s.name) == want) return s;
     }
     return {};
 }

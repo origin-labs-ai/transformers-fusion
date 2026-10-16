@@ -27,27 +27,27 @@ void test_format_enum_properties() {
     }
 
     // Verify base format names and BPW
-    assert(std::string(quant::format_name(quant::Format::Q1)) == "Q1");
-    assert(std::string(quant::format_name(quant::Format::Q2)) == "Q2");
-    assert(std::string(quant::format_name(quant::Format::Q3)) == "Q3");
-    assert(std::string(quant::format_name(quant::Format::Q4)) == "Q4");
-    assert(std::string(quant::format_name(quant::Format::Q6)) == "Q6");
-    assert(std::string(quant::format_name(quant::Format::Q8)) == "Q8");
-    assert(std::string(quant::format_name(quant::Format::Q12)) == "Q12");
-    assert(std::string(quant::format_name(quant::Format::Q16)) == "Q16");
-    assert(std::string(quant::format_name(quant::Format::Q24)) == "Q24");
-    assert(std::string(quant::format_name(quant::Format::Q32)) == "Q32");
+    assert(std::string(quant::format_name(quant::Format::Q_1)) == "Q_1");
+    assert(std::string(quant::format_name(quant::Format::Q_2)) == "Q_2");
+    assert(std::string(quant::format_name(quant::Format::Q_3)) == "Q_3");
+    assert(std::string(quant::format_name(quant::Format::Q_4)) == "Q_4");
+    assert(std::string(quant::format_name(quant::Format::Q_6)) == "Q_6");
+    assert(std::string(quant::format_name(quant::Format::Q_8)) == "Q_8");
+    assert(std::string(quant::format_name(quant::Format::Q_12)) == "Q_12");
+    assert(std::string(quant::format_name(quant::Format::Q_16)) == "Q_16");
+    assert(std::string(quant::format_name(quant::Format::Q_24)) == "Q_24");
+    assert(std::string(quant::format_name(quant::Format::Q_32)) == "Q_32");
 
-    assert(std::abs(quant::format_bpw(quant::Format::Q1) - 1.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q2) - 2.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q3) - 3.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q4) - 4.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q6) - 6.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q8) - 8.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q12) - 12.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q16) - 16.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q24) - 24.0f) < 1e-4f);
-    assert(std::abs(quant::format_bpw(quant::Format::Q32) - 32.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_1) - 1.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_2) - 2.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_3) - 3.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_4) - 4.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_6) - 6.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_8) - 8.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_12) - 12.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_16) - 16.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_24) - 24.0f) < 1e-4f);
+    assert(std::abs(quant::format_bpw(quant::Format::Q_32) - 32.0f) < 1e-4f);
 
     // Verify GRP exact variants (QG1..QG24 at enum 37..45)
     for (int i = 37; i <= 45; i++) {
@@ -65,13 +65,13 @@ void test_format_enum_properties() {
     }
 
     // Verify QUAD_MIX variants
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_3_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_4_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_6_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_8_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_12_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_16_5));
-    assert(quant::format_is_quad_mix(quant::Format::QG_MX_24_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_3_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_4_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_6_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_8_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_12_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_16_5));
+    assert(quant::format_is_quad_mix(quant::Format::Q_G_MX_24_5));
 
     std::cout << "  -> PASSED: All 38 format enum definitions verified!" << std::endl;
 }
@@ -131,39 +131,39 @@ static void test_format_roundtrip(quant::Format fmt, const char* name) {
 
 void test_all_requested_formats() {
     // Base formats
-    test_format_roundtrip(quant::Format::Q3, "Q3");
-    test_format_roundtrip(quant::Format::Q6, "Q6");
-    test_format_roundtrip(quant::Format::Q12, "Q12");
-    test_format_roundtrip(quant::Format::Q24, "Q24");
+    test_format_roundtrip(quant::Format::Q_3, "Q_3");
+    test_format_roundtrip(quant::Format::Q_6, "Q_6");
+    test_format_roundtrip(quant::Format::Q_12, "Q_12");
+    test_format_roundtrip(quant::Format::Q_24, "Q_24");
 
     // All 9 GRP variants
-    test_format_roundtrip(quant::Format::QG1, "QG1");
-    test_format_roundtrip(quant::Format::QG2, "QG2");
-    test_format_roundtrip(quant::Format::QG3, "QG3");
-    test_format_roundtrip(quant::Format::QG4, "QG4");
-    test_format_roundtrip(quant::Format::QG6, "QG6");
-    test_format_roundtrip(quant::Format::QG8, "QG8");
-    test_format_roundtrip(quant::Format::QG12, "QG12");
-    test_format_roundtrip(quant::Format::QG16, "QG16");
-    test_format_roundtrip(quant::Format::QG24, "QG24");
+    test_format_roundtrip(quant::Format::Q_G_1, "Q_G_1");
+    test_format_roundtrip(quant::Format::Q_G_2, "Q_G_2");
+    test_format_roundtrip(quant::Format::Q_G_3, "Q_G_3");
+    test_format_roundtrip(quant::Format::Q_G_4, "Q_G_4");
+    test_format_roundtrip(quant::Format::Q_G_6, "Q_G_6");
+    test_format_roundtrip(quant::Format::Q_G_8, "Q_G_8");
+    test_format_roundtrip(quant::Format::Q_G_12, "Q_G_12");
+    test_format_roundtrip(quant::Format::Q_G_16, "Q_G_16");
+    test_format_roundtrip(quant::Format::Q_G_24, "Q_G_24");
 
     // All 4 TWI_MIX variants
 
     // All 14 QUAD_MIX variants
-    test_format_roundtrip(quant::Format::QG_MX_3_5, "QG_MX_3_5");
-    test_format_roundtrip(quant::Format::QG_MX_4_5, "QG_MX_4_5");
-    test_format_roundtrip(quant::Format::QG_MX_6_5, "QG_MX_6_5");
-    test_format_roundtrip(quant::Format::QG_MX_8_5, "QG_MX_8_5");
-    test_format_roundtrip(quant::Format::QG_MX_12_5, "QG_MX_12_5");
-    test_format_roundtrip(quant::Format::QG_MX_16_5, "QG_MX_16_5");
-    test_format_roundtrip(quant::Format::QG_MX_24_5, "QG_MX_24_5");
-    test_format_roundtrip(quant::Format::QG_MX_3_5, "QG_MX_3_5");
-    test_format_roundtrip(quant::Format::QG_MX_4_5, "QG_MX_4_5");
-    test_format_roundtrip(quant::Format::QG_MX_6_5, "QG_MX_6_5");
-    test_format_roundtrip(quant::Format::QG_MX_8_5, "QG_MX_8_5");
-    test_format_roundtrip(quant::Format::QG_MX_12_5, "QG_MX_12_5");
-    test_format_roundtrip(quant::Format::QG_MX_16_5, "QG_MX_16_5");
-    test_format_roundtrip(quant::Format::QG_MX_24_5, "QG_MX_24_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_3_5, "Q_G_MX_3_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_4_5, "Q_G_MX_4_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_6_5, "Q_G_MX_6_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_8_5, "Q_G_MX_8_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_12_5, "Q_G_MX_12_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_16_5, "Q_G_MX_16_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_24_5, "Q_G_MX_24_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_3_5, "Q_G_MX_3_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_4_5, "Q_G_MX_4_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_6_5, "Q_G_MX_6_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_8_5, "Q_G_MX_8_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_12_5, "Q_G_MX_12_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_16_5, "Q_G_MX_16_5");
+    test_format_roundtrip(quant::Format::Q_G_MX_24_5, "Q_G_MX_24_5");
 }
 
 int main() {
